@@ -1,12 +1,11 @@
 /* Расчёты калькуляторов «Свобода мысли»: ипотека и рассрочка.
    К странице не обращается — те же функции проверяются тестами (tests/engine.test.mjs).
 
-   Ипотека считается по методике таблицы «Калькулятор ЧПВ» (лист «Калькурятор субсидий»):
-     Кредит для субсидии = Цена по прайсу − ПВ
-     Субсидия банку      = Кредит × комиссия банка
-     Цена в договоре     = Цена со скидкой + Субсидия
-     Необходимый ПВ      = Цена в договоре × мин. ПВ (20,1%), но не меньше «цена − лимит кредита»
-   Менеджер в таблице подбирает ПВ вручную, копируя «Необходимое ПВ» в «ПВ клиента»; здесь это делает цикл. */
+   Ипотека считается по методике таблицы «Калькулятор ЧПВ» (лист «Калькулятор субсидирования»):
+     ПВ               = доля цены по прайсу (от 20,1%), и «прайс − ПВ» не больше лимита кредита
+     Комиссия банку   = (Цена по прайсу − ПВ) × ставка комиссии
+     Цена в договоре  = Цена со скидкой («наличка») + Комиссия банку
+     Профит           = Цена по прайсу − Цена в договоре; меньше нуля — программа не проходит */
 (function (root) {
   'use strict';
 
@@ -48,16 +47,17 @@
   function or(v, dflt) { return v == null ? dflt : v; }
   function forProject(item, project) { return !item.projects.length || item.projects.indexOf(project) >= 0; }
 
-  var KIDS_ORDER = ['один ребёнок', 'двое детей', 'трое детей', 'четверо детей', 'пятеро и больше'];
-
   function buildData(raw) {
     var programs = (raw.mortgage || []).map(function (p, i) {
+      // Лимит кредита — из строки, а для семейной ипотеки — по числу детей
+      var limit = or(p.limit, p.kids && raw.limitsByKids ? or(raw.limitsByKids[p.kids], Infinity) : Infinity);
       return {
-        id: i + 1, projects: p.projects || [], type: p.type, name: p.name,
+        id: i + 1, projects: p.projects || [], type: p.type,
+        name: p.name || p.bank + (p.variant ? ', ' + p.variant : ''),
         r1: p.rate, r2: or(p.rateAfter, p.rate), grace: p.graceYears || 0,
-        minTerm: p.minTerm || 1, maxTerm: p.maxTerm || 30,
+        minTerm: p.minTerm || 1, maxTerm: p.term || 30,
         minPv: or(p.minPv, raw.minPv || 0), maxPv: or(p.maxPv, 1),
-        minLoan: p.minLoan || 0, limit: or(p.limit, Infinity),
+        minLoan: p.minLoan || 0, limit: limit,
         sub: p.subsidy || 0, minPrice: or(p.minPrice, null), kids: p.kids || null
       };
     });
@@ -81,10 +81,7 @@
   function kidsOptions(D, project, type) {
     var list = uniq(D.programs.filter(function (p) { return p.kids && p.type === type && forProject(p, project); })
       .map(function (p) { return p.kids; }));
-    return list.sort(function (a, b) {
-      var ia = KIDS_ORDER.indexOf(a), ib = KIDS_ORDER.indexOf(b);
-      return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
-    });
+    return list.sort(function (a, b) { return parseInt(a, 10) - parseInt(b, 10); }); // «1 ребёнок», «2 ребёнка»…
   }
 
   /* ================== ИПОТЕКА ================== */
@@ -100,29 +97,24 @@
 
   var OK = 'Подходит';
 
-  // opts.loanFromBase — считать платёж от «Цена по прайсу − ПВ», как в таблице «Калькулятор ЧПВ»
+  // opts.loanFromBase — показывать кредит и платёж от «прайс − ПВ», как в таблице; иначе — от цены в договоре
   function calcProgram(p, inp, opts) {
-    var B = inp.base, D = Math.round(B * (1 - inp.disc)), pvIn = inp.pv || 0;
+    var B = inp.base, D = Math.round(B * (1 - inp.disc)), pvIn = Math.round(inp.pv || 0);
     var s = p.sub, m = p.minPv, lim = p.limit;
 
-    // Подбор ПВ: «Необходимое ПВ» зависит от цены в договоре, цена — от субсидии, субсидия — от кредита
-    var pv = Math.max(pvIn, m * B), ddu = D;
-    for (var i = 0; i < 80; i++) {
-      ddu = D + Math.max(B - pv, 0) * s;
-      var next = Math.min(Math.max(pvIn, m * ddu, ddu - lim), ddu);
-      if (Math.abs(next - pv) < 0.01) { pv = next; break; }
-      pv = next;
-    }
-    var subsidy = Math.max(B - Math.ceil(pv - 1e-6), 0) * s;
-    var price = Math.round(D + subsidy);
-    var surplus = B - price;                       // «Профицит» из таблицы: должен быть не меньше нуля
-    var minPvRub = Math.max(Math.ceil(m * price - 1e-6), price - lim, 0);
-    pv = Math.min(Math.max(Math.round(pvIn), minPvRub), price);
-    var loan = (opts && opts.loanFromBase ? B : price) - pv;
-    var pvShare = price > 0 ? pv / price : 0;
-    var byLimit = lim < Infinity && price - lim > m * price + 0.5;
-    // Скидка, с которой программа проходит: субсидия не больше скидки (профицит ≥ 0)
-    var needDisc = B > 0 ? s * (B - Math.max(pvIn, m * B, B - lim)) / B : 0;
+    // Взнос считается от цены по прайсу; «прайс − взнос» не больше лимита кредита
+    var minPvRub = Math.max(Math.ceil(m * B - 1e-6), B - lim, 0);
+    var pv = Math.min(Math.max(pvIn, minPvRub), B);
+    var credit = B - pv;                           // «Сумма кредита» в таблице
+    var subsidy = credit * s;                      // «Комиссия банку, руб.»
+    var price = Math.round(D + subsidy);           // «Цена реализации»: наличка + комиссия
+    var surplus = B - price;                       // «Профит»: должен быть не меньше нуля
+    if (pv > price) pv = price;
+    var loan = opts && opts.loanFromBase ? credit : price - pv;
+    var pvShare = B > 0 ? pv / B : 0;
+    var byLimit = lim < Infinity && B - lim > m * B + 0.5;
+    // Скидка, с которой программа проходит: комиссия не больше скидки (профит ≥ 0)
+    var needDisc = B > 0 ? s * credit / B : 0;
 
     var status = loan <= 0 ? 'Кредит не нужен'
       : (p.minPrice != null && B < p.minPrice) ? 'Не для этой квартиры'

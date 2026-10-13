@@ -6,7 +6,7 @@
   var CONFIG = Object.assign({
     // true — показывать внутренние цифры: комиссию банку и профицит. Включается и адресом: index.html?internal=1
     showInternal: /[?&]internal=1/.test(location.search),
-    // true — считать платёж от «прайс − ПВ», как в таблице «Калькулятор ЧПВ»; false — от цены в договоре
+    // true — показывать кредит и платёж от «прайс − ПВ», как в таблице «Калькулятор субсидирования»; false — от цены в договоре
     loanFromBase: false,
     defaultPrice: 10000000
   }, window.SM_CALC_CONFIG || {});
@@ -31,6 +31,7 @@
     };
   }
 
+  function hasKids() { return !el.kidsField.hidden; }
   function setupKids() {
     var opts = C.kidsOptions(D, state.project, state.type), cur = el.kids.value;
     el.kidsField.hidden = !opts.length;
@@ -51,18 +52,18 @@
     add('Цена по прайсу', F.rub(inp.base));
     add('Цена квартиры в договоре', F.rub(r.price), 'sm-strong');
     add('Скидка', F.rub(inp.base - r.price) + dim(F.pct1(r.disc)));
-    add('Первоначальный взнос', F.rub(r.pv) + dim(F.pct1(r.pvShare)), 'sm-strong');
+    add('Первоначальный взнос', F.rub(r.pv) + dim(F.pct1(r.pvShare) + ' прайса'), 'sm-strong');
     add('Сумма кредита', F.rub(r.loan), 'sm-strong');
     add('Переплата по процентам', F.rub(r.over));
     add('Всего выплат банку', F.rub(r.total));
     if (CONFIG.showInternal) { // sm-int — только на экране: в печать и PDF для клиента не попадает
       add('Комиссия банку', F.rub(r.subsidy) + dim(F.pct(r.sub) + ' кредита'), 'sm-int');
-      add('Профицит', F.rub(r.surplus), 'sm-int');
+      add('Профит', F.rub(r.surplus), 'sm-int');
     }
     var flat = el.flat.value.trim();
     return '<div class="sm-hero">' +
-        '<div class="sm-hero-name">' + esc(r.name) + '</div>' +
-        '<div class="sm-hero-flat">' + esc(inp.project) + (flat ? ' · кв. ' + esc(flat) : '') + '</div>' +
+        '<div class="sm-hero-name">' + esc(inp.type + ', ' + r.name) + '</div>' +
+        '<div class="sm-hero-flat">' + esc(inp.project) + (hasKids() ? ' · ' + esc(inp.kids) : '') + (flat ? ' · кв. ' + esc(flat) : '') + '</div>' +
         '<div class="sm-pay">' +
           '<div><div class="sm-k">' + (grace ? 'Платёж первые ' + F.period(r.graceMonths) : 'Ежемесячный платёж') + '</div><div class="sm-v">' + F.rub(r.pay1) + '</div></div>' +
           (grace ? '<div><div class="sm-k">Платёж после</div><div class="sm-v sm-v2">' + F.rub(r.pay2) + '</div></div>' : '') +
@@ -78,7 +79,7 @@
     ['Ставка', function (r) { return F.pct(r.r1) + (r.graceMonths ? sub('через ' + F.period(r.graceMonths) + ' — ' + F.pct(r.r2)) : ''); }],
     ['Срок', function (r) { return F.years(r.term); }],
     ['Цена в договоре', function (r) { return F.rub(r.price) + sub('скидка ' + F.pct1(r.disc)); }, true],
-    ['Первый взнос', function (r) { return F.rub(r.pv) + sub(F.pct1(r.pvShare)); }, true],
+    ['Первый взнос', function (r) { return F.rub(r.pv) + sub(F.pct1(r.pvShare) + ' прайса'); }, true],
     ['Кредит', function (r) { return F.rub(r.loan); }, true],
     ['Платёж в месяц', function (r) { return '<b>' + F.rub(r.pay1) + '</b>' + (r.graceMonths ? sub('далее ' + F.rub(r.pay2)) : ''); }, true],
     ['Переплата', function (r) { return F.rub(r.over); }, true]
@@ -95,7 +96,7 @@
 
   function render() {
     var inp = readInputs();
-    el.title.textContent = inp.type + ': все программы';
+    el.title.textContent = inp.type + (hasKids() ? ', ' + inp.kids : '') + ': все программы';
     if (!inp.base) {
       el.detail.innerHTML = '<p class="sm-empty">Укажите стоимость квартиры.</p>';
       el.thead.innerHTML = el.tbody.innerHTML = el.tip.innerHTML = '';
@@ -126,7 +127,7 @@
     add('Стоимость квартиры по прайсу', F.rub(inp.base), true);
     add('Скидка', F.pct(inp.disc));
     add('Тип ипотеки', esc(inp.type));
-    if (!el.kidsField.hidden) add('Количество детей', esc(inp.kids));
+    if (hasKids()) add('Количество детей', esc(inp.kids));
     add('Первоначальный взнос', inp.pv ? F.rub(inp.pv) : 'минимальный');
     add('Срок', inp.term ? F.years(inp.term) : 'максимальный');
 

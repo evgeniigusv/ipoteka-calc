@@ -1,5 +1,6 @@
 // Проверка расчётов: node tests/engine.test.mjs
-// Эталон по ипотеке — пример из таблицы «Калькулятор ЧПВ», лист «Калькурятор субсидий».
+// Эталон по ипотеке — таблица «Калькулятор ЧПВ», лист «Калькулятор субсидирования»:
+// квартира с ценой за наличку 12 515 000 и по прайсу 14 385 057, ПВ 20,1% (цифры блока «Сравнение всех программ»).
 import fs from 'node:fs';
 import vm from 'node:vm';
 import assert from 'node:assert/strict';
@@ -15,104 +16,120 @@ const near = (a, b, eps = 1) => assert.ok(Math.abs(a - b) <= eps, `${a} ≠ ${b}
 let n = 0;
 const test = (name, fn) => { fn(); n++; console.log('ok —', name); };
 
-const DA1 = 'ДА — 1 очередь', DA2 = 'ДА — 2 очередь';
-const sber129 = rows => rows.find(x => x.name === 'Сниженная ставка на весь срок (Сбер)' && x.r1 === 0.129);
+const DA1 = 'ДА — 1 очередь', DA2 = 'ДА — 2 очередь', FAMILY = 'Семейная ипотека', BASE = 'Базовая ипотека';
+const SHEET = { project: DA1, base: 14385057, disc: 1 - 12515000 / 14385057 };
+const find = (rows, name, term, rate) => rows.find(r => r.name === name && r.term === term && (rate == null || r.r1 === rate));
 
-test('данные читаются: 2 очереди, 3 типа ипотеки, скидка 13%', () => {
+test('данные читаются: 2 очереди, 2 типа ипотеки, 29 программ, скидка 13%', () => {
   assert.deepEqual(D.projects, [DA1, DA2]);
-  assert.deepEqual(D.types, ['Семейная ипотека', 'IT-ипотека', 'Стандартная ипотека']);
+  assert.deepEqual(D.types, [FAMILY, BASE]);
   assert.equal(D.defaultDiscount, 0.13);
-  assert.equal(D.programs.length, 8);
+  assert.equal(D.programs.length, 29);
   assert.equal(D.installments.length, 4);
-  D.programs.forEach(p => { assert.equal(p.minPv, 0.201); assert.ok(p.r1 > 0 && p.sub >= 0 && p.maxTerm >= 15); });
-  assert.deepEqual(C.kidsOptions(D, DA1, 'Семейная ипотека'), []);
+  D.programs.forEach(p => { assert.equal(p.minPv, 0.201); assert.ok(p.r1 > 0 && p.sub >= 0 && p.maxTerm >= 10 && p.name); });
+  assert.deepEqual(C.kidsOptions(D, DA1, FAMILY), ['1 ребёнок', '2 ребёнка', '3 ребёнка', '4 ребёнка', '5 и более детей']);
+  assert.deepEqual(C.kidsOptions(D, DA1, BASE), []);
+  const lim = k => [...new Set(D.programs.filter(p => p.kids === k).map(p => p.limit))];
+  assert.deepEqual(lim('1 ребёнок'), [6000000]);
+  assert.deepEqual(lim('2 ребёнка'), [8000000]);
+  assert.deepEqual(lim('3 ребёнка'), [10000000]);
+  D.programs.filter(p => p.type === BASE).forEach(p => assert.equal(p.limit, Infinity));
 });
 
-test('аннуитет совпадает с таблицей: 4 218 000 под 12,9% на 30 лет = 46 330,04', () => {
-  near(C.pmt(0.129 / 12, 360, 4218000), 46330.04, 0.01);
-  near(C.pmt(0.195 / 12, 360, 4218000), 68750.03, 0.01);
-});
-
-// Таблица: прайс 6 218 000, со скидкой 5 410 000, Сбер 12,9% / комиссия 14,5%.
-// В равновесии «ПВ клиента» = «Необходимое ПВ»: ПВ = 0,201·(s·B + D) / (1 + 0,201·s) — та же формула, что в боте.
-test('субсидированная программа: ПВ, субсидия и цена — как в «Калькуляторе ЧПВ»', () => {
-  const B = 6218000, Dp = 5410000, s = 0.145, m = 0.201;
-  const pv = m * (s * B + Dp) / (1 + m * s), subsidy = (B - pv) * s, ddu = Dp + subsidy;
-  const r = sber129(C.mortgage(D, { project: DA1, type: 'Стандартная ипотека', base: B, disc: 1 - Dp / B }).rows);
-  assert.ok(r.ok);
-  near(r.pv, pv, 1);
-  near(r.subsidy, subsidy, 1);
-  near(r.price, ddu, 1);
-  near(r.minPvRub, r.price * m, 1);
-  assert.equal(r.loan, r.price - r.pv);
-  assert.ok(r.surplus > 0);
-});
-
-test('ПВ клиента 2 000 000 — цифры ячеек таблицы: субсидия 611 610, цена 6 021 610, профицит 196 390', () => {
-  const inp = { project: DA1, type: 'Стандартная ипотека', base: 6218000, disc: 1 - 5410000 / 6218000, pv: 2000000 };
-  const r = sber129(C.mortgage(D, inp).rows);
-  near(r.subsidy, 611610, 0.5);
-  near(r.price, 6021610, 0.5);
-  near(r.surplus, 196390, 0.5);
-  assert.equal(r.pv, 2000000);
-  // с настройкой loanFromBase платёж — как в таблице (кредит = прайс − ПВ)
-  near(sber129(C.mortgage(D, inp, { loanFromBase: true }).rows).pay1, 46330.04, 0.01);
-});
-
-test('без субсидии цена = прайс минус скидка, ПВ 20,1%', () => {
-  const res = C.mortgage(D, { project: DA2, type: 'Стандартная ипотека', base: 10000000, disc: 0.13 });
-  const r = res.rows.find(x => x.name === 'Рыночная ставка, без субсидии');
-  assert.equal(r.price, 8700000);
-  assert.equal(r.pv, 1748700);
-  assert.equal(r.loan, 6951300);
-  near(r.pay1, C.pmt(0.195 / 12, 360, 6951300), 0.01);
-});
-
-test('лимит кредита: семейная — не больше 6 млн, взнос растёт; IT — не больше 9 млн', () => {
-  const fam = C.mortgage(D, { project: DA1, type: 'Семейная ипотека', base: 10000000, disc: 0.13 });
-  assert.equal(fam.rows.length, 2);
-  fam.rows.forEach(r => {
-    assert.ok(r.ok);
-    assert.equal(r.loan, 6000000);
-    assert.ok(r.pvShare > 0.201);
-    assert.match(r.note, /не больше 6\s000\s000/);
-    near(r.pay1, C.pmt(0.035 / 12, 360, 6000000), 0.01);
+test('базовая ипотека: комиссия, цена и профит — как в «Калькуляторе субсидирования»', () => {
+  const rows = C.mortgage(D, { ...SHEET, type: BASE }).rows;
+  assert.equal(rows.length, 7);
+  // [программа, срок, комиссия банку, цена реализации, профит]
+  [
+    ['ДОМ.РФ, стандартная ставка', 30, 0, 12515000, 1870057],
+    ['ДОМ.РФ, субсидированная ставка', 30, 1752783, 14267783, 117274],
+    ['Альфа-Банк, субсидированная ставка', 10, 1066612, 13581612, 803446],
+    ['Альфа-Банк, субсидированная ставка', 15, 1467740, 13982740, 402317],
+    ['Альфа-Банк, субсидированная ставка', 20, 1795310, 14310310, 74748],
+    ['Альфа-Банк, субсидированная ставка', 30, 1753933, 14268933, 116125],
+    ['Сбербанк, субсидированная ставка', 30, 1781517, 14296517, 88540]
+  ].forEach(([name, term, fee, price, profit]) => {
+    const r = find(rows, name, term);
+    assert.ok(r.ok, name);
+    assert.equal(r.pv, 2891397);                 // «ПВ, руб.» при 20,1%
+    near(r.subsidy, fee); near(r.price, price); near(r.surplus, profit);
+    assert.equal(r.loan, r.price - r.pv);        // кредит — от цены в договоре
   });
-  const it = C.mortgage(D, { project: DA1, type: 'IT-ипотека', base: 14000000, disc: 0.13 });
-  it.rows.forEach(r => assert.equal(r.loan, 9000000));
-  const small = C.mortgage(D, { project: DA1, type: 'IT-ипотека', base: 8000000, disc: 0.13 });
-  small.rows.forEach(r => { assert.ok(r.loan < 9000000); near(r.pvShare, 0.201, 1e-6); assert.equal(r.note, ''); });
 });
 
-test('субсидия больше скидки — программа не подходит, подсказана нужная скидка', () => {
-  const inp = { project: DA1, type: 'Стандартная ипотека', base: 10000000, disc: 0.05 };
-  const res = C.mortgage(D, inp);
-  const bad = sber129(res.rows);
-  assert.equal(bad.status, 'Субсидия больше скидки');
-  assert.equal(bad.note, 'Доступна при скидке от 11,6%');
-  assert.ok(sber129(C.mortgage(D, { ...inp, disc: 0.116 }).rows).ok);
-  assert.ok(!sber129(C.mortgage(D, { ...inp, disc: 0.115 }).rows).ok);
-  assert.equal(res.best.name, 'Рыночная ставка, без субсидии');
+test('с настройкой loanFromBase кредит и платёж — как в таблице (от цены по прайсу)', () => {
+  const rows = C.mortgage(D, { ...SHEET, type: BASE }, { loanFromBase: true }).rows;
+  [
+    ['ДОМ.РФ, стандартная ставка', 30, 180738], ['ДОМ.РФ, субсидированная ставка', 30, 128942],
+    ['Альфа-Банк, субсидированная ставка', 10, 168173], ['Альфа-Банк, субсидированная ставка', 15, 141587],
+    ['Альфа-Банк, субсидированная ставка', 20, 130503], ['Альфа-Банк, субсидированная ставка', 30, 122578],
+    ['Сбербанк, субсидированная ставка', 30, 127143]
+  ].forEach(([name, term, pay]) => {
+    const r = find(rows, name, term);
+    near(r.loan, 11493661);
+    near(r.pay1, pay);
+  });
+});
+
+test('лимит кредита: ВТБ, 3 ребёнка — «нужен ПВ от 30,5%», как в вердикте таблицы', () => {
+  const rows = C.mortgage(D, { ...SHEET, type: FAMILY, kids: '3 ребёнка' }).rows;
+  assert.deepEqual(rows.map(r => r.name).sort(), ['ВТБ', 'ВТБ', 'ДОМ.РФ', 'Сбербанк']);
+  const r = find(rows, 'ВТБ', 15);
+  assert.equal(r.pv, 14385057 - 10000000);
+  assert.equal(C.fmt.pct1(r.pvShare), '30,5%');
+  near(r.subsidy, 10000000 * 0.1088);
+  assert.equal(r.price, 12515000 + 1088000);
+  assert.match(r.note, /не больше 10\s000\s000/);
+});
+
+test('семейная без упора в лимит: взнос 20,1% от прайса, платёж на срок программы', () => {
+  const res = C.mortgage(D, { project: DA1, type: FAMILY, kids: '1 ребёнок', base: 7000000, disc: 0.13 });
+  assert.equal(res.rows.length, 8);
+  const r = find(res.rows, 'ДОМ.РФ', 15);
+  assert.equal(r.pv, 1407000);
+  near(r.subsidy, 5593000 * 0.1176);
+  assert.equal(r.price, 6090000 + 657737);
+  assert.equal(r.note, '');
+  near(r.pay1, C.pmt(0.071 / 12, 180, r.price - r.pv), 0.01);
+  // комиссия 17–21% при скидке 13% не проходит: подсказана нужная скидка
+  const vtb = find(res.rows, 'ВТБ', 30, 0.06);
+  assert.equal(vtb.status, 'Субсидия больше скидки');
+  assert.equal(vtb.note, 'Доступна при скидке от 16,9%');
+  assert.ok(find(C.mortgage(D, { project: DA1, type: FAMILY, kids: '1 ребёнок', base: 7000000, disc: 0.169 }).rows, 'ВТБ', 30, 0.06).ok);
   assert.ok(res.rows.at(-1).ok === false, 'неподходящие — в конце списка');
 });
 
-test('автоподбор: наименьший платёж среди программ с наименьшим взносом; ручной выбор сохраняется', () => {
-  const inp = { project: DA1, type: 'Стандартная ипотека', base: 10000000, disc: 0.13 };
+test('число детей отбирает программы: для пятерых — только Сбербанк', () => {
+  const rows = C.mortgage(D, { project: DA1, type: FAMILY, kids: '5 и более детей', base: 9000000, disc: 0.13 }).rows;
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].name, 'Сбербанк');
+  assert.equal(rows[0].r1, 0.006);
+});
+
+test('автоподбор: наименьший платёж среди подходящих; ручной выбор сохраняется', () => {
+  const inp = { project: DA1, type: BASE, base: 10000000, disc: 0.13 };
   const res = C.mortgage(D, inp);
-  assert.equal(res.best.r1, 0.129, 'Совкомбанк на 15 лет платит больше в месяц, хоть ставка и ниже');
-  const pick = res.rows.find(x => x.r1 === 0.139).id;
+  const ok = res.rows.filter(r => r.ok);
+  assert.equal(res.best.pay1, Math.min(...ok.map(r => r.pay1)));
+  const pick = ok.at(-1).id;
   const res2 = C.mortgage(D, { ...inp, pick });
   assert.equal(res2.best.id, pick);
   assert.ok(res2.picked);
 });
 
-test('срок: Совкомбанк на 15 лет не считается на 30; введённый срок 10 лет применяется ко всем', () => {
-  const inp = { project: DA1, type: 'Стандартная ипотека', base: 10000000, disc: 0.13 };
-  const r = C.mortgage(D, { ...inp, term: 30 }).rows.find(x => x.r1 === 0.1249);
-  assert.equal(r.term, 15);
-  near(r.pay1, C.pmt(0.1249 / 12, 180, r.loan), 0.01);
+test('срок: программа на 10 лет не считается на 30; введённый срок короче — применяется', () => {
+  const inp = { project: DA1, type: BASE, base: 10000000, disc: 0.13 };
+  const r = find(C.mortgage(D, { ...inp, term: 30 }).rows, 'Альфа-Банк, субсидированная ставка', 10);
+  near(r.pay1, C.pmt(0.1249 / 12, 120, r.loan), 0.01);
   assert.equal(r.note, 'Срок уменьшен до максимального по программе');
-  C.mortgage(D, { ...inp, term: 10 }).rows.forEach(x => assert.equal(x.term, 10));
+  C.mortgage(D, { ...inp, term: 7 }).rows.forEach(x => assert.equal(x.term, 7));
+});
+
+test('свой взнос больше минимального: комиссия считается от меньшего кредита', () => {
+  const r = find(C.mortgage(D, { ...SHEET, type: BASE, pv: 5000000 }).rows, 'Сбербанк, субсидированная ставка', 30);
+  assert.equal(r.pv, 5000000);
+  near(r.subsidy, (14385057 - 5000000) * 0.155);
+  assert.equal(r.loan, r.price - 5000000);
 });
 
 test('льготный период: платёж пересчитывается на остаток по основной ставке', () => {
