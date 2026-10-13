@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ипотечный калькулятор — Свобода мысли</title>
+<link rel="icon" type="image/svg+xml" href="assets/mark-da.svg">
+<meta name="theme-color" content="#355DB3">
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;700&family=Unbounded:wght@500;600&display=swap">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+<main class="sm" id="sm-ipoteka">
+  <header class="sm-head">
+    <h1>Ипотечный калькулятор</h1>
+    <div class="sm-head-r">
+      <a class="sm-nav" href="rassrochka.html">Калькулятор рассрочки</a>
+      <a class="sm-logo" href="https://da-dom.life/" target="_blank" rel="noopener"><img src="assets/logo-svoboda-dark.svg" width="106" height="56" alt="Свобода мысли"></a>
+    </div>
+  </header>
+  <p class="sm-lede">Выберите очередь и условия покупки. Калькулятор посчитает платёж по каждой программе и покажет ту, где он наименьший.</p>
+
+  <div class="sm-grid">
+    <section class="sm-card">
+      <h2>Условия</h2>
+      <div class="sm-field">
+        <span class="sm-label" id="sm-project-l">Проект</span>
+        <div class="sm-pills" id="sm-project" role="group" aria-labelledby="sm-project-l"></div>
+      </div>
+      <div class="sm-row2">
+        <div class="sm-field">
+          <label for="sm-price">Стоимость квартиры, ₽</label>
+          <input id="sm-price" type="text" inputmode="numeric" autocomplete="off">
+          <span class="sm-hint">Цена по прайсу, без скидки</span>
+        </div>
+        <div class="sm-field">
+          <label for="sm-flat">Номер квартиры</label>
+          <input id="sm-flat" type="text" autocomplete="off" placeholder="необязательно">
+        </div>
+      </div>
+      <div class="sm-field">
+        <label for="sm-disc">Скидка</label>
+        <div class="sm-suffix"><input id="sm-disc" type="text" inputmode="decimal" autocomplete="off" placeholder="0"><span aria-hidden="true">%</span></div>
+        <span class="sm-hint">Скидка при полной оплате. В программах со сниженной ставкой часть скидки уходит на снижение ставки, поэтому цена в договоре выше</span>
+      </div>
+      <div class="sm-field">
+        <span class="sm-label" id="sm-type-l">Тип ипотеки</span>
+        <div class="sm-pills" id="sm-type" role="group" aria-labelledby="sm-type-l"></div>
+      </div>
+      <div class="sm-field" id="sm-kids-field" hidden>
+        <label for="sm-kids">Количество детей</label>
+        <select id="sm-kids"></select>
+      </div>
+      <div class="sm-row2">
+        <div class="sm-field">
+          <label for="sm-pv">Первоначальный взнос, ₽</label>
+          <input id="sm-pv" type="text" inputmode="numeric" autocomplete="off" placeholder="минимальный">
+          <span class="sm-hint">Меньше минимального по программе — посчитаем с минимальным</span>
+        </div>
+        <div class="sm-field">
+          <label for="sm-term">Срок, лет</label>
+          <input id="sm-term" type="number" inputmode="decimal" min="1" max="30" step="1" placeholder="максимальный">
+          <span class="sm-hint">В пределах срока программы</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="sm-card" aria-live="polite">
+      <h2>Расчёт по программе</h2>
+      <div id="sm-detail"></div>
+    </section>
+  </div>
+
+  <section class="sm-card sm-tablecard">
+    <div class="sm-tablehead">
+      <h2 id="sm-table-title">Все программы</h2>
+      <span class="sm-tip" id="sm-tip"></span>
+    </div>
+    <div class="sm-scroll">
+      <table>
+        <thead id="sm-thead"></thead>
+        <tbody id="sm-tbody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer class="sm-foot">
+    <p class="sm-legal"><span id="sm-legal">Расчёт предварительный и не является офертой. Окончательные условия, страхование и комиссии определяет банк.</span> Условия программ — на <span id="sm-updated"></span>.</p>
+    <div class="sm-actions">
+      <span class="sm-msg" id="sm-msg" role="status"></span>
+      <button type="button" class="sm-btn sm-btn2" id="sm-print">Распечатать</button>
+      <button type="button" class="sm-btn" id="sm-save">Сохранить PDF</button>
+    </div>
+  </footer>
+</main>
+
+<script src="assets/data.js"></script>
+<script src="assets/engine.js"></script>
+<script src="assets/common.js"></script>
+<script src="assets/ipoteka.js"></script>
+</body>
+</html>

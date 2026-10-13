@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Калькулятор рассрочки — Свобода мысли</title>
+<link rel="icon" type="image/svg+xml" href="assets/mark-da.svg">
+<meta name="theme-color" content="#355DB3">
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;700&family=Unbounded:wght@500;600&display=swap">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+<main class="sm" id="sm-rassrochka">
+  <header class="sm-head">
+    <h1>Калькулятор рассрочки</h1>
+    <div class="sm-head-r">
+      <a class="sm-nav" href="./">Ипотечный калькулятор</a>
+      <a class="sm-logo" href="https://da-dom.life/" target="_blank" rel="noopener"><img src="assets/logo-svoboda-dark.svg" width="106" height="56" alt="Свобода мысли"></a>
+    </div>
+  </header>
+  <p class="sm-lede">Выберите очередь и укажите стоимость квартиры. Калькулятор покажет график платежей по каждой рассрочке.</p>
+
+  <section class="sm-card">
+    <div class="sm-inputs">
+      <div class="sm-field">
+        <span class="sm-label" id="sm-project-l">Проект</span>
+        <div class="sm-pills" id="sm-project" role="group" aria-labelledby="sm-project-l"></div>
+      </div>
+      <div class="sm-field">
+        <label for="sm-flat">Номер квартиры</label>
+        <input id="sm-flat" type="text" autocomplete="off" placeholder="необязательно">
+      </div>
+      <div class="sm-field">
+        <label for="sm-price">Стоимость квартиры, ₽</label>
+        <input id="sm-price" type="text" inputmode="numeric" autocomplete="off">
+      </div>
+      <div class="sm-field">
+        <label for="sm-rooms">Квартира</label>
+        <select id="sm-rooms">
+          <option value="1">Студия или 1-комнатная</option>
+          <option value="2">2-комнатная</option>
+          <option value="3">3-комнатная и больше</option>
+        </select>
+      </div>
+      <div class="sm-field">
+        <label for="sm-extra">Доп. скидка</label>
+        <div class="sm-suffix"><input id="sm-extra" type="text" inputmode="decimal" autocomplete="off" placeholder="0"><span aria-hidden="true">%</span></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="sm-cards" id="sm-cards" aria-live="polite"></div>
+
+  <footer class="sm-foot">
+    <p class="sm-legal"><span id="sm-legal">Расчёт предварительный и не является офертой. График и сумму платежей фиксирует договор.</span> Условия программ — на <span id="sm-updated"></span>.</p>
+    <div class="sm-actions">
+      <span class="sm-msg" id="sm-msg" role="status"></span>
+      <button type="button" class="sm-btn sm-btn2" id="sm-print">Распечатать</button>
+      <button type="button" class="sm-btn" id="sm-save">Сохранить PDF</button>
+    </div>
+  </footer>
+</main>
+
+<script src="assets/data.js"></script>
+<script src="assets/engine.js"></script>
+<script src="assets/common.js"></script>
+<script src="assets/rassrochka.js"></script>
+</body>
+</html>
