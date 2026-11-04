@@ -13,7 +13,7 @@
           ' · этаж ' + (row.floor || '—') + ' · ' + Number(row.area).toLocaleString('ru-RU') + ' м²';
         select.add(new Option(title, String(i + 1)));
       });
-      info.textContent = loaded ? 'Снимок Macro на ' + updated + '; автоматически не обновляется. Наличие и цену уточняйте в Macro.' : 'Список квартир недоступен. Можно ввести цену вручную.';
+      info.textContent = loaded ? 'Обновление Macro: ' + updated + ' (время сервера). Данные обновляются автоматически; наличие и цену уточняйте в Macro.' : 'Список квартир недоступен. Можно ввести цену вручную.';
     }
     function current() { var i = Number(select.value); return i > 0 ? list[i - 1] : null; }
     select.addEventListener('change', function () {
