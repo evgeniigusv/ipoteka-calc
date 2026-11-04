@@ -51,15 +51,16 @@
 
   function render() {
     var inp = readInputs();
+    if (flats.isPif()) { el.cards.innerHTML = '<section class="sm-card"><p class="sm-empty">Для квартиры ПИФ условия рассрочки нужно уточнить. Расчёт отключён.</p></section>'; return; }
     if (!inp.base) { el.cards.innerHTML = '<section class="sm-card"><p class="sm-empty">Укажите стоимость квартиры.</p></section>'; return; }
     var cards = C.installments(D, inp);
     el.cards.innerHTML = cards.length ? cards.map(function (c) { return cardHtml(c); }).join('')
-      : '<section class="sm-card"><p class="sm-empty">Для этой очереди рассрочек нет.</p></section>';
+      : '<section class="sm-card"><p class="sm-empty">Условия рассрочки для этого проекта готовятся.</p></section>';
   }
 
   /* ---------- PDF: один лист A4 ---------- */
   function buildReport(png) {
-    var inp = readInputs(), flat = el.flat.value.trim(), cards = C.installments(D, inp);
+    var inp = readInputs(), flat = flats.selectedNumber(), cards = C.installments(D, inp);
     var fact = function (k, v) { return '<div>' + k + '<b>' + v + '</b></div>'; };
     var page = U.page(U.reportHead('Расчёт рассрочки', inp.project + (flat ? ' · кв. ' + flat : '') + ' · ' + U.stamp(), png) +
       '<section class="sm-card"><div class="sm-facts">' + fact('Проект', esc(inp.project)) + (flat ? fact('Номер квартиры', esc(flat)) : '') +
@@ -70,7 +71,10 @@
       '<p class="sm-legal">' + esc($('sm-legal').textContent) + '</p>', 'portrait');
     return { pages: [page], file: 'Расчёт рассрочки ' + inp.project + (flat ? ' кв ' + flat : '') + ' ' + new Date().toLocaleDateString('ru-RU') };
   }
-  function createPdf() { return readInputs().base ? U.makePdf(buildReport, 'portrait') : Promise.resolve(null); }
+  function createPdf() { return !flats.isPif() && readInputs().base && C.installments(D, readInputs()).length ? U.makePdf(buildReport, 'portrait') : Promise.resolve(null); }
+
+  var flats = window.SMFlats.setup({ select: el.flat, info: $('sm-flat-info'), price: el.price, rooms: el.rooms,
+    discount: null, project: state.project, onChange: function () { render(); } });
 
   /* ---------- Запуск ---------- */
   U.pills(el.project, D.projects.map(function (p) { return { value: p, label: p }; }), state.project, 'v');
@@ -79,6 +83,7 @@
 
   U.onPill(el.project, 'v', function (v, btn) {
     state.project = v;
+    flats.setProject(v);
     Array.prototype.forEach.call(el.project.children, function (b) { b.setAttribute('aria-pressed', String(b === btn)); });
     render();
   });

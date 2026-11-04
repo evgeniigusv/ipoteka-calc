@@ -21,7 +21,9 @@ const SHEET = { project: DA1, base: 14385057, disc: 1 - 12515000 / 14385057 };
 const find = (rows, name, term, rate) => rows.find(r => r.name === name && r.term === term && (rate == null || r.r1 === rate));
 
 test('данные читаются: 2 очереди, 2 типа ипотеки, 29 программ, скидка 13%', () => {
-  assert.deepEqual(D.projects, [DA1, DA2]);
+  assert.deepEqual(D.projects, [DA1, DA2, 'ДНК — 2 очередь']);
+  assert.equal(C.mortgage(D, {project: 'ДНК — 2 очередь', type: BASE, base: 10000000, disc: 0.13}).rows.length, 0);
+  assert.equal(C.installments(D, {project: 'ДНК — 2 очередь', base: 10000000, rooms: 1, extra: 0, pv: {}, step: {}}).length, 0);
   assert.deepEqual(D.types, [FAMILY, BASE]);
   assert.equal(D.defaultDiscount, 0.13);
   assert.equal(D.programs.length, 29);

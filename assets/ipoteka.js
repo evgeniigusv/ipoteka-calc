@@ -60,7 +60,7 @@
       add('Комиссия банку', F.rub(r.subsidy) + dim(F.pct(r.sub) + ' кредита'), 'sm-int');
       add('Профит', F.rub(r.surplus), 'sm-int');
     }
-    var flat = el.flat.value.trim();
+    var flat = flats.selectedNumber();
     return '<div class="sm-hero">' +
         '<div class="sm-hero-name">' + esc(inp.type + ', ' + r.name) + '</div>' +
         '<div class="sm-hero-flat">' + esc(inp.project) + (hasKids() ? ' · ' + esc(inp.kids) : '') + (flat ? ' · кв. ' + esc(flat) : '') + '</div>' +
@@ -96,6 +96,7 @@
 
   function render() {
     var inp = readInputs();
+    if (flats.isPif()) { el.detail.innerHTML = '<p class="sm-empty">Для квартиры ПИФ условия покупки нужно уточнить. Расчёт отключён.</p>'; el.thead.innerHTML = el.tbody.innerHTML = el.tip.innerHTML = ''; last = null; return; }
     el.title.textContent = inp.type + (hasKids() ? ', ' + inp.kids : '') + ': все программы';
     if (!inp.base) {
       el.detail.innerHTML = '<p class="sm-empty">Укажите стоимость квартиры.</p>';
@@ -107,7 +108,7 @@
     if (state.pick != null && !res.picked) state.pick = null; // выбранная вручную перестала подходить — снова автоподбор
     last = { inp: inp, res: res };
     el.detail.innerHTML = res.best ? detailHtml(inp, res.best)
-      : '<p class="sm-empty">' + (res.rows.length ? 'При таких условиях ни одна программа не подходит. Измените скидку, взнос или тип ипотеки.' : 'Для этой очереди программ нет.') + '</p>';
+      : '<p class="sm-empty">' + (res.rows.length ? 'При таких условиях ни одна программа не подходит. Измените скидку, взнос или тип ипотеки.' : 'Условия ипотеки для этого проекта готовятся.') + '</p>';
     el.thead.innerHTML = res.rows.length ? headHtml() : '';
     el.tbody.innerHTML = res.rows.map(function (r) { return rowHtml(r, res.best && res.best.id); }).join('');
     el.tip.innerHTML = !res.best ? ''
@@ -117,7 +118,7 @@
 
   /* ---------- PDF: лист 1 — условия и расчёт, дальше — таблица программ по 12 строк ---------- */
   function buildReport(png) {
-    var inp = last.inp, res = last.res, flat = el.flat.value.trim(), facts = [];
+    var inp = last.inp, res = last.res, flat = flats.selectedNumber(), facts = [];
     var add = function (k, v, strong) {
       var c = strong ? ' class="sm-strong"' : '';
       facts.push('<dt' + c + '>' + k + '</dt><dd' + c + '>' + v + '</dd>');
@@ -148,6 +149,9 @@
   }
   function createPdf() { return last && last.res.best ? U.makePdf(buildReport, 'landscape') : Promise.resolve(null); }
 
+  var flats = window.SMFlats.setup({ select: el.flat, info: $('sm-flat-info'), price: el.price, rooms: el.rooms,
+    discount: el.disc, project: state.project, onChange: function () { render(); } });
+
   /* ---------- Запуск ---------- */
   var asItems = function (list) { return list.map(function (x) { return { value: x, label: x }; }); };
   U.pills(el.project, asItems(D.projects), state.project, 'v');
@@ -161,6 +165,7 @@
   var pickPill = function (box, key) {
     U.onPill(box, 'v', function (v, btn) {
       state[key] = v; state.pick = null;
+      if (key === 'project') flats.setProject(v);
       Array.prototype.forEach.call(box.children, function (b) { b.setAttribute('aria-pressed', String(b === btn)); });
       setupKids();
       render();
@@ -171,7 +176,7 @@
   U.moneyInput(el.price, render);
   U.moneyInput(el.pv, render);
   U.pctInput(el.disc, render);
-  [el.term, el.flat].forEach(function (i) { i.addEventListener('input', render); });
+  el.term.addEventListener('input', render);
   el.kids.addEventListener('change', render);
 
   var pick = function (e) {

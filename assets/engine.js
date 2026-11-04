@@ -52,7 +52,7 @@
       // Лимит кредита — из строки, а для семейной ипотеки — по числу детей
       var limit = or(p.limit, p.kids && raw.limitsByKids ? or(raw.limitsByKids[p.kids], Infinity) : Infinity);
       return {
-        id: i + 1, projects: p.projects || [], type: p.type,
+        id: i + 1, projects: p.projects || raw.mortgageProjects || [], type: p.type,
         name: p.name || p.bank + (p.variant ? ', ' + p.variant : ''),
         r1: p.rate, r2: or(p.rateAfter, p.rate), grace: p.graceYears || 0,
         minTerm: p.minTerm || 1, maxTerm: p.term || 30,
