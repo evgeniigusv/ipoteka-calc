@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Калькулятор ЧПВ — Свобода мысли</title>
+<link rel="icon" type="image/svg+xml" href="assets/mark-da.svg">
+<meta name="theme-color" content="#355DB3">
+<meta name="robots" content="noindex, nofollow">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;700&family=Unbounded:wght@500;600&display=swap">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<main class="sm" id="sm-chpv">
+  <header class="sm-head">
+    <h1>Калькулятор ЧПВ</h1>
+    <div class="sm-head-r">
+      <a class="sm-nav" href="./">Ипотека</a>
+      <a class="sm-nav" href="rassrochka.html">Рассрочка</a>
+      <a class="sm-logo" href="https://da-dom.life/" target="_blank" rel="noopener"><img src="assets/logo-svoboda-dark.svg" width="106" height="56" alt="Свобода мысли"></a>
+    </div>
+  </header>
+  <p class="sm-lede">Расчёт финансирования первоначального взноса по методике рабочего калькулятора. Ставки справочные; итоговые условия подтверждает ипотечный брокер.</p>
+  <div class="sm-grid">
+    <section class="sm-card">
+      <h2>Условия</h2>
+      <div class="sm-field"><span class="sm-label" id="sm-project-l">Проект</span><div class="sm-pills" id="sm-project" role="group" aria-labelledby="sm-project-l"></div></div>
+      <div class="sm-field">
+        <label for="sm-flat-search">Номер квартиры</label><input id="sm-flat-search" type="text" autocomplete="off" placeholder="Введите номер квартиры">
+        <label class="sm-flat-list-label" for="sm-flat">Или выберите из списка</label><select id="sm-flat"><option value="">Выбрать из списка</option></select>
+        <span id="sm-flat-info" class="sm-hint">Загрузка квартир из Macro…</span>
+      </div>
+      <div class="sm-row2">
+        <div class="sm-field"><label for="sm-price">Цена по прайсу, ₽</label><input id="sm-price" type="text" inputmode="numeric"></div>
+        <div class="sm-field"><label for="sm-cash">Цена за наличные, ₽</label><input id="sm-cash" type="text" inputmode="numeric"><span class="sm-hint">Цена при 100% оплате</span></div>
+      </div>
+      <div class="sm-field"><label for="sm-program">Программа ипотеки</label><select id="sm-program"></select><span class="sm-hint">Ставки и лимиты — справочные, из рабочего калькулятора</span></div>
+      <div class="sm-row2">
+        <div class="sm-field"><label for="sm-client">Средства клиента, ₽</label><input id="sm-client" type="text" inputmode="numeric" value="200 000"></div>
+        <div class="sm-field"><label for="sm-ddu">Цена ДДУ, ₽</label><input id="sm-ddu" type="text" inputmode="numeric" placeholder="укажите"><span class="sm-hint">Подберите цену или укажите вручную</span></div>
+      </div>
+      <button type="button" class="sm-btn sm-btn2" id="sm-suggest">Подобрать цену ДДУ</button>
+    </section>
+    <section class="sm-card" aria-live="polite"><h2>Расчёт ЧПВ</h2><div id="sm-result"></div></section>
+  </div>
+  <footer class="sm-foot"><p class="sm-legal">Предварительный внутренний расчёт. Проверьте цену, наличие и условия с ипотечным брокером.</p><div class="sm-actions"><button type="button" class="sm-btn sm-btn2" id="sm-print">Распечатать</button></div></footer>
+</main>
+<script src="assets/data.js"></script><script src="assets/engine.js"></script><script src="assets/common.js"></script><script src="assets/flats.js"></script><script src="assets/chpv-engine.js"></script><script src="assets/chpv.js"></script>
+</body>
+</html>

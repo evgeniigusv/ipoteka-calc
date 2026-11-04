@@ -15,12 +15,12 @@ from dotenv import dotenv_values
 
 REPO = 'evgeniigusv/ipoteka-calc'
 FILE = 'assets/macro-flats.json'
-HOUSES = (6736582, 6871059, 10899161, 11013930)
+HOUSES = (6736582, 6871059, 11013930)
 SQL = '''SELECT house_id, geo_flatnum AS num, estate_floor AS floor,
  estate_rooms AS rooms, estate_studia AS studio, estate_area AS area,
  estate_price AS price, estate_price_action AS action
  FROM estate_sells WHERE estate_sell_category='flat' AND estate_sell_status=20
- AND estate_price>0 AND house_id IN (%s,%s,%s,%s)
+ AND estate_price>0 AND house_id IN (%s,%s,%s)
  ORDER BY house_id, estate_floor, geo_flatnum, estate_sell_id'''
 
 

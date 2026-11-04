@@ -1,7 +1,7 @@
 /* Выбор квартиры из отдельной выгрузки Macro. Без подключения к Macro из браузера. */
 (function (root) {
   'use strict';
-  var houses = { 'ДА — 1 очередь': [6736582, 10899161], 'ДА — 2 очередь': [6871059], 'ДНК — 2 очередь': [11013930] };
+  var houses = { 'ДА — 1 очередь': [6736582], 'ДА — 2 очередь': [6871059], 'ДНК — 2 очередь': [11013930] };
   function setup(options) {
     var list = [], project = options.project, updated = '', loaded = false, failed = false;
     var select = options.select, search = document.getElementById('sm-flat-search'), info = options.info;
@@ -37,6 +37,7 @@
       if (row) {
         options.price.value = Number(row.price).toLocaleString('ru-RU');
         if (options.rooms) options.rooms.value = String(row.studio || Number(row.rooms) <= 1 ? 1 : Math.min(3, Number(row.rooms)));
+        if (options.onSelect) options.onSelect(row);
         if (options.discount) {
           var price = Number(row.price), action = Number(row.action);
           options.discount.value = action > 0 && action < price ? ((price - action) / price * 100).toFixed(2).replace('.', ',') : '0';
@@ -45,6 +46,7 @@
     }
     search.addEventListener('input', function () {
       options.price.value = '';
+      if (options.onClear) options.onClear();
       if (options.discount) options.discount.value = '';
       var exact = refresh();
       if (loaded && normalize(search.value) && exact.length === 1) {
@@ -56,7 +58,7 @@
     select.addEventListener('change', function () {
       var row = current();
       if (row) { search.value = String(row.num); apply(row); }
-      else { options.price.value = ''; if (options.discount) options.discount.value = ''; }
+      else { options.price.value = ''; if (options.onClear) options.onClear(); if (options.discount) options.discount.value = ''; }
       options.onChange();
     });
     fetch('assets/macro-flats.json', { cache: 'no-store' }).then(function (r) {
