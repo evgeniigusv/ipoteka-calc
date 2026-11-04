@@ -304,3 +304,5 @@ html, body { margin: 0; padding: 0; background: var(--bg); }
   .sm tbody tr { break-inside: avoid; }
   .sm-cards { gap: 10px; margin-top: 10px; }
 }
+
+.sm .sm-flat-list-label { margin-top: 10px; }

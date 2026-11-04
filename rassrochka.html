@@ -31,8 +31,10 @@
         <div class="sm-pills" id="sm-project" role="group" aria-labelledby="sm-project-l"></div>
       </div>
       <div class="sm-field">
-        <label for="sm-flat">Квартира</label>
-          <select id="sm-flat"><option value="">Ввести цену вручную</option></select>
+        <label for="sm-flat-search">Номер квартиры</label>
+          <input id="sm-flat-search" type="text" inputmode="text" autocomplete="off" placeholder="Введите номер квартиры">
+          <label class="sm-flat-list-label" for="sm-flat">Или выберите из списка</label>
+          <select id="sm-flat"><option value="">Выбрать из списка</option></select>
           <span id="sm-flat-info" class="sm-hint">Загрузка квартир из Macro…</span>
       </div>
       <div class="sm-field">
