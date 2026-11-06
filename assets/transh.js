@@ -32,7 +32,7 @@
     $('sm-da-tranches').hidden=dnk; $('sm-dnk-tranches').hidden=!dnk; $('sm-dnk-stage-hint').hidden=!dnk; $('sm-third-date').hidden=!dnk;
     el.discount.value='';setProgramDiscount();el.pv.value=dnk?'20':'20,1';
     if(dnk)updateProgramInfo();else el.info.textContent='Для «ДА»: первый транш 100 000 ₽, второй — весь остаток кредита. В инструментах указан ориентир платежа 1 500 ₽; банк и ставку уточните. Строка действовала до 30.10.2026.';
-    el.dateHint.textContent=dnk?'По инструментам — май 2029 года. Точный день не указан; можно уточнить и ввести его.':'';
+    el.dateHint.textContent=dnk?'В инструментах указан май 2029 года, но ввод дома — IV квартал 2029. Уточните дату у банка.':'';
     $('sm-date2-hint').textContent=dnk?'Через год после сделки; дату можно изменить.':('В источнике ориентир — до '+(project===projects[0]?'20.03.2027':'20.09.2028')+'. Уточните дату выдачи в банке.');
     render();
   }
@@ -47,7 +47,7 @@
     r.stages.forEach(function(s,i){var end=i<r.stages.length-1?' — до '+stageDate(r.stages[i+1].date):' и далее';
       html+='<div class="sm-stage"><div class="sm-stage-heading"><strong>'+(i===r.stages.length-1?(r.stages.length===2?'2-й (остаток)':'Последний'):(i+1)+'-й')+' транш</strong><span class="sm-stage-date">с '+stageDate(s.date)+end+'</span></div><div class="sm-stage-metrics"><div><span>Сумма транша</span><b>'+F.rub(s.amount)+'</b></div><div><span>Всего выдано</span><b>'+F.rub(s.issued)+'</b></div><div><span>Платёж в месяц</span><b class="sm-stage-payment">'+F.rub(s.payment)+'</b></div></div></div>';});
     html+='<div class="sm-note">Оценка: аннуитет считается от суммы выданных траншей на исходный срок '+F.years(x.years)+'. Уменьшение долга между траншами, неполные месяцы и изменение срока не учитываются. Точный график предоставит банк.</div>';
-    if(x.date3Approx)html+='<div class="sm-note">По инструментам последний транш — в мае 2029 года. Точный день необходимо уточнить у банка.</div>';
+    if(x.date3Approx)html+='<div class="sm-note">В инструментах последний транш указан на май 2029 года, а ввод дома — на IV квартал 2029 года. Дату транша необходимо уточнить у банка.</div>';
     if(selected&&selected.id==='sber1')html+='<div class="sm-note">Первый транш — не менее 100 000 ₽. Последний транш рассчитан как остаток кредита.</div>';
     if(project==='ДНК — 2 очередь' && x.date3.slice(0,7)!=='2029-05')html+='<div class="sm-note">В документе для ДНК-2 последний транш указан на май 2029 года. Проверьте выбранную дату с банком.</div>';
     return html;
