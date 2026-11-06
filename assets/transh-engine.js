@@ -2,6 +2,17 @@
 (function(root){
   'use strict';
   function validDate(s){if(!/^\d{4}-\d{2}-\d{2}$/.test(s||''))return false;var d=new Date(s+'T00:00:00');return Number.isFinite(d.getTime())&&d.getFullYear()===Number(s.slice(0,4))&&d.getMonth()+1===Number(s.slice(5,7))&&d.getDate()===Number(s.slice(8,10));}
+  // Только расчётный ориентир, не банковская ставка. Исходная модель ДА: 100 тыс., 1500/мес., 30 лет.
+  function rateFromPayment(principal,payment,years){
+    if(!(Number.isFinite(principal)&&principal>0&&Number.isFinite(payment)&&payment>0&&Number.isInteger(years)&&years>=1&&years<=30))throw new Error('Некорректный ориентир платежа.');
+    var n=years*12;
+    if(payment<principal/n)throw new Error('Платёж не покрывает кредит даже без процентов.');
+    if(payment===principal/n)return 0;
+    var low=0,high=1;
+    if(payment>root.SMCalc.pmt(high/12,n,principal))throw new Error('Ориентир превышает допустимую ставку.');
+    for(var i=0;i<70;i++){var mid=(low+high)/2;if(root.SMCalc.pmt(mid/12,n,principal)>payment)high=mid;else low=mid;}
+    return (low+high)/2;
+  }
   function calculate(x){
     if (!(Number.isFinite(x.price) && x.price > 0) || !(Number.isFinite(x.rate) && x.rate > 0 && x.rate <= 1) || !(Number.isInteger(x.years) && x.years >= 1 && x.years <= 30)) throw new Error('Укажите стоимость, ставку и срок от 1 до 30 лет.');
     if (!(x.down >= 0.20 && x.down < 1)) throw new Error('Первоначальный взнос должен быть от 20% и меньше 100%.');
@@ -20,5 +31,5 @@
     stages.forEach(function(s){s.payment=root.SMCalc.pmt(rate,n,s.issued);});
     return {price:x.price,down:pv,total:total,stages:stages};
   }
-  root.SMTranshCalc={calculate:calculate};
+  root.SMTranshCalc={calculate:calculate,rateFromPayment:rateFromPayment};
 })(window);

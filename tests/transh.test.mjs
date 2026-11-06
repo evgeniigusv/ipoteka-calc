@@ -25,3 +25,19 @@ assert.ok(Math.abs(da.stages[0].payment-SMCalc.pmt(.192/12,360,100000))<.001);
 assert.throws(()=>SMTranshCalc.calculate({...x,tranches:2,firstRub:8000000,date3:''}),/меньше суммы кредита/);
 assert.throws(()=>SMTranshCalc.calculate({...x,tranches:2,firstRub:100000,date2:'',date3:''}),/дату/);
 console.log('ДА: первый транш 100 тыс., второй — весь остаток, проверены');
+// User-approved preliminary DA scenario: 100,000 RUB issued, ~1,500/month on 30 years.
+const referenceRate=SMTranshCalc.rateFromPayment(100000,1500,30);
+assert.ok(referenceRate>.17 && referenceRate<.19);
+for(const date2 of ['2027-03-20','2028-09-20']){
+  const reference=SMTranshCalc.calculate({...x,rate:referenceRate,down:.201,tranches:2,firstRub:100000,date2,date3:''});
+  assert.ok(Math.abs(reference.stages[0].payment-1500)<1e-8);
+  assert.ok(Math.abs(reference.stages[1].payment-119850)<1e-6);
+  assert.deepEqual(reference.stages.map(s=>s.amount),[100000,7890000]);
+  assert.equal(reference.stages.reduce((sum,s)=>sum+s.amount,0)+reference.down,reference.price);
+}
+const shorter=SMTranshCalc.calculate({...x,rate:referenceRate,years:20,down:.201,tranches:2,firstRub:100000,date2:'2028-09-20',date3:''});
+assert.ok(shorter.stages[0].payment>1500); // Changing term changes payments, not the inferred annual rate.
+assert.ok(Math.abs(shorter.stages[1].payment/shorter.stages[0].payment-79.9)<1e-10);
+assert.throws(()=>SMTranshCalc.rateFromPayment(100000,250,30),/не покрывает/);
+assert.throws(()=>SMTranshCalc.rateFromPayment(Infinity,1500,30),/Некорректный/);
+console.log('Ориентир ДА: 1 500 ₽ → 119 850 ₽ для 10 млн, обе очереди и сокращённый срок — проверены');
