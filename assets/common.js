@@ -41,7 +41,7 @@
   function onPill(box, attr, handler) {
     box.addEventListener('click', function (e) {
       var b = e.target.closest('button[data-' + attr + ']');
-      if (b) handler(b.getAttribute('data-' + attr), b);
+      if (b && b.getAttribute('aria-pressed') !== 'true') handler(b.getAttribute('data-' + attr), b);
     });
   }
   function stamp() {

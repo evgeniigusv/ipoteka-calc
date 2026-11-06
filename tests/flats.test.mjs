@@ -31,3 +31,25 @@ search.value = '9'; search.trigger('input'); assert.equal(select.value, ''); ass
 search.value = '9999'; search.trigger('input'); assert.equal(price.value, ''); assert.equal(flats.selectedNumber(), '9999'); assert.match(info.textContent, /не найдена/);
 flats.setProject('ДА — 2 очередь'); assert.equal(disc.value,''); assert.equal(flats.cashPrice(),null); search.value = '1'; search.trigger('input'); assert.equal(price.value.replace(/\D/g, ''), '13000000'); assert.equal(flats.isPif(), false);
 console.log('Поиск по номеру, исключение ПИФ, ручной ввод и очереди — проверены');
+// Regression from the screen recording: switching projects must not erase a manual comparison price.
+flats.setProject('ДА — 2 очередь');
+assert.equal(flats.selectedNumber(),'1');
+assert.equal(price.value.replace(/\D/g,''),'13000000');
+flats.setProject('ДНК — 2 очередь');
+assert.equal(price.value,''); // A catalog price must never become a different project's apartment price.
+assert.equal(flats.selectedNumber(),'');
+price.value='10 000 000';
+flats.setProject('ДА — 2 очередь');
+assert.equal(flats.selectedNumber(),'1');
+assert.equal(price.value.replace(/\D/g,''),'13000000');
+flats.setProject('ДНК — 2 очередь');
+assert.equal(price.value,'10 000 000');
+assert.equal(flats.selectedNumber(),'');
+search.value='';search.trigger('input');price.value='12 000 000';
+// A previously unseen project gets the manual budget, with no apartment identity attached.
+flats.setProject('Тестовый проект');
+assert.equal(price.value,'12 000 000');assert.equal(flats.selectedNumber(),'');
+price.value='15 000 000';flats.setProject('ДНК — 2 очередь');
+assert.equal(price.value,'12 000 000');
+flats.setProject('Тестовый проект');assert.equal(price.value,'15 000 000');
+console.log('Переключение проектов: ручная цена сохраняется, квартира восстанавливается только в своём проекте');

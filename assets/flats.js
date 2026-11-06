@@ -4,6 +4,7 @@
   var houses = { 'ДА — 1 очередь': [6736582], 'ДА — 2 очередь': [6871059], 'ДНК — 2 очередь': [11013930] };
   function setup(options) {
     var selectedCash = null, selectedPrice = '', selectedDiscount = '';
+    var projectState = Object.create(null);
     var list = [], project = options.project, updated = '', loaded = false, failed = false;
     var select = options.select, search = document.getElementById('sm-flat-search'), info = options.info;
     function normalize(value) { return String(value || '').trim().replace(/^(?:кв\.?\s*)?№?\s*/i, '').toLowerCase(); }
@@ -48,6 +49,35 @@
         }
       }
     }
+    function setProject(next) {
+      if (next === project) return;
+      var row = current(), manualPrice = !row && !search.value.trim() ? options.price.value : '';
+      projectState[project] = {
+        query: search.value, selection: select.value, price: options.price.value,
+        rooms: options.rooms ? options.rooms.value : '',
+        discount: options.discount ? options.discount.value : '',
+        cash: selectedCash, sourcePrice: selectedPrice, sourceDiscount: selectedDiscount
+      };
+      var saved = projectState[next];
+      project = next;
+      selectedCash = null; selectedPrice = ''; selectedDiscount = '';
+      search.value = saved ? saved.query : '';
+      options.price.value = saved ? saved.price : manualPrice;
+      if (options.discount) options.discount.value = '';
+      if (options.onClear) options.onClear();
+      refresh();
+      if (saved) {
+        var restored = saved.selection ? list[Number(saved.selection) - 1] : null;
+        if (restored && (houses[project] || []).indexOf(restored.house_id) >= 0) {
+          select.value = saved.selection;
+          apply(restored);
+        }
+        options.price.value = saved.price;
+        if (options.rooms) options.rooms.value = saved.rooms;
+        if (options.discount) options.discount.value = saved.discount;
+        selectedCash = saved.cash; selectedPrice = saved.sourcePrice; selectedDiscount = saved.sourceDiscount;
+      }
+    }
     search.addEventListener('input', function () {
       options.price.value = '';
       if (options.onClear) options.onClear();
@@ -74,7 +104,7 @@
       if (normalize(search.value) && exact.length === 1) { select.value = String(exact[0].index + 1); apply(exact[0].row); options.onChange(); }
     }).catch(function () { failed = true; refresh(); });
     return {
-      setProject: function (next) { project = next; selectedCash=null; search.value = ''; options.price.value = ''; if(options.discount) options.discount.value=''; if(options.onClear) options.onClear(); refresh(); },
+      setProject: setProject,
       cashPrice: function(){return current() && options.discount && options.price.value===selectedPrice && options.discount.value===selectedDiscount ? selectedCash : null;},
       isPif: function () { var row = current(); return !!row && row.house_id === 10899161; },
       selectedNumber: function () { var row = current(); return row ? String(row.num) + (row.house_id === 10899161 ? ' (ПИФ)' : '') : search.value.trim(); }
