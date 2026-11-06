@@ -8,6 +8,7 @@
     {id:'sber10',name:'Сбербанк · первый транш 10%',first:10,second:20,rate:19.2,discount:8},
     {id:'sber1',name:'Сбербанк · первый транш 1%',first:1,second:20,rate:19.2,discount:5,minFirst:100000}
   ];
+  var daDates={'ДА — 1 очередь':'2027-03-20','ДА — 2 очередь':'2028-09-20'};
   function pad(n){return String(n).padStart(2,'0');}
   function iso(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
   function localDate(s){var a=s.split('-').map(Number);return new Date(a[0],a[1]-1,a[2]);}
@@ -22,6 +23,7 @@
   function setupProgram(){
     var dnk=project==='ДНК — 2 очередь';
     el.program.innerHTML=dnk?programs.map(function(p){return '<option value="'+p.id+'">'+esc(p.name)+'</option>';}).join(''):'<option value="manual">Траншевая ипотека · условия банка уточняются</option>';
+    el.date2.value=dnk&&el.date1.value?addYear(el.date1.value):daDates[project];
     applyProgram();
   }
   function applyProgram(){
@@ -30,10 +32,10 @@
     el.bank.value=dnk?'Сбербанк':'';el.rate.value=selected?String(selected.rate).replace('.',','):'';
     el.first.value=selected?String(selected.first):'';el.second.value=selected?String(selected.second):'';
     $('sm-da-tranches').hidden=dnk; $('sm-dnk-tranches').hidden=!dnk; $('sm-dnk-stage-hint').hidden=!dnk; $('sm-third-date').hidden=!dnk;
-    el.discount.value='';setProgramDiscount();el.pv.value=dnk?'20':'20,1';
+    el.discount.value='0';setProgramDiscount();el.pv.value=dnk?'20':'20,1';
     if(dnk)updateProgramInfo();else el.info.textContent='Для «ДА»: первый транш 100 000 ₽, второй — весь остаток кредита. В инструментах указан ориентир платежа 1 500 ₽; банк и ставку уточните. Строка действовала до 30.10.2026.';
     el.dateHint.textContent=dnk?'В инструментах указан май 2029 года, но ввод дома — IV квартал 2029. Уточните дату у банка.':'';
-    $('sm-date2-hint').textContent=dnk?'Через год после сделки; дату можно изменить.':('В источнике ориентир — до '+(project===projects[0]?'20.03.2027':'20.09.2028')+'. Уточните дату выдачи в банке.');
+    $('sm-date2-hint').textContent=dnk?'Через год после сделки; дату можно изменить.':('По условиям ДА — '+showDate(daDates[project])+'. При необходимости дату можно изменить.');
     render();
   }
   function read(){
@@ -41,7 +43,7 @@
     return {base:base,discount:discount,price:Math.round(base*(1-discount)),down:U.parsePct(el.pv.value),rate:U.parsePct(el.rate.value),years:Number(el.term.value),first:U.parsePct(el.first.value),second:U.parsePct(el.second.value),date1:el.date1.value,date2:el.date2.value,date3:el.date3.value||(selected?'2029-05-01':''),date3Approx:!!selected&&!el.date3.value,minFirst:selected?selected.minFirst||0:0,tranches:selected?3:2,firstRub:selected?null:100000,bank:el.bank.value.trim()};
   }
   function results(x,r){
-    var html='<div class="sm-hero"><div class="sm-hero-name">'+esc(x.bank)+'</div><div class="sm-hero-flat">'+esc(project)+(flats.selectedNumber()?' · кв. '+esc(flats.selectedNumber()):'')+'</div><div class="sm-pay"><div><div class="sm-k">Платёж после первого транша</div><div class="sm-v">'+F.rub(r.stages[0].payment)+'</div></div></div></div>';
+    var html='<div class="sm-hero"><div class="sm-hero-name">'+esc(x.bank||'Траншевая ипотека')+'</div><div class="sm-hero-flat">'+esc(project)+(flats.selectedNumber()?' · кв. '+esc(flats.selectedNumber()):'')+'</div><div class="sm-pay"><div><div class="sm-k">Платёж после первого транша</div><div class="sm-v">'+F.rub(r.stages[0].payment)+'</div></div></div></div>';
     html+='<dl><dt>Программа</dt><dd>'+esc(selected ? selected.name.replace('Сбербанк · ', '') : 'Индивидуальные условия')+'</dd><dt>Ставка и срок</dt><dd>'+F.pct(x.rate)+' · '+F.years(x.years)+'</dd><dt>Стоимость квартиры после скидки</dt><dd>'+F.rub(r.price)+'</dd><dt>Первоначальный взнос</dt><dd>'+F.rub(r.down)+'</dd><dt>Общий кредит</dt><dd>'+F.rub(r.total)+'</dd></dl>';
     function stageDate(s){return x.date3Approx&&s===x.date3?'мая 2029 (день уточняется)':showDate(s);}
     r.stages.forEach(function(s,i){var end=i<r.stages.length-1?' — до '+stageDate(r.stages[i+1].date):' и далее';
@@ -53,7 +55,6 @@
     return html;
   }
   function render(){var x=read();last=null;
-    if(!x.bank){el.result.innerHTML='<p class="sm-empty">Укажите банк, параметры траншей и даты выдачи.</p>';return;}
     if(project!=='ДНК — 2 очередь'&&x.down<.201){el.result.innerHTML='<p class="sm-empty">Для ДА в источнике указан первоначальный взнос от 20,1%.</p>';return;}
     try{var r=calc.calculate(x);el.result.innerHTML=results(x,r);last={x:x,r:r};}
     catch(e){el.result.innerHTML='<p class="sm-empty">'+esc(e.message)+'</p>';}
