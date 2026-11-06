@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "checked_at": "2026-11-06T00:00:00+05:00",
+  "checked_at": "2026-11-06T10:23:28.019575+00:00",
   "records": [
     {
       "id": "mortgage-ecd396581f4c15",
@@ -9,6 +9,9 @@
       "name": "ДОМ.РФ · 1 ребёнок · 15 лет",
       "project": "da1",
       "kind": "mortgage",
+      "description": "Платёж рассчитывается от фактической суммы кредита: цена ДДУ за вычетом первоначального взноса.",
+      "combination": "По условиям банка; итоговая цена зависит от субсидии",
+      "mode": "individual",
       "params": {
         "type": "Семейная ипотека",
         "bank": "ДОМ.РФ",
@@ -19,9 +22,6 @@
         "kids": "1 ребёнок",
         "limit": 6000000
       },
-      "description": "",
-      "combination": "По условиям банка; итоговая цена зависит от субсидии",
-      "mode": "individual",
       "enabled": true
     },
     {
@@ -31,6 +31,9 @@
       "name": "ДОМ.РФ · 1 ребёнок · 15 лет",
       "project": "da2",
       "kind": "mortgage",
+      "description": "",
+      "combination": "По условиям банка; итоговая цена зависит от субсидии",
+      "mode": "individual",
       "params": {
         "type": "Семейная ипотека",
         "bank": "ДОМ.РФ",
@@ -41,9 +44,6 @@
         "kids": "1 ребёнок",
         "limit": 6000000
       },
-      "description": "",
-      "combination": "По условиям банка; итоговая цена зависит от субсидии",
-      "mode": "individual",
       "enabled": true
     },
     {
@@ -53,6 +53,9 @@
       "name": "ДОМ.РФ · 2 ребёнка · 15 лет",
       "project": "da1",
       "kind": "mortgage",
+      "description": "",
+      "combination": "По условиям банка; итоговая цена зависит от субсидии",
+      "mode": "individual",
       "params": {
         "type": "Семейная ипотека",
         "bank": "ДОМ.РФ",
@@ -63,9 +66,6 @@
         "kids": "2 ребёнка",
         "limit": 8000000
       },
-      "description": "",
-      "combination": "По условиям банка; итоговая цена зависит от субсидии",
-      "mode": "individual",
       "enabled": true
     },
     {
@@ -75,6 +75,9 @@
       "name": "ДОМ.РФ · 2 ребёнка · 15 лет",
       "project": "da2",
       "kind": "mortgage",
+      "description": "",
+      "combination": "По условиям банка; итоговая цена зависит от субсидии",
+      "mode": "individual",
       "params": {
         "type": "Семейная ипотека",
         "bank": "ДОМ.РФ",
@@ -85,9 +88,6 @@
         "kids": "2 ребёнка",
         "limit": 8000000
       },
-      "description": "",
-      "combination": "По условиям банка; итоговая цена зависит от субсидии",
-      "mode": "individual",
       "enabled": true
     },
     {
@@ -97,6 +97,9 @@
       "name": "ДОМ.РФ · 3 ребёнка · 15 лет",
       "project": "da1",
       "kind": "mortgage",
+      "description": "",
+      "combination": "По условиям банка; итоговая цена зависит от субсидии",
+      "mode": "individual",
       "params": {
         "type": "Семейная ипотека",
         "bank": "ДОМ.РФ",
@@ -107,9 +110,6 @@
         "kids": "3 ребёнка",
         "limit": 10000000
       },
-      "description": "",
-      "combination": "По условиям банка; итоговая цена зависит от субсидии",
-      "mode": "individual",
       "enabled": true
     },
     {
@@ -119,6 +119,9 @@
       "name": "ДОМ.РФ · 3 ребёнка · 15 лет",
       "project": "da2",
       "kind": "mortgage",
+      "description": "",
+      "combination": "По условиям банка; итоговая цена зависит от субсидии",
+      "mode": "individual",
       "params": {
         "type": "Семейная ипотека",
         "bank": "ДОМ.РФ",
@@ -129,9 +132,6 @@
         "kids": "3 ребёнка",
         "limit": 10000000
       },
-      "description": "",
-      "combination": "По условиям банка; итоговая цена зависит от субсидии",
-      "mode": "individual",
       "enabled": true
     },
     {
@@ -141,6 +141,9 @@
       "name": "ДОМ.РФ · 4 ребёнка · 15 лет",
       "project": "da1",
       "kind": "mortgage",
+      "description": "",
+      "combination": "По условиям банка; итоговая цена зависит от субсидии",
+      "mode": "individual",
       "params": {
         "type": "Семейная ипотека",
         "bank": "ДОМ.РФ",
@@ -151,9 +154,6 @@
         "kids": "4 ребёнка",
         "limit": 10000000
       },
-      "description": "",
-      "combination": "По условиям банка; итоговая цена зависит от субсидии",
-      "mode": "individual",
       "enabled": true
     },
     {
@@ -163,6 +163,9 @@
       "name": "ДОМ.РФ · 4 ребёнка · 15 лет",
       "project": "da2",
       "kind": "mortgage",
+      "description": "",
+      "combination": "По условиям банка; итоговая цена зависит от субсидии",
+      "mode": "individual",
       "params": {
         "type": "Семейная ипотека",
         "bank": "ДОМ.РФ",
@@ -173,9 +176,6 @@
         "kids": "4 ребёнка",
         "limit": 10000000
       },
-      "description": "",
-      "combination": "По условиям банка; итоговая цена зависит от субсидии",
-      "mode": "individual",
       "enabled": true
     },
     {
@@ -185,6 +185,9 @@
       "name": "ДОМ.РФ · Базовая ипотека · 30 лет · стандартная ставка",
       "project": "da1",
       "kind": "mortgage",
+      "description": "",
+      "combination": "По условиям банка; итоговая цена зависит от субсидии",
+      "mode": "individual",
       "params": {
         "type": "Базовая ипотека",
         "bank": "ДОМ.РФ",
@@ -194,9 +197,6 @@
         "minPv": 0.201,
         "variant": "стандартная ставка"
       },
-      "description": "",
-      "combination": "По условиям банка; итоговая цена зависит от субсидии",
-      "mode": "individual",
       "enabled": true
     },
     {
@@ -206,6 +206,9 @@
       "name": "ДОМ.РФ · Базовая ипотека · 30 лет · стандартная ставка",
       "project": "da2",
       "kind": "mortgage",
+      "description": "",
+      "combination": "По условиям банка; итоговая цена зависит от субсидии",
+      "mode": "individual",
       "params": {
         "type": "Базовая ипотека",
         "bank": "ДОМ.РФ",
@@ -215,9 +218,6 @@
         "minPv": 0.201,
         "variant": "стандартная ставка"
       },
-      "description": "",
-      "combination": "По условиям банка; итоговая цена зависит от субсидии",
-      "mode": "individual",
       "enabled": true
     },
     {
@@ -227,6 +227,9 @@
       "name": "ДОМ.РФ · Базовая ипотека · 30 лет · субсидированная ставка",
       "project": "da1",
       "kind": "mortgage",
+      "description": "",
+      "combination": "По условиям банка; итоговая цена зависит от субсидии",
+      "mode": "individual",
       "params": {
         "type": "Базовая ипотека",
         "bank": "ДОМ.РФ",
@@ -236,9 +239,6 @@
         "minPv": 0.201,
         "variant": "субсидированная ставка"
       },
-      "description": "",
-      "combination": "По условиям банка; итоговая цена зависит от субсидии",
-      "mode": "individual",
       "enabled": true
     },
     {
@@ -248,6 +248,9 @@
       "name": "ДОМ.РФ · Базовая ипотека · 30 лет · субсидированная ставка",
       "project": "da2",
       "kind": "mortgage",
+      "description": "",
+      "combination": "По условиям банка; итоговая цена зависит от субсидии",
+      "mode": "individual",
       "params": {
         "type": "Базовая ипотека",
         "bank": "ДОМ.РФ",
@@ -257,9 +260,6 @@
         "minPv": 0.201,
         "variant": "субсидированная ставка"
       },
-      "description": "",
-      "combination": "По условиям банка; итоговая цена зависит от субсидии",
-      "mode": "individual",
       "enabled": true
     },
     {
@@ -269,6 +269,9 @@
       "name": "Альфа-Банк · 1 ребёнок · 15 лет",
       "project": "da1",
       "kind": "mortgage",
+      "description": "",
+      "combination": "По условиям банка; итоговая цена зависит от субсидии",
+      "mode": "individual",
       "params": {
         "type": "Семейная ипотека",
         "bank": "Альфа-Банк",
@@ -279,9 +282,6 @@
         "kids": "1 ребёнок",
         "limit": 6000000
       },
-      "description": "",
-      "combination": "По условиям банка; итоговая цена зависит от субсидии",
-      "mode": "individual",
       "enabled": true
     },
     {
@@ -291,6 +291,9 @@
       "name": "Альфа-Банк · 1 ребёнок · 15 лет",
       "project": "da2",
       "kind": "mortgage",
+      "description": "",
+      "combination": "По условиям банка; итоговая цена зависит от субсидии",
+      "mode": "individual",
       "params": {
         "type": "Семейная ипотека",
         "bank": "Альфа-Банк",
@@ -301,9 +304,6 @@
         "kids": "1 ребёнок",
         "limit": 6000000
       },
-      "description": "",
-      "combination": "По условиям банка; итоговая цена зависит от субсидии",
-      "mode": "individual",
       "enabled": true
     },
     {
@@ -313,6 +313,9 @@
       "name": "Альфа-Банк · 1 ребёнок · 15 лет · вариант 2",
       "project": "da1",
       "kind": "mortgage",
+      "description": "",
+      "combination": "По условиям банка; итоговая цена зависит от субсидии",
+      "mode": "individual",
       "params": {
         "type": "Семейная ипотека",
         "bank": "Альфа-Банк",
@@ -323,9 +326,6 @@
         "kids": "1 ребёнок",
         "limit": 6000000
       },
-      "description": "",
-      "combination": "По условиям банка; итоговая цена зависит от субсидии",
-      "mode": "individual",
       "enabled": true
     },
     {
@@ -335,6 +335,9 @@
       "name": "Альфа-Банк · 1 ребёнок · 15 лет · вариант 2",
       "project": "da2",
       "kind": "mortgage",
+      "description": "",
+      "combination": "По условиям банка; итоговая цена зависит от субсидии",
+      "mode": "individual",
       "params": {
         "type": "Семейная ипотека",
         "bank": "Альфа-Банк",
@@ -345,9 +348,6 @@
         "kids": "1 ребёнок",
         "limit": 6000000
       },
-      "description": "",
-      "combination": "По условиям банка; итоговая цена зависит от субсидии",
-      "mode": "individual",
       "enabled": true
     },
     {
@@ -357,6 +357,9 @@
       "name": "Альфа-Банк · 2 ребёнка · 15 лет",
       "project": "da1",
       "kind": "mortgage",
+      "description": "",
+      "combination": "По условиям банка; итоговая цена зависит от субсидии",
+      "mode": "individual",
       "params": {
         "type": "Семейная ипотека",
         "bank": "Альфа-Банк",
@@ -367,9 +370,6 @@
         "kids": "2 ребёнка",
         "limit": 8000000
       },
-      "description": "",
-      "combination": "По условиям банка; итоговая цена зависит от субсидии",
-      "mode": "individual",
       "enabled": true
     },
     {
@@ -379,6 +379,9 @@
       "name": "Альфа-Банк · 2 ребёнка · 15 лет",
       "project": "da2",
       "kind": "mortgage",
+      "description": "",
+      "combination": "По условиям банка; итоговая цена зависит от субсидии",
+      "mode": "individual",
       "params": {
         "type": "Семейная ипотека",
         "bank": "Альфа-Банк",
@@ -389,9 +392,6 @@
         "kids": "2 ребёнка",
         "limit": 8000000
       },
-      "description": "",
-      "combination": "По условиям банка; итоговая цена зависит от субсидии",
-      "mode": "individual",
       "enabled": true
     },
     {
@@ -401,6 +401,9 @@
       "name": "Альфа-Банк · Базовая ипотека · 10 лет · субсидированная ставка",
       "project": "da1",
       "kind": "mortgage",
+      "description": "",
+      "combination": "По условиям банка; итоговая цена зависит от субсидии",
+      "mode": "individual",
       "params": {
         "type": "Базовая ипотека",
         "bank": "Альфа-Банк",
@@ -410,9 +413,6 @@
         "minPv": 0.201,
         "variant": "субсидированная ставка"
       },
-      "description": "",
-      "combination": "По условиям банка; итоговая цена зависит от субсидии",
-      "mode": "individual",
       "enabled": true
     },
     {
@@ -422,6 +422,9 @@
       "name": "Альфа-Банк · Базовая ипотека · 10 лет · субсидированная ставка",
       "project": "da2",
       "kind": "mortgage",
+      "description": "",
+      "combination": "По условиям банка; итоговая цена зависит от субсидии",
+      "mode": "individual",
       "params": {
         "type": "Базовая ипотека",
         "bank": "Альфа-Банк",
@@ -431,9 +434,6 @@
         "minPv": 0.201,
         "variant": "субсидированная ставка"
       },
-      "description": "",
-      "combination": "По условиям банка; итоговая цена зависит от субсидии",
-      "mode": "individual",
       "enabled": true
     },
     {
@@ -443,6 +443,9 @@
       "name": "Альфа-Банк · Базовая ипотека · 15 лет · субсидированная ставка",
       "project": "da1",
       "kind": "mortgage",
+      "description": "",
+      "combination": "По условиям банка; итоговая цена зависит от субсидии",
+      "mode": "individual",
       "params": {
         "type": "Базовая ипотека",
         "bank": "Альфа-Банк",
@@ -452,9 +455,6 @@
         "minPv": 0.201,
         "variant": "субсидированная ставка"
       },
-      "description": "",
-      "combination": "По условиям банка; итоговая цена зависит от субсидии",
-      "mode": "individual",
       "enabled": true
     },
     {
@@ -464,6 +464,9 @@
       "name": "Альфа-Банк · Базовая ипотека · 15 лет · субсидированная ставка",
       "project": "da2",
       "kind": "mortgage",
+      "description": "",
+      "combination": "По условиям банка; итоговая цена зависит от субсидии",
+      "mode": "individual",
       "params": {
         "type": "Базовая ипотека",
         "bank": "Альфа-Банк",
@@ -473,9 +476,6 @@
         "minPv": 0.201,
         "variant": "субсидированная ставка"
       },
-      "description": "",
-      "combination": "По условиям банка; итоговая цена зависит от субсидии",
-      "mode": "individual",
       "enabled": true
     },
     {
@@ -485,6 +485,9 @@
       "name": "Альфа-Банк · Базовая ипотека · 20 лет · субсидированная ставка",
       "project": "da1",
       "kind": "mortgage",
+      "description": "",
+      "combination": "По условиям банка; итоговая цена зависит от субсидии",
+      "mode": "individual",
       "params": {
         "type": "Базовая ипотека",
         "bank": "Альфа-Банк",
@@ -494,9 +497,6 @@
         "minPv": 0.201,
         "variant": "субсидированная ставка"
       },
-      "description": "",
-      "combination": "По условиям банка; итоговая цена зависит от субсидии",
-      "mode": "individual",
       "enabled": true
     },
     {
@@ -506,6 +506,9 @@
       "name": "Альфа-Банк · Базовая ипотека · 20 лет · субсидированная ставка",
       "project": "da2",
       "kind": "mortgage",
+      "description": "",
+      "combination": "По условиям банка; итоговая цена зависит от субсидии",
+      "mode": "individual",
       "params": {
         "type": "Базовая ипотека",
         "bank": "Альфа-Банк",
@@ -515,9 +518,6 @@
         "minPv": 0.201,
         "variant": "субсидированная ставка"
       },
-      "description": "",
-      "combination": "По условиям банка; итоговая цена зависит от субсидии",
-      "mode": "individual",
       "enabled": true
     },
     {
@@ -527,6 +527,9 @@
       "name": "Альфа-Банк · Базовая ипотека · 30 лет · субсидированная ставка",
       "project": "da1",
       "kind": "mortgage",
+      "description": "",
+      "combination": "По условиям банка; итоговая цена зависит от субсидии",
+      "mode": "individual",
       "params": {
         "type": "Базовая ипотека",
         "bank": "Альфа-Банк",
@@ -536,9 +539,6 @@
         "minPv": 0.201,
         "variant": "субсидированная ставка"
       },
-      "description": "",
-      "combination": "По условиям банка; итоговая цена зависит от субсидии",
-      "mode": "individual",
       "enabled": true
     },
     {
@@ -548,6 +548,9 @@
       "name": "Альфа-Банк · Базовая ипотека · 30 лет · субсидированная ставка",
       "project": "da2",
       "kind": "mortgage",
+      "description": "",
+      "combination": "По условиям банка; итоговая цена зависит от субсидии",
+      "mode": "individual",
       "params": {
         "type": "Базовая ипотека",
         "bank": "Альфа-Банк",
@@ -557,9 +560,6 @@
         "minPv": 0.201,
         "variant": "субсидированная ставка"
       },
-      "description": "",
-      "combination": "По условиям банка; итоговая цена зависит от субсидии",
-      "mode": "individual",
       "enabled": true
     },
     {
@@ -569,6 +569,9 @@
       "name": "ВТБ · Базовая ипотека · 30 лет · стандартная ставка",
       "project": "da1",
       "kind": "mortgage",
+      "description": "",
+      "combination": "По условиям банка; итоговая цена зависит от субсидии",
+      "mode": "individual",
       "params": {
         "type": "Базовая ипотека",
         "bank": "ВТБ",
@@ -578,9 +581,6 @@
         "minPv": 0.201,
         "variant": "стандартная ставка"
       },
-      "description": "",
-      "combination": "По условиям банка; итоговая цена зависит от субсидии",
-      "mode": "individual",
       "enabled": true
     },
     {
@@ -590,6 +590,9 @@
       "name": "ВТБ · Базовая ипотека · 30 лет · стандартная ставка",
       "project": "da2",
       "kind": "mortgage",
+      "description": "",
+      "combination": "По условиям банка; итоговая цена зависит от субсидии",
+      "mode": "individual",
       "params": {
         "type": "Базовая ипотека",
         "bank": "ВТБ",
@@ -599,9 +602,6 @@
         "minPv": 0.201,
         "variant": "стандартная ставка"
       },
-      "description": "",
-      "combination": "По условиям банка; итоговая цена зависит от субсидии",
-      "mode": "individual",
       "enabled": true
     },
     {
@@ -611,6 +611,9 @@
       "name": "ВТБ · Базовая ипотека · 30 лет · субсидированная ставка",
       "project": "da1",
       "kind": "mortgage",
+      "description": "",
+      "combination": "По условиям банка; итоговая цена зависит от субсидии",
+      "mode": "individual",
       "params": {
         "type": "Базовая ипотека",
         "bank": "ВТБ",
@@ -620,9 +623,6 @@
         "minPv": 0.201,
         "variant": "субсидированная ставка"
       },
-      "description": "",
-      "combination": "По условиям банка; итоговая цена зависит от субсидии",
-      "mode": "individual",
       "enabled": true
     },
     {
@@ -632,6 +632,9 @@
       "name": "ВТБ · Базовая ипотека · 30 лет · субсидированная ставка",
       "project": "da2",
       "kind": "mortgage",
+      "description": "",
+      "combination": "По условиям банка; итоговая цена зависит от субсидии",
+      "mode": "individual",
       "params": {
         "type": "Базовая ипотека",
         "bank": "ВТБ",
@@ -641,9 +644,6 @@
         "minPv": 0.201,
         "variant": "субсидированная ставка"
       },
-      "description": "",
-      "combination": "По условиям банка; итоговая цена зависит от субсидии",
-      "mode": "individual",
       "enabled": true
     },
     {
@@ -653,6 +653,9 @@
       "name": "ВТБ · Базовая ипотека · 30 лет · субсидированная ставка · вариант 2",
       "project": "da1",
       "kind": "mortgage",
+      "description": "",
+      "combination": "По условиям банка; итоговая цена зависит от субсидии",
+      "mode": "individual",
       "params": {
         "type": "Базовая ипотека",
         "bank": "ВТБ",
@@ -662,9 +665,6 @@
         "minPv": 0.201,
         "variant": "субсидированная ставка"
       },
-      "description": "",
-      "combination": "По условиям банка; итоговая цена зависит от субсидии",
-      "mode": "individual",
       "enabled": true
     },
     {
@@ -674,6 +674,9 @@
       "name": "ВТБ · Базовая ипотека · 30 лет · субсидированная ставка · вариант 2",
       "project": "da2",
       "kind": "mortgage",
+      "description": "",
+      "combination": "По условиям банка; итоговая цена зависит от субсидии",
+      "mode": "individual",
       "params": {
         "type": "Базовая ипотека",
         "bank": "ВТБ",
@@ -683,9 +686,6 @@
         "minPv": 0.201,
         "variant": "субсидированная ставка"
       },
-      "description": "",
-      "combination": "По условиям банка; итоговая цена зависит от субсидии",
-      "mode": "individual",
       "enabled": true
     },
     {
@@ -695,6 +695,9 @@
       "name": "ВТБ · 1 ребёнок · 15 лет",
       "project": "da1",
       "kind": "mortgage",
+      "description": "",
+      "combination": "По условиям банка; итоговая цена зависит от субсидии",
+      "mode": "individual",
       "params": {
         "type": "Семейная ипотека",
         "bank": "ВТБ",
@@ -705,9 +708,6 @@
         "kids": "1 ребёнок",
         "limit": 6000000
       },
-      "description": "",
-      "combination": "По условиям банка; итоговая цена зависит от субсидии",
-      "mode": "individual",
       "enabled": true
     },
     {
@@ -717,6 +717,9 @@
       "name": "ВТБ · 1 ребёнок · 15 лет",
       "project": "da2",
       "kind": "mortgage",
+      "description": "",
+      "combination": "По условиям банка; итоговая цена зависит от субсидии",
+      "mode": "individual",
       "params": {
         "type": "Семейная ипотека",
         "bank": "ВТБ",
@@ -727,9 +730,6 @@
         "kids": "1 ребёнок",
         "limit": 6000000
       },
-      "description": "",
-      "combination": "По условиям банка; итоговая цена зависит от субсидии",
-      "mode": "individual",
       "enabled": true
     },
     {
@@ -739,6 +739,9 @@
       "name": "ВТБ · 1 ребёнок · 15 лет · вариант 2",
       "project": "da1",
       "kind": "mortgage",
+      "description": "",
+      "combination": "По условиям банка; итоговая цена зависит от субсидии",
+      "mode": "individual",
       "params": {
         "type": "Семейная ипотека",
         "bank": "ВТБ",
@@ -749,9 +752,6 @@
         "kids": "1 ребёнок",
         "limit": 6000000
       },
-      "description": "",
-      "combination": "По условиям банка; итоговая цена зависит от субсидии",
-      "mode": "individual",
       "enabled": true
     },
     {
@@ -761,6 +761,9 @@
       "name": "ВТБ · 1 ребёнок · 15 лет · вариант 2",
       "project": "da2",
       "kind": "mortgage",
+      "description": "",
+      "combination": "По условиям банка; итоговая цена зависит от субсидии",
+      "mode": "individual",
       "params": {
         "type": "Семейная ипотека",
         "bank": "ВТБ",
@@ -771,9 +774,6 @@
         "kids": "1 ребёнок",
         "limit": 6000000
       },
-      "description": "",
-      "combination": "По условиям банка; итоговая цена зависит от субсидии",
-      "mode": "individual",
       "enabled": true
     },
     {
@@ -783,6 +783,9 @@
       "name": "ВТБ · 1 ребёнок · 30 лет",
       "project": "da1",
       "kind": "mortgage",
+      "description": "",
+      "combination": "По условиям банка; итоговая цена зависит от субсидии",
+      "mode": "individual",
       "params": {
         "type": "Семейная ипотека",
         "bank": "ВТБ",
@@ -793,9 +796,6 @@
         "kids": "1 ребёнок",
         "limit": 6000000
       },
-      "description": "",
-      "combination": "По условиям банка; итоговая цена зависит от субсидии",
-      "mode": "individual",
       "enabled": true
     },
     {
@@ -805,6 +805,9 @@
       "name": "ВТБ · 1 ребёнок · 30 лет",
       "project": "da2",
       "kind": "mortgage",
+      "description": "",
+      "combination": "По условиям банка; итоговая цена зависит от субсидии",
+      "mode": "individual",
       "params": {
         "type": "Семейная ипотека",
         "bank": "ВТБ",
@@ -815,9 +818,6 @@
         "kids": "1 ребёнок",
         "limit": 6000000
       },
-      "description": "",
-      "combination": "По условиям банка; итоговая цена зависит от субсидии",
-      "mode": "individual",
       "enabled": true
     },
     {
@@ -827,6 +827,9 @@
       "name": "ВТБ · 1 ребёнок · 30 лет · вариант 2",
       "project": "da1",
       "kind": "mortgage",
+      "description": "",
+      "combination": "По условиям банка; итоговая цена зависит от субсидии",
+      "mode": "individual",
       "params": {
         "type": "Семейная ипотека",
         "bank": "ВТБ",
@@ -837,9 +840,6 @@
         "kids": "1 ребёнок",
         "limit": 6000000
       },
-      "description": "",
-      "combination": "По условиям банка; итоговая цена зависит от субсидии",
-      "mode": "individual",
       "enabled": true
     },
     {
@@ -849,6 +849,9 @@
       "name": "ВТБ · 1 ребёнок · 30 лет · вариант 2",
       "project": "da2",
       "kind": "mortgage",
+      "description": "",
+      "combination": "По условиям банка; итоговая цена зависит от субсидии",
+      "mode": "individual",
       "params": {
         "type": "Семейная ипотека",
         "bank": "ВТБ",
@@ -859,9 +862,6 @@
         "kids": "1 ребёнок",
         "limit": 6000000
       },
-      "description": "",
-      "combination": "По условиям банка; итоговая цена зависит от субсидии",
-      "mode": "individual",
       "enabled": true
     },
     {
@@ -871,6 +871,9 @@
       "name": "ВТБ · 2 ребёнка · 15 лет",
       "project": "da1",
       "kind": "mortgage",
+      "description": "",
+      "combination": "По условиям банка; итоговая цена зависит от субсидии",
+      "mode": "individual",
       "params": {
         "type": "Семейная ипотека",
         "bank": "ВТБ",
@@ -881,9 +884,6 @@
         "kids": "2 ребёнка",
         "limit": 8000000
       },
-      "description": "",
-      "combination": "По условиям банка; итоговая цена зависит от субсидии",
-      "mode": "individual",
       "enabled": true
     },
     {
@@ -893,6 +893,9 @@
       "name": "ВТБ · 2 ребёнка · 15 лет",
       "project": "da2",
       "kind": "mortgage",
+      "description": "",
+      "combination": "По условиям банка; итоговая цена зависит от субсидии",
+      "mode": "individual",
       "params": {
         "type": "Семейная ипотека",
         "bank": "ВТБ",
@@ -903,9 +906,6 @@
         "kids": "2 ребёнка",
         "limit": 8000000
       },
-      "description": "",
-      "combination": "По условиям банка; итоговая цена зависит от субсидии",
-      "mode": "individual",
       "enabled": true
     },
     {
@@ -915,6 +915,9 @@
       "name": "ВТБ · 2 ребёнка · 15 лет · вариант 2",
       "project": "da1",
       "kind": "mortgage",
+      "description": "",
+      "combination": "По условиям банка; итоговая цена зависит от субсидии",
+      "mode": "individual",
       "params": {
         "type": "Семейная ипотека",
         "bank": "ВТБ",
@@ -925,9 +928,6 @@
         "kids": "2 ребёнка",
         "limit": 8000000
       },
-      "description": "",
-      "combination": "По условиям банка; итоговая цена зависит от субсидии",
-      "mode": "individual",
       "enabled": true
     },
     {
@@ -937,6 +937,9 @@
       "name": "ВТБ · 2 ребёнка · 15 лет · вариант 2",
       "project": "da2",
       "kind": "mortgage",
+      "description": "",
+      "combination": "По условиям банка; итоговая цена зависит от субсидии",
+      "mode": "individual",
       "params": {
         "type": "Семейная ипотека",
         "bank": "ВТБ",
@@ -947,9 +950,6 @@
         "kids": "2 ребёнка",
         "limit": 8000000
       },
-      "description": "",
-      "combination": "По условиям банка; итоговая цена зависит от субсидии",
-      "mode": "individual",
       "enabled": true
     },
     {
@@ -959,6 +959,9 @@
       "name": "ВТБ · 2 ребёнка · 30 лет",
       "project": "da1",
       "kind": "mortgage",
+      "description": "",
+      "combination": "По условиям банка; итоговая цена зависит от субсидии",
+      "mode": "individual",
       "params": {
         "type": "Семейная ипотека",
         "bank": "ВТБ",
@@ -969,9 +972,6 @@
         "kids": "2 ребёнка",
         "limit": 8000000
       },
-      "description": "",
-      "combination": "По условиям банка; итоговая цена зависит от субсидии",
-      "mode": "individual",
       "enabled": true
     },
     {
@@ -981,6 +981,9 @@
       "name": "ВТБ · 2 ребёнка · 30 лет",
       "project": "da2",
       "kind": "mortgage",
+      "description": "",
+      "combination": "По условиям банка; итоговая цена зависит от субсидии",
+      "mode": "individual",
       "params": {
         "type": "Семейная ипотека",
         "bank": "ВТБ",
@@ -991,9 +994,6 @@
         "kids": "2 ребёнка",
         "limit": 8000000
       },
-      "description": "",
-      "combination": "По условиям банка; итоговая цена зависит от субсидии",
-      "mode": "individual",
       "enabled": true
     },
     {
@@ -1003,6 +1003,9 @@
       "name": "ВТБ · 2 ребёнка · 30 лет · вариант 2",
       "project": "da1",
       "kind": "mortgage",
+      "description": "",
+      "combination": "По условиям банка; итоговая цена зависит от субсидии",
+      "mode": "individual",
       "params": {
         "type": "Семейная ипотека",
         "bank": "ВТБ",
@@ -1013,9 +1016,6 @@
         "kids": "2 ребёнка",
         "limit": 8000000
       },
-      "description": "",
-      "combination": "По условиям банка; итоговая цена зависит от субсидии",
-      "mode": "individual",
       "enabled": true
     },
     {
@@ -1025,6 +1025,9 @@
       "name": "ВТБ · 2 ребёнка · 30 лет · вариант 2",
       "project": "da2",
       "kind": "mortgage",
+      "description": "",
+      "combination": "По условиям банка; итоговая цена зависит от субсидии",
+      "mode": "individual",
       "params": {
         "type": "Семейная ипотека",
         "bank": "ВТБ",
@@ -1035,9 +1038,6 @@
         "kids": "2 ребёнка",
         "limit": 8000000
       },
-      "description": "",
-      "combination": "По условиям банка; итоговая цена зависит от субсидии",
-      "mode": "individual",
       "enabled": true
     },
     {
@@ -1047,6 +1047,9 @@
       "name": "Сбербанк · 1 ребёнок · 15 лет",
       "project": "da1",
       "kind": "mortgage",
+      "description": "",
+      "combination": "По условиям банка; итоговая цена зависит от субсидии",
+      "mode": "individual",
       "params": {
         "type": "Семейная ипотека",
         "bank": "Сбербанк",
@@ -1057,9 +1060,6 @@
         "kids": "1 ребёнок",
         "limit": 6000000
       },
-      "description": "",
-      "combination": "По условиям банка; итоговая цена зависит от субсидии",
-      "mode": "individual",
       "enabled": true
     },
     {
@@ -1069,6 +1069,9 @@
       "name": "Сбербанк · 1 ребёнок · 15 лет",
       "project": "da2",
       "kind": "mortgage",
+      "description": "",
+      "combination": "По условиям банка; итоговая цена зависит от субсидии",
+      "mode": "individual",
       "params": {
         "type": "Семейная ипотека",
         "bank": "Сбербанк",
@@ -1079,9 +1082,6 @@
         "kids": "1 ребёнок",
         "limit": 6000000
       },
-      "description": "",
-      "combination": "По условиям банка; итоговая цена зависит от субсидии",
-      "mode": "individual",
       "enabled": true
     },
     {
@@ -1091,6 +1091,9 @@
       "name": "Сбербанк · 2 ребёнка · 15 лет",
       "project": "da1",
       "kind": "mortgage",
+      "description": "",
+      "combination": "По условиям банка; итоговая цена зависит от субсидии",
+      "mode": "individual",
       "params": {
         "type": "Семейная ипотека",
         "bank": "Сбербанк",
@@ -1101,9 +1104,6 @@
         "kids": "2 ребёнка",
         "limit": 8000000
       },
-      "description": "",
-      "combination": "По условиям банка; итоговая цена зависит от субсидии",
-      "mode": "individual",
       "enabled": true
     },
     {
@@ -1113,6 +1113,9 @@
       "name": "Сбербанк · 2 ребёнка · 15 лет",
       "project": "da2",
       "kind": "mortgage",
+      "description": "",
+      "combination": "По условиям банка; итоговая цена зависит от субсидии",
+      "mode": "individual",
       "params": {
         "type": "Семейная ипотека",
         "bank": "Сбербанк",
@@ -1123,9 +1126,6 @@
         "kids": "2 ребёнка",
         "limit": 8000000
       },
-      "description": "",
-      "combination": "По условиям банка; итоговая цена зависит от субсидии",
-      "mode": "individual",
       "enabled": true
     },
     {
@@ -1135,6 +1135,9 @@
       "name": "Сбербанк · 3 ребёнка · 15 лет",
       "project": "da1",
       "kind": "mortgage",
+      "description": "",
+      "combination": "По условиям банка; итоговая цена зависит от субсидии",
+      "mode": "individual",
       "params": {
         "type": "Семейная ипотека",
         "bank": "Сбербанк",
@@ -1145,9 +1148,6 @@
         "kids": "3 ребёнка",
         "limit": 10000000
       },
-      "description": "",
-      "combination": "По условиям банка; итоговая цена зависит от субсидии",
-      "mode": "individual",
       "enabled": true
     },
     {
@@ -1157,6 +1157,9 @@
       "name": "Сбербанк · 3 ребёнка · 15 лет",
       "project": "da2",
       "kind": "mortgage",
+      "description": "",
+      "combination": "По условиям банка; итоговая цена зависит от субсидии",
+      "mode": "individual",
       "params": {
         "type": "Семейная ипотека",
         "bank": "Сбербанк",
@@ -1167,9 +1170,6 @@
         "kids": "3 ребёнка",
         "limit": 10000000
       },
-      "description": "",
-      "combination": "По условиям банка; итоговая цена зависит от субсидии",
-      "mode": "individual",
       "enabled": true
     },
     {
@@ -1179,6 +1179,9 @@
       "name": "Сбербанк · 4 ребёнка · 15 лет",
       "project": "da1",
       "kind": "mortgage",
+      "description": "",
+      "combination": "По условиям банка; итоговая цена зависит от субсидии",
+      "mode": "individual",
       "params": {
         "type": "Семейная ипотека",
         "bank": "Сбербанк",
@@ -1189,9 +1192,6 @@
         "kids": "4 ребёнка",
         "limit": 10000000
       },
-      "description": "",
-      "combination": "По условиям банка; итоговая цена зависит от субсидии",
-      "mode": "individual",
       "enabled": true
     },
     {
@@ -1201,6 +1201,9 @@
       "name": "Сбербанк · 4 ребёнка · 15 лет",
       "project": "da2",
       "kind": "mortgage",
+      "description": "",
+      "combination": "По условиям банка; итоговая цена зависит от субсидии",
+      "mode": "individual",
       "params": {
         "type": "Семейная ипотека",
         "bank": "Сбербанк",
@@ -1211,9 +1214,6 @@
         "kids": "4 ребёнка",
         "limit": 10000000
       },
-      "description": "",
-      "combination": "По условиям банка; итоговая цена зависит от субсидии",
-      "mode": "individual",
       "enabled": true
     },
     {
@@ -1223,6 +1223,9 @@
       "name": "Сбербанк · 5 и более детей · 15 лет",
       "project": "da1",
       "kind": "mortgage",
+      "description": "",
+      "combination": "По условиям банка; итоговая цена зависит от субсидии",
+      "mode": "individual",
       "params": {
         "type": "Семейная ипотека",
         "bank": "Сбербанк",
@@ -1233,9 +1236,6 @@
         "kids": "5 и более детей",
         "limit": 10000000
       },
-      "description": "",
-      "combination": "По условиям банка; итоговая цена зависит от субсидии",
-      "mode": "individual",
       "enabled": true
     },
     {
@@ -1245,6 +1245,9 @@
       "name": "Сбербанк · 5 и более детей · 15 лет",
       "project": "da2",
       "kind": "mortgage",
+      "description": "",
+      "combination": "По условиям банка; итоговая цена зависит от субсидии",
+      "mode": "individual",
       "params": {
         "type": "Семейная ипотека",
         "bank": "Сбербанк",
@@ -1255,9 +1258,6 @@
         "kids": "5 и более детей",
         "limit": 10000000
       },
-      "description": "",
-      "combination": "По условиям банка; итоговая цена зависит от субсидии",
-      "mode": "individual",
       "enabled": true
     },
     {
@@ -1267,6 +1267,9 @@
       "name": "Сбербанк · Базовая ипотека · 30 лет · субсидированная ставка",
       "project": "da1",
       "kind": "mortgage",
+      "description": "",
+      "combination": "По условиям банка; итоговая цена зависит от субсидии",
+      "mode": "individual",
       "params": {
         "type": "Базовая ипотека",
         "bank": "Сбербанк",
@@ -1276,9 +1279,6 @@
         "minPv": 0.201,
         "variant": "субсидированная ставка"
       },
-      "description": "",
-      "combination": "По условиям банка; итоговая цена зависит от субсидии",
-      "mode": "individual",
       "enabled": true
     },
     {
@@ -1288,6 +1288,9 @@
       "name": "Сбербанк · Базовая ипотека · 30 лет · субсидированная ставка",
       "project": "da2",
       "kind": "mortgage",
+      "description": "",
+      "combination": "По условиям банка; итоговая цена зависит от субсидии",
+      "mode": "individual",
       "params": {
         "type": "Базовая ипотека",
         "bank": "Сбербанк",
@@ -1297,9 +1300,6 @@
         "minPv": 0.201,
         "variant": "субсидированная ставка"
       },
-      "description": "",
-      "combination": "По условиям банка; итоговая цена зависит от субсидии",
-      "mode": "individual",
       "enabled": true
     },
     {
@@ -1309,6 +1309,9 @@
       "name": "ДОМ.РФ · 1 ребёнок · 15 лет",
       "project": "dnk2",
       "kind": "mortgage",
+      "description": "",
+      "combination": "По условиям банка; итоговая цена зависит от субсидии",
+      "mode": "individual",
       "params": {
         "type": "Семейная ипотека",
         "bank": "ДОМ.РФ",
@@ -1319,9 +1322,6 @@
         "kids": "1 ребёнок",
         "limit": 6000000
       },
-      "description": "",
-      "combination": "По условиям банка; итоговая цена зависит от субсидии",
-      "mode": "individual",
       "enabled": true
     },
     {
@@ -1331,6 +1331,9 @@
       "name": "ДОМ.РФ · 2 ребёнка · 15 лет",
       "project": "dnk2",
       "kind": "mortgage",
+      "description": "",
+      "combination": "По условиям банка; итоговая цена зависит от субсидии",
+      "mode": "individual",
       "params": {
         "type": "Семейная ипотека",
         "bank": "ДОМ.РФ",
@@ -1341,9 +1344,6 @@
         "kids": "2 ребёнка",
         "limit": 8000000
       },
-      "description": "",
-      "combination": "По условиям банка; итоговая цена зависит от субсидии",
-      "mode": "individual",
       "enabled": true
     },
     {
@@ -1353,6 +1353,9 @@
       "name": "ДОМ.РФ · 3 ребёнка · 15 лет",
       "project": "dnk2",
       "kind": "mortgage",
+      "description": "",
+      "combination": "По условиям банка; итоговая цена зависит от субсидии",
+      "mode": "individual",
       "params": {
         "type": "Семейная ипотека",
         "bank": "ДОМ.РФ",
@@ -1363,9 +1366,6 @@
         "kids": "3 ребёнка",
         "limit": 10000000
       },
-      "description": "",
-      "combination": "По условиям банка; итоговая цена зависит от субсидии",
-      "mode": "individual",
       "enabled": true
     },
     {
@@ -1375,6 +1375,9 @@
       "name": "ДОМ.РФ · 4 ребёнка · 15 лет",
       "project": "dnk2",
       "kind": "mortgage",
+      "description": "",
+      "combination": "По условиям банка; итоговая цена зависит от субсидии",
+      "mode": "individual",
       "params": {
         "type": "Семейная ипотека",
         "bank": "ДОМ.РФ",
@@ -1385,9 +1388,6 @@
         "kids": "4 ребёнка",
         "limit": 10000000
       },
-      "description": "",
-      "combination": "По условиям банка; итоговая цена зависит от субсидии",
-      "mode": "individual",
       "enabled": true
     },
     {
@@ -1397,6 +1397,9 @@
       "name": "ДОМ.РФ · Базовая ипотека · 30 лет · стандартная ставка",
       "project": "dnk2",
       "kind": "mortgage",
+      "description": "",
+      "combination": "По условиям банка; итоговая цена зависит от субсидии",
+      "mode": "individual",
       "params": {
         "type": "Базовая ипотека",
         "bank": "ДОМ.РФ",
@@ -1406,9 +1409,6 @@
         "minPv": 0.2,
         "variant": "стандартная ставка"
       },
-      "description": "",
-      "combination": "По условиям банка; итоговая цена зависит от субсидии",
-      "mode": "individual",
       "enabled": true
     },
     {
@@ -1418,6 +1418,9 @@
       "name": "ДОМ.РФ · Базовая ипотека · 30 лет · субсидированная ставка",
       "project": "dnk2",
       "kind": "mortgage",
+      "description": "",
+      "combination": "По условиям банка; итоговая цена зависит от субсидии",
+      "mode": "individual",
       "params": {
         "type": "Базовая ипотека",
         "bank": "ДОМ.РФ",
@@ -1427,9 +1430,6 @@
         "minPv": 0.2,
         "variant": "субсидированная ставка"
       },
-      "description": "",
-      "combination": "По условиям банка; итоговая цена зависит от субсидии",
-      "mode": "individual",
       "enabled": true
     },
     {
@@ -1439,6 +1439,9 @@
       "name": "ВТБ · Базовая ипотека · 30 лет · стандартная ставка",
       "project": "dnk2",
       "kind": "mortgage",
+      "description": "",
+      "combination": "По условиям банка; итоговая цена зависит от субсидии",
+      "mode": "individual",
       "params": {
         "type": "Базовая ипотека",
         "bank": "ВТБ",
@@ -1448,9 +1451,6 @@
         "minPv": 0.2,
         "variant": "стандартная ставка"
       },
-      "description": "",
-      "combination": "По условиям банка; итоговая цена зависит от субсидии",
-      "mode": "individual",
       "enabled": true
     },
     {
@@ -1460,6 +1460,9 @@
       "name": "ВТБ · Базовая ипотека · 30 лет · субсидированная ставка",
       "project": "dnk2",
       "kind": "mortgage",
+      "description": "",
+      "combination": "По условиям банка; итоговая цена зависит от субсидии",
+      "mode": "individual",
       "params": {
         "type": "Базовая ипотека",
         "bank": "ВТБ",
@@ -1469,9 +1472,6 @@
         "minPv": 0.2,
         "variant": "субсидированная ставка"
       },
-      "description": "",
-      "combination": "По условиям банка; итоговая цена зависит от субсидии",
-      "mode": "individual",
       "enabled": true
     },
     {
@@ -1481,6 +1481,9 @@
       "name": "ВТБ · Базовая ипотека · 30 лет · субсидированная ставка · вариант 2",
       "project": "dnk2",
       "kind": "mortgage",
+      "description": "",
+      "combination": "По условиям банка; итоговая цена зависит от субсидии",
+      "mode": "individual",
       "params": {
         "type": "Базовая ипотека",
         "bank": "ВТБ",
@@ -1490,9 +1493,6 @@
         "minPv": 0.2,
         "variant": "субсидированная ставка"
       },
-      "description": "",
-      "combination": "По условиям банка; итоговая цена зависит от субсидии",
-      "mode": "individual",
       "enabled": true
     },
     {
@@ -1502,6 +1502,9 @@
       "name": "ВТБ · 1 ребёнок · 15 лет",
       "project": "dnk2",
       "kind": "mortgage",
+      "description": "",
+      "combination": "По условиям банка; итоговая цена зависит от субсидии",
+      "mode": "individual",
       "params": {
         "type": "Семейная ипотека",
         "bank": "ВТБ",
@@ -1512,9 +1515,6 @@
         "kids": "1 ребёнок",
         "limit": 6000000
       },
-      "description": "",
-      "combination": "По условиям банка; итоговая цена зависит от субсидии",
-      "mode": "individual",
       "enabled": true
     },
     {
@@ -1524,6 +1524,9 @@
       "name": "ВТБ · 1 ребёнок · 15 лет · вариант 2",
       "project": "dnk2",
       "kind": "mortgage",
+      "description": "",
+      "combination": "По условиям банка; итоговая цена зависит от субсидии",
+      "mode": "individual",
       "params": {
         "type": "Семейная ипотека",
         "bank": "ВТБ",
@@ -1534,9 +1537,6 @@
         "kids": "1 ребёнок",
         "limit": 6000000
       },
-      "description": "",
-      "combination": "По условиям банка; итоговая цена зависит от субсидии",
-      "mode": "individual",
       "enabled": true
     },
     {
@@ -1546,6 +1546,9 @@
       "name": "ВТБ · 1 ребёнок · 30 лет",
       "project": "dnk2",
       "kind": "mortgage",
+      "description": "",
+      "combination": "По условиям банка; итоговая цена зависит от субсидии",
+      "mode": "individual",
       "params": {
         "type": "Семейная ипотека",
         "bank": "ВТБ",
@@ -1556,9 +1559,6 @@
         "kids": "1 ребёнок",
         "limit": 6000000
       },
-      "description": "",
-      "combination": "По условиям банка; итоговая цена зависит от субсидии",
-      "mode": "individual",
       "enabled": true
     },
     {
@@ -1568,6 +1568,9 @@
       "name": "ВТБ · 1 ребёнок · 30 лет · вариант 2",
       "project": "dnk2",
       "kind": "mortgage",
+      "description": "",
+      "combination": "По условиям банка; итоговая цена зависит от субсидии",
+      "mode": "individual",
       "params": {
         "type": "Семейная ипотека",
         "bank": "ВТБ",
@@ -1578,9 +1581,6 @@
         "kids": "1 ребёнок",
         "limit": 6000000
       },
-      "description": "",
-      "combination": "По условиям банка; итоговая цена зависит от субсидии",
-      "mode": "individual",
       "enabled": true
     },
     {
@@ -1590,6 +1590,9 @@
       "name": "ВТБ · 2 ребёнка · 15 лет",
       "project": "dnk2",
       "kind": "mortgage",
+      "description": "",
+      "combination": "По условиям банка; итоговая цена зависит от субсидии",
+      "mode": "individual",
       "params": {
         "type": "Семейная ипотека",
         "bank": "ВТБ",
@@ -1600,9 +1603,6 @@
         "kids": "2 ребёнка",
         "limit": 8000000
       },
-      "description": "",
-      "combination": "По условиям банка; итоговая цена зависит от субсидии",
-      "mode": "individual",
       "enabled": true
     },
     {
@@ -1612,6 +1612,9 @@
       "name": "ВТБ · 2 ребёнка · 15 лет · вариант 2",
       "project": "dnk2",
       "kind": "mortgage",
+      "description": "",
+      "combination": "По условиям банка; итоговая цена зависит от субсидии",
+      "mode": "individual",
       "params": {
         "type": "Семейная ипотека",
         "bank": "ВТБ",
@@ -1622,9 +1625,6 @@
         "kids": "2 ребёнка",
         "limit": 8000000
       },
-      "description": "",
-      "combination": "По условиям банка; итоговая цена зависит от субсидии",
-      "mode": "individual",
       "enabled": true
     },
     {
@@ -1634,6 +1634,9 @@
       "name": "ВТБ · 2 ребёнка · 30 лет",
       "project": "dnk2",
       "kind": "mortgage",
+      "description": "",
+      "combination": "По условиям банка; итоговая цена зависит от субсидии",
+      "mode": "individual",
       "params": {
         "type": "Семейная ипотека",
         "bank": "ВТБ",
@@ -1644,9 +1647,6 @@
         "kids": "2 ребёнка",
         "limit": 8000000
       },
-      "description": "",
-      "combination": "По условиям банка; итоговая цена зависит от субсидии",
-      "mode": "individual",
       "enabled": true
     },
     {
@@ -1656,6 +1656,9 @@
       "name": "ВТБ · 2 ребёнка · 30 лет · вариант 2",
       "project": "dnk2",
       "kind": "mortgage",
+      "description": "",
+      "combination": "По условиям банка; итоговая цена зависит от субсидии",
+      "mode": "individual",
       "params": {
         "type": "Семейная ипотека",
         "bank": "ВТБ",
@@ -1666,9 +1669,6 @@
         "kids": "2 ребёнка",
         "limit": 8000000
       },
-      "description": "",
-      "combination": "По условиям банка; итоговая цена зависит от субсидии",
-      "mode": "individual",
       "enabled": true
     },
     {
@@ -1678,6 +1678,9 @@
       "name": "Сбербанк · 1 ребёнок · 15 лет",
       "project": "dnk2",
       "kind": "mortgage",
+      "description": "",
+      "combination": "По условиям банка; итоговая цена зависит от субсидии",
+      "mode": "individual",
       "params": {
         "type": "Семейная ипотека",
         "bank": "Сбербанк",
@@ -1688,9 +1691,6 @@
         "kids": "1 ребёнок",
         "limit": 6000000
       },
-      "description": "",
-      "combination": "По условиям банка; итоговая цена зависит от субсидии",
-      "mode": "individual",
       "enabled": true
     },
     {
@@ -1700,6 +1700,9 @@
       "name": "Сбербанк · 2 ребёнка · 15 лет",
       "project": "dnk2",
       "kind": "mortgage",
+      "description": "",
+      "combination": "По условиям банка; итоговая цена зависит от субсидии",
+      "mode": "individual",
       "params": {
         "type": "Семейная ипотека",
         "bank": "Сбербанк",
@@ -1710,9 +1713,6 @@
         "kids": "2 ребёнка",
         "limit": 8000000
       },
-      "description": "",
-      "combination": "По условиям банка; итоговая цена зависит от субсидии",
-      "mode": "individual",
       "enabled": true
     },
     {
@@ -1722,6 +1722,9 @@
       "name": "Сбербанк · 3 ребёнка · 15 лет",
       "project": "dnk2",
       "kind": "mortgage",
+      "description": "",
+      "combination": "По условиям банка; итоговая цена зависит от субсидии",
+      "mode": "individual",
       "params": {
         "type": "Семейная ипотека",
         "bank": "Сбербанк",
@@ -1732,9 +1735,6 @@
         "kids": "3 ребёнка",
         "limit": 10000000
       },
-      "description": "",
-      "combination": "По условиям банка; итоговая цена зависит от субсидии",
-      "mode": "individual",
       "enabled": true
     },
     {
@@ -1744,6 +1744,9 @@
       "name": "Сбербанк · 4 ребёнка · 15 лет",
       "project": "dnk2",
       "kind": "mortgage",
+      "description": "",
+      "combination": "По условиям банка; итоговая цена зависит от субсидии",
+      "mode": "individual",
       "params": {
         "type": "Семейная ипотека",
         "bank": "Сбербанк",
@@ -1754,9 +1757,6 @@
         "kids": "4 ребёнка",
         "limit": 10000000
       },
-      "description": "",
-      "combination": "По условиям банка; итоговая цена зависит от субсидии",
-      "mode": "individual",
       "enabled": true
     },
     {
@@ -1766,6 +1766,9 @@
       "name": "Сбербанк · 5 и более детей · 15 лет",
       "project": "dnk2",
       "kind": "mortgage",
+      "description": "",
+      "combination": "По условиям банка; итоговая цена зависит от субсидии",
+      "mode": "individual",
       "params": {
         "type": "Семейная ипотека",
         "bank": "Сбербанк",
@@ -1776,9 +1779,6 @@
         "kids": "5 и более детей",
         "limit": 10000000
       },
-      "description": "",
-      "combination": "По условиям банка; итоговая цена зависит от субсидии",
-      "mode": "individual",
       "enabled": true
     },
     {
@@ -1788,6 +1788,9 @@
       "name": "Сбербанк · Базовая ипотека · 30 лет · субсидированная ставка",
       "project": "dnk2",
       "kind": "mortgage",
+      "description": "",
+      "combination": "По условиям банка; итоговая цена зависит от субсидии",
+      "mode": "individual",
       "params": {
         "type": "Базовая ипотека",
         "bank": "Сбербанк",
@@ -1797,9 +1800,6 @@
         "minPv": 0.2,
         "variant": "субсидированная ставка"
       },
-      "description": "",
-      "combination": "По условиям банка; итоговая цена зависит от субсидии",
-      "mode": "individual",
       "enabled": true
     },
     {
@@ -1809,6 +1809,9 @@
       "name": "Рассрочка от 30%",
       "project": "da1",
       "kind": "installment",
+      "description": "Взнос и скидка от него — по прайсу, как в таблице скидок. Остаток — равными платежами.",
+      "combination": "Скидка на сумму ПВ",
+      "mode": "sequential",
       "params": {
         "scheme": "equal",
         "minPv": 0.3,
@@ -1823,9 +1826,6 @@
         "extraSequential": true,
         "validUntil": "2026-09-30"
       },
-      "description": "Взнос и скидка от него — по прайсу, как в таблице скидок. Остаток — равными платежами.",
-      "combination": "Скидка на сумму ПВ",
-      "mode": "sequential",
       "enabled": true
     },
     {
@@ -1835,6 +1835,9 @@
       "name": "Рассрочка с ежемесячным платежом",
       "project": "da1",
       "kind": "installment",
+      "description": "Платежи с 1 по 5 число, начиная со следующего месяца. Остаток — к дате погашения.",
+      "combination": "Последовательно",
+      "mode": "sequential",
       "params": {
         "scheme": "monthly",
         "minPv": 0.1,
@@ -1848,9 +1851,6 @@
         "extraSequential": true,
         "validUntil": "2026-09-30"
       },
-      "description": "Платежи с 1 по 5 число, начиная со следующего месяца. Остаток — к дате погашения.",
-      "combination": "Последовательно",
-      "mode": "sequential",
       "enabled": true
     },
     {
@@ -1860,6 +1860,9 @@
       "name": "Для будущих родителей · 3 мес.",
       "project": "da1",
       "kind": "installment",
+      "description": "Без промежуточных платежей, остаток за счёт семейной ипотеки. Применимость и одобрение банка уточняются.",
+      "combination": "Последовательно",
+      "mode": "sequential",
       "params": {
         "scheme": "deferred",
         "minPv": 0.201,
@@ -1868,9 +1871,6 @@
         "extraSequential": true,
         "validUntil": "2026-07-30"
       },
-      "description": "Без промежуточных платежей, остаток за счёт семейной ипотеки. Применимость и одобрение банка уточняются.",
-      "combination": "Последовательно",
-      "mode": "sequential",
       "enabled": true
     },
     {
@@ -1880,6 +1880,9 @@
       "name": "Для будущих родителей · 6 мес.",
       "project": "da1",
       "kind": "installment",
+      "description": "Без промежуточных платежей, остаток за счёт семейной ипотеки. Применимость и одобрение банка уточняются.",
+      "combination": "Последовательно",
+      "mode": "sequential",
       "params": {
         "scheme": "deferred",
         "minPv": 0.201,
@@ -1888,9 +1891,6 @@
         "extraSequential": true,
         "validUntil": "2026-07-30"
       },
-      "description": "Без промежуточных платежей, остаток за счёт семейной ипотеки. Применимость и одобрение банка уточняются.",
-      "combination": "Последовательно",
-      "mode": "sequential",
       "enabled": true
     },
     {
@@ -1900,6 +1900,9 @@
       "name": "Рассрочка от 30%",
       "project": "da2",
       "kind": "installment",
+      "description": "Взнос и скидка от него — по прайсу, как в таблице скидок. Остаток — равными платежами.",
+      "combination": "Скидка на сумму ПВ",
+      "mode": "sequential",
       "params": {
         "scheme": "equal",
         "minPv": 0.3,
@@ -1915,9 +1918,6 @@
         "extraSequential": true,
         "validUntil": "2026-09-30"
       },
-      "description": "Взнос и скидка от него — по прайсу, как в таблице скидок. Остаток — равными платежами.",
-      "combination": "Скидка на сумму ПВ",
-      "mode": "sequential",
       "enabled": true
     },
     {
@@ -1927,6 +1927,9 @@
       "name": "Рассрочка с ежемесячным платежом",
       "project": "da2",
       "kind": "installment",
+      "description": "Платежи с 1 по 5 число, начиная со следующего месяца. Остаток — к дате погашения.",
+      "combination": "Последовательно",
+      "mode": "sequential",
       "params": {
         "scheme": "monthly",
         "minPv": 0.1,
@@ -1940,9 +1943,6 @@
         "extraSequential": true,
         "validUntil": "2026-09-30"
       },
-      "description": "Платежи с 1 по 5 число, начиная со следующего месяца. Остаток — к дате погашения.",
-      "combination": "Последовательно",
-      "mode": "sequential",
       "enabled": true
     },
     {
@@ -1952,6 +1952,9 @@
       "name": "Для будущих родителей · 3 мес.",
       "project": "da2",
       "kind": "installment",
+      "description": "Без промежуточных платежей, остаток за счёт семейной ипотеки. Применимость и одобрение банка уточняются.",
+      "combination": "Последовательно",
+      "mode": "sequential",
       "params": {
         "scheme": "deferred",
         "minPv": 0.201,
@@ -1960,9 +1963,6 @@
         "extraSequential": true,
         "validUntil": "2026-07-30"
       },
-      "description": "Без промежуточных платежей, остаток за счёт семейной ипотеки. Применимость и одобрение банка уточняются.",
-      "combination": "Последовательно",
-      "mode": "sequential",
       "enabled": true
     },
     {
@@ -1972,6 +1972,9 @@
       "name": "Для будущих родителей · 6 мес.",
       "project": "da2",
       "kind": "installment",
+      "description": "Без промежуточных платежей, остаток за счёт семейной ипотеки. Применимость и одобрение банка уточняются.",
+      "combination": "Последовательно",
+      "mode": "sequential",
       "params": {
         "scheme": "deferred",
         "minPv": 0.201,
@@ -1980,9 +1983,6 @@
         "extraSequential": true,
         "validUntil": "2026-07-30"
       },
-      "description": "Без промежуточных платежей, остаток за счёт семейной ипотеки. Применимость и одобрение банка уточняются.",
-      "combination": "Последовательно",
-      "mode": "sequential",
       "enabled": true
     },
     {
@@ -1992,6 +1992,9 @@
       "name": "Без первоначального взноса",
       "project": "dnk2",
       "kind": "installment",
+      "description": "Ограниченный ассортимент: одна сделка в месяц на отдел продаж. Через 3 месяца — 10%; в октябре 2028 — 5%. Дополнительные скидки не применяются.",
+      "combination": "Не суммируется",
+      "mode": "none",
       "params": {
         "scheme": "monthly",
         "minPv": 0,
@@ -2013,9 +2016,6 @@
         ],
         "noExtra": true
       },
-      "description": "Ограниченный ассортимент: одна сделка в месяц на отдел продаж. Через 3 месяца — 10%; в октябре 2028 — 5%. Дополнительные скидки не применяются.",
-      "combination": "Не суммируется",
-      "mode": "none",
       "enabled": true
     },
     {
@@ -2025,6 +2025,9 @@
       "name": "Рассрочка 20/20",
       "project": "dnk2",
       "kind": "installment",
+      "description": "ПВ 20%, ежемесячно 20 000 ₽, в октябре 2028 — дополнительно 5%. Точный день промежуточного платежа уточняется.",
+      "combination": "Суммируется",
+      "mode": "additive",
       "params": {
         "scheme": "monthly",
         "minPv": 0.2,
@@ -2044,9 +2047,6 @@
         "launchDiscount": 0.02,
         "launchUntil": "2026-11-30"
       },
-      "description": "ПВ 20%, ежемесячно 20 000 ₽, в октябре 2028 — дополнительно 5%. Точный день промежуточного платежа уточняется.",
-      "combination": "Суммируется",
-      "mode": "additive",
       "enabled": true
     },
     {
@@ -2056,6 +2056,9 @@
       "name": "Рассрочка 4/25",
       "project": "dnk2",
       "kind": "installment",
+      "description": "Четыре платежа по 25% стоимости квартиры.",
+      "combination": "Суммируется",
+      "mode": "additive",
       "params": {
         "scheme": "scheduled",
         "minPv": 0.25,
@@ -2074,9 +2077,6 @@
         "launchDiscount": 0.02,
         "launchUntil": "2026-11-30"
       },
-      "description": "Четыре платежа по 25% стоимости квартиры.",
-      "combination": "Суммируется",
-      "mode": "additive",
       "enabled": true
     },
     {
@@ -2086,6 +2086,9 @@
       "name": "Рассрочка 50/50",
       "project": "dnk2",
       "kind": "installment",
+      "description": "ПВ 50% или 70%; в октябре 2028 — 5%, остаток до 30.01.2029. При ПВ 70% базовая скидка 12%. Точный день в октябре уточняется.",
+      "combination": "Суммируется",
+      "mode": "additive",
       "params": {
         "scheme": "scheduled",
         "minPv": 0.5,
@@ -2105,9 +2108,6 @@
         "launchDiscount": 0.02,
         "launchUntil": "2026-11-30"
       },
-      "description": "ПВ 50% или 70%; в октябре 2028 — 5%, остаток до 30.01.2029. При ПВ 70% базовая скидка 12%. Точный день в октябре уточняется.",
-      "combination": "Суммируется",
-      "mode": "additive",
       "enabled": true
     },
     {
@@ -2117,6 +2117,9 @@
       "name": "Для будущих родителей",
       "project": "dnk2",
       "kind": "installment",
+      "description": "Максимум 9 месяцев; переход на ипотеку — в течение 2 месяцев после рождения ребёнка. Нужна справка о беременности. При изменении условий ипотеки цена и условия пересматриваются.",
+      "combination": "Суммируется",
+      "mode": "additive",
       "params": {
         "scheme": "deferred",
         "minPv": 0.2,
@@ -2125,9 +2128,6 @@
         "launchDiscount": 0.02,
         "launchUntil": "2026-11-30"
       },
-      "description": "Максимум 9 месяцев; переход на ипотеку — в течение 2 месяцев после рождения ребёнка. Нужна справка о беременности. При изменении условий ипотеки цена и условия пересматриваются.",
-      "combination": "Суммируется",
-      "mode": "additive",
       "enabled": true
     },
     {
@@ -2137,6 +2137,9 @@
       "name": "Траншевая ипотека · ориентир 1 500 ₽",
       "project": "da1",
       "kind": "tranche",
+      "description": "Первый транш 100 000 ₽, второй — остаток. Оценка по ориентиру; точную ставку подтверждает банк.",
+      "combination": "Скидка АН / дожим",
+      "mode": "sequential",
       "params": {
         "tranches": 2,
         "minPv": 0.201,
@@ -2147,9 +2150,6 @@
         "date2": "2027-03-20",
         "discount": 0
       },
-      "description": "Первый транш 100 000 ₽, второй — остаток. Оценка по ориентиру; точную ставку подтверждает банк.",
-      "combination": "Скидка АН / дожим",
-      "mode": "sequential",
       "enabled": true
     },
     {
@@ -2159,6 +2159,9 @@
       "name": "Траншевая ипотека · ориентир 1 500 ₽",
       "project": "da2",
       "kind": "tranche",
+      "description": "Первый транш 100 000 ₽, второй — остаток. Оценка по ориентиру; точную ставку подтверждает банк.",
+      "combination": "Скидка АН / дожим",
+      "mode": "sequential",
       "params": {
         "tranches": 2,
         "minPv": 0.201,
@@ -2169,9 +2172,6 @@
         "date2": "2028-09-20",
         "discount": 0
       },
-      "description": "Первый транш 100 000 ₽, второй — остаток. Оценка по ориентиру; точную ставку подтверждает банк.",
-      "combination": "Скидка АН / дожим",
-      "mode": "sequential",
       "enabled": true
     },
     {
@@ -2181,6 +2181,9 @@
       "name": "Траншевая ипотека · первый транш 20%",
       "project": "dnk2",
       "kind": "tranche",
+      "description": "Дата последнего транша в документе — май 2029; она противоречит вводу в IV квартале 2029 и требует подтверждения.",
+      "combination": "Стартовая скидка +2% до 30.11.2026",
+      "mode": "additive",
       "params": {
         "bank": "Сбербанк",
         "tranches": 3,
@@ -2196,9 +2199,6 @@
         "launchDiscount": 0.02,
         "launchUntil": "2026-11-30"
       },
-      "description": "Дата последнего транша в документе — май 2029; она противоречит вводу в IV квартале 2029 и требует подтверждения.",
-      "combination": "Стартовая скидка +2% до 30.11.2026",
-      "mode": "additive",
       "enabled": true
     },
     {
@@ -2208,6 +2208,9 @@
       "name": "Траншевая ипотека · первый транш 10%",
       "project": "dnk2",
       "kind": "tranche",
+      "description": "Дата последнего транша в документе — май 2029; она противоречит вводу в IV квартале 2029 и требует подтверждения.",
+      "combination": "Стартовая скидка +2% до 30.11.2026",
+      "mode": "additive",
       "params": {
         "bank": "Сбербанк",
         "tranches": 3,
@@ -2223,9 +2226,6 @@
         "launchDiscount": 0.02,
         "launchUntil": "2026-11-30"
       },
-      "description": "Дата последнего транша в документе — май 2029; она противоречит вводу в IV квартале 2029 и требует подтверждения.",
-      "combination": "Стартовая скидка +2% до 30.11.2026",
-      "mode": "additive",
       "enabled": true
     },
     {
@@ -2235,6 +2235,9 @@
       "name": "Траншевая ипотека · первый транш 1%",
       "project": "dnk2",
       "kind": "tranche",
+      "description": "Дата последнего транша в документе — май 2029; она противоречит вводу в IV квартале 2029 и требует подтверждения.",
+      "combination": "Стартовая скидка +2% до 30.11.2026",
+      "mode": "additive",
       "params": {
         "bank": "Сбербанк",
         "tranches": 3,
@@ -2250,9 +2253,6 @@
         "launchDiscount": 0.02,
         "launchUntil": "2026-11-30"
       },
-      "description": "Дата последнего транша в документе — май 2029; она противоречит вводу в IV квартале 2029 и требует подтверждения.",
-      "combination": "Стартовая скидка +2% до 30.11.2026",
-      "mode": "additive",
       "enabled": true
     },
     {
@@ -2262,6 +2262,9 @@
       "name": "ЧПВ · 1 ребёнок",
       "project": "da1",
       "kind": "chpv",
+      "description": "Дофинансирование взноса по методике активного калькулятора ЧПВ. Применимость программы подтверждается отдельно.",
+      "combination": "Не суммируется с дополнительными скидками",
+      "mode": "none",
       "params": {
         "limit": 6000000,
         "years": 15,
@@ -2270,9 +2273,6 @@
         "cost": 0.25,
         "overRate": 0.14
       },
-      "description": "Дофинансирование взноса по методике активного калькулятора ЧПВ. Применимость программы подтверждается отдельно.",
-      "combination": "Не суммируется с дополнительными скидками",
-      "mode": "none",
       "enabled": true
     },
     {
@@ -2282,6 +2282,9 @@
       "name": "ЧПВ · 2 ребёнка",
       "project": "da1",
       "kind": "chpv",
+      "description": "Дофинансирование взноса по методике активного калькулятора ЧПВ. Применимость программы подтверждается отдельно.",
+      "combination": "Не суммируется с дополнительными скидками",
+      "mode": "none",
       "params": {
         "limit": 8000000,
         "years": 15,
@@ -2290,9 +2293,6 @@
         "cost": 0.25,
         "overRate": 0.14
       },
-      "description": "Дофинансирование взноса по методике активного калькулятора ЧПВ. Применимость программы подтверждается отдельно.",
-      "combination": "Не суммируется с дополнительными скидками",
-      "mode": "none",
       "enabled": true
     },
     {
@@ -2302,6 +2302,9 @@
       "name": "ЧПВ · 3 ребёнка",
       "project": "da1",
       "kind": "chpv",
+      "description": "Дофинансирование взноса по методике активного калькулятора ЧПВ. Применимость программы подтверждается отдельно.",
+      "combination": "Не суммируется с дополнительными скидками",
+      "mode": "none",
       "params": {
         "limit": 10000000,
         "years": 15,
@@ -2310,9 +2313,6 @@
         "cost": 0.25,
         "overRate": 0.14
       },
-      "description": "Дофинансирование взноса по методике активного калькулятора ЧПВ. Применимость программы подтверждается отдельно.",
-      "combination": "Не суммируется с дополнительными скидками",
-      "mode": "none",
       "enabled": true
     },
     {
@@ -2322,6 +2322,9 @@
       "name": "ЧПВ · 4 ребёнка",
       "project": "da1",
       "kind": "chpv",
+      "description": "Дофинансирование взноса по методике активного калькулятора ЧПВ. Применимость программы подтверждается отдельно.",
+      "combination": "Не суммируется с дополнительными скидками",
+      "mode": "none",
       "params": {
         "limit": 10000000,
         "years": 15,
@@ -2330,9 +2333,6 @@
         "cost": 0.25,
         "overRate": 0.14
       },
-      "description": "Дофинансирование взноса по методике активного калькулятора ЧПВ. Применимость программы подтверждается отдельно.",
-      "combination": "Не суммируется с дополнительными скидками",
-      "mode": "none",
       "enabled": true
     },
     {
@@ -2342,6 +2342,9 @@
       "name": "ЧПВ · 5 и более детей",
       "project": "da1",
       "kind": "chpv",
+      "description": "Дофинансирование взноса по методике активного калькулятора ЧПВ. Применимость программы подтверждается отдельно.",
+      "combination": "Не суммируется с дополнительными скидками",
+      "mode": "none",
       "params": {
         "limit": 10000000,
         "years": 15,
@@ -2350,9 +2353,6 @@
         "cost": 0.25,
         "overRate": 0.14
       },
-      "description": "Дофинансирование взноса по методике активного калькулятора ЧПВ. Применимость программы подтверждается отдельно.",
-      "combination": "Не суммируется с дополнительными скидками",
-      "mode": "none",
       "enabled": true
     },
     {
@@ -2362,6 +2362,9 @@
       "name": "ЧПВ · IT",
       "project": "da1",
       "kind": "chpv",
+      "description": "Дофинансирование взноса по методике активного калькулятора ЧПВ. Применимость программы подтверждается отдельно.",
+      "combination": "Не суммируется с дополнительными скидками",
+      "mode": "none",
       "params": {
         "limit": 9000000,
         "years": 30,
@@ -2370,9 +2373,6 @@
         "cost": 0.25,
         "overRate": 0.14
       },
-      "description": "Дофинансирование взноса по методике активного калькулятора ЧПВ. Применимость программы подтверждается отдельно.",
-      "combination": "Не суммируется с дополнительными скидками",
-      "mode": "none",
       "enabled": true
     },
     {
@@ -2382,6 +2382,9 @@
       "name": "ЧПВ · 1 ребёнок",
       "project": "da2",
       "kind": "chpv",
+      "description": "Дофинансирование взноса по методике активного калькулятора ЧПВ. Применимость программы подтверждается отдельно.",
+      "combination": "Не суммируется с дополнительными скидками",
+      "mode": "none",
       "params": {
         "limit": 6000000,
         "years": 15,
@@ -2390,9 +2393,6 @@
         "cost": 0.5,
         "overRate": 0.14
       },
-      "description": "Дофинансирование взноса по методике активного калькулятора ЧПВ. Применимость программы подтверждается отдельно.",
-      "combination": "Не суммируется с дополнительными скидками",
-      "mode": "none",
       "enabled": true
     },
     {
@@ -2402,6 +2402,9 @@
       "name": "ЧПВ · 2 ребёнка",
       "project": "da2",
       "kind": "chpv",
+      "description": "Дофинансирование взноса по методике активного калькулятора ЧПВ. Применимость программы подтверждается отдельно.",
+      "combination": "Не суммируется с дополнительными скидками",
+      "mode": "none",
       "params": {
         "limit": 8000000,
         "years": 15,
@@ -2410,9 +2413,6 @@
         "cost": 0.5,
         "overRate": 0.14
       },
-      "description": "Дофинансирование взноса по методике активного калькулятора ЧПВ. Применимость программы подтверждается отдельно.",
-      "combination": "Не суммируется с дополнительными скидками",
-      "mode": "none",
       "enabled": true
     },
     {
@@ -2422,6 +2422,9 @@
       "name": "ЧПВ · 3 ребёнка",
       "project": "da2",
       "kind": "chpv",
+      "description": "Дофинансирование взноса по методике активного калькулятора ЧПВ. Применимость программы подтверждается отдельно.",
+      "combination": "Не суммируется с дополнительными скидками",
+      "mode": "none",
       "params": {
         "limit": 10000000,
         "years": 15,
@@ -2430,9 +2433,6 @@
         "cost": 0.5,
         "overRate": 0.14
       },
-      "description": "Дофинансирование взноса по методике активного калькулятора ЧПВ. Применимость программы подтверждается отдельно.",
-      "combination": "Не суммируется с дополнительными скидками",
-      "mode": "none",
       "enabled": true
     },
     {
@@ -2442,6 +2442,9 @@
       "name": "ЧПВ · 4 ребёнка",
       "project": "da2",
       "kind": "chpv",
+      "description": "Дофинансирование взноса по методике активного калькулятора ЧПВ. Применимость программы подтверждается отдельно.",
+      "combination": "Не суммируется с дополнительными скидками",
+      "mode": "none",
       "params": {
         "limit": 10000000,
         "years": 15,
@@ -2450,9 +2453,6 @@
         "cost": 0.5,
         "overRate": 0.14
       },
-      "description": "Дофинансирование взноса по методике активного калькулятора ЧПВ. Применимость программы подтверждается отдельно.",
-      "combination": "Не суммируется с дополнительными скидками",
-      "mode": "none",
       "enabled": true
     },
     {
@@ -2462,6 +2462,9 @@
       "name": "ЧПВ · 5 и более детей",
       "project": "da2",
       "kind": "chpv",
+      "description": "Дофинансирование взноса по методике активного калькулятора ЧПВ. Применимость программы подтверждается отдельно.",
+      "combination": "Не суммируется с дополнительными скидками",
+      "mode": "none",
       "params": {
         "limit": 10000000,
         "years": 15,
@@ -2470,9 +2473,6 @@
         "cost": 0.5,
         "overRate": 0.14
       },
-      "description": "Дофинансирование взноса по методике активного калькулятора ЧПВ. Применимость программы подтверждается отдельно.",
-      "combination": "Не суммируется с дополнительными скидками",
-      "mode": "none",
       "enabled": true
     },
     {
@@ -2482,6 +2482,9 @@
       "name": "ЧПВ · IT",
       "project": "da2",
       "kind": "chpv",
+      "description": "Дофинансирование взноса по методике активного калькулятора ЧПВ. Применимость программы подтверждается отдельно.",
+      "combination": "Не суммируется с дополнительными скидками",
+      "mode": "none",
       "params": {
         "limit": 9000000,
         "years": 30,
@@ -2490,9 +2493,6 @@
         "cost": 0.5,
         "overRate": 0.14
       },
-      "description": "Дофинансирование взноса по методике активного калькулятора ЧПВ. Применимость программы подтверждается отдельно.",
-      "combination": "Не суммируется с дополнительными скидками",
-      "mode": "none",
       "enabled": true
     },
     {
@@ -2502,13 +2502,13 @@
       "name": "Скидка за полную оплату",
       "project": "da1",
       "kind": "discount",
+      "description": "Полная оплата и ипотека без субсидии.",
+      "combination": "Сочетание с другими акциями по правилам программы",
+      "mode": "additive",
       "params": {
         "scope": "cash",
         "percent": 0.13
       },
-      "description": "Полная оплата и ипотека без субсидии.",
-      "combination": "Сочетание с другими акциями по правилам программы",
-      "mode": "additive",
       "enabled": true
     },
     {
@@ -2518,13 +2518,13 @@
       "name": "Скидка за полную оплату",
       "project": "da2",
       "kind": "discount",
+      "description": "Полная оплата и ипотека без субсидии.",
+      "combination": "Сочетание с другими акциями по правилам программы",
+      "mode": "additive",
       "params": {
         "scope": "cash",
         "percent": 0.13
       },
-      "description": "Полная оплата и ипотека без субсидии.",
-      "combination": "Сочетание с другими акциями по правилам программы",
-      "mode": "additive",
       "enabled": true
     },
     {
@@ -2534,15 +2534,15 @@
       "name": "Скидка за полную оплату",
       "project": "dnk2",
       "kind": "discount",
+      "description": "Полная оплата и ипотека без субсидии.",
+      "combination": "Сочетание с другими акциями по правилам программы",
+      "mode": "additive",
       "params": {
         "scope": "cash",
         "percent": 0.14,
         "launchDiscount": 0.05,
         "launchUntil": "2026-11-30"
       },
-      "description": "Полная оплата и ипотека без субсидии.",
-      "combination": "Сочетание с другими акциями по правилам программы",
-      "mode": "additive",
       "enabled": true
     },
     {
@@ -2552,10 +2552,10 @@
       "name": "Любая ипотека на стандартных условиях",
       "project": "da1",
       "kind": "info",
-      "params": {},
       "description": "ПВ и ставка по стандартным условиям программы",
       "combination": "Суммируется со скидкой за 100% оплату и ипотеку без субсидии.\n\nБез удорожания",
       "mode": "additive",
+      "params": {},
       "enabled": true
     },
     {
@@ -2565,10 +2565,10 @@
       "name": "Любая ипотека на стандартных условиях",
       "project": "da2",
       "kind": "info",
-      "params": {},
       "description": "ПВ и ставка по стандартным условиям программы",
       "combination": "Суммируется со скидкой за 100% оплату и ипотеку без субсидии.\n\nБез удорожания",
       "mode": "additive",
+      "params": {},
       "enabled": true
     },
     {
@@ -2578,10 +2578,10 @@
       "name": "Дофинансирование ПВ",
       "project": "da1",
       "kind": "info",
-      "params": {},
       "description": "До 500 т.р на любую квартиру.",
       "combination": "Не суммируется со скидками за 100% оплату и ипотеку без субсидии.\n\nБез удорожания",
       "mode": "none",
+      "params": {},
       "enabled": true
     },
     {
@@ -2591,10 +2591,10 @@
       "name": "Рассрочка 50 / 50",
       "project": "da1",
       "kind": "info",
-      "params": {},
       "description": "Не подключена к расчёту: противоречивые даты в источнике. ПВ 50%\n\nПогашение - до 30.09.2026 \n\nПредложение До 20.03.2027",
       "combination": "Применяется 1/2 скидки за 100% оплату\n\nБез удорожания",
       "mode": "individual",
+      "params": {},
       "enabled": false
     },
     {
@@ -2604,10 +2604,10 @@
       "name": "Рассрочка на нежилые помещения",
       "project": "da1",
       "kind": "info",
-      "params": {},
       "description": "Рассрочка равными платежами до РНВ (05.04.2027)",
       "combination": "РОП.",
       "mode": "individual",
+      "params": {},
       "enabled": true
     },
     {
@@ -2617,10 +2617,10 @@
       "name": "Рассрочка на нежилые помещения",
       "project": "da2",
       "kind": "info",
-      "params": {},
       "description": "Рассрочка равными платежами до РНВ (05.07.28)",
       "combination": "РОП.",
       "mode": "individual",
+      "params": {},
       "enabled": true
     },
     {
@@ -2630,10 +2630,10 @@
       "name": "Рассрочка на паркинг на -2 этаже",
       "project": "da1",
       "kind": "info",
-      "params": {},
       "description": "ПВ 50%\n\nСрок до 20.04.2027",
       "combination": "Не суммируется с любыми скидками",
       "mode": "none",
+      "params": {},
       "enabled": true
     },
     {
@@ -2643,10 +2643,10 @@
       "name": "Рассрочка на паркинг на -2 этаже",
       "project": "da2",
       "kind": "info",
-      "params": {},
       "description": "ПВ 50%\n\nПогашение - через 2 года (например до 05.06.2028)",
       "combination": "Не суммируется с любыми скидками",
       "mode": "none",
+      "params": {},
       "enabled": true
     },
     {
@@ -2656,10 +2656,10 @@
       "name": "Рассрочка кладовые в подземном этаже",
       "project": "da1",
       "kind": "info",
-      "params": {},
       "description": "ПВ от 50 000\n\nРавнями платежами в течении срока  - до 20.04.2027",
       "combination": "Не суммируется с любыми скидками",
       "mode": "none",
+      "params": {},
       "enabled": true
     },
     {
@@ -2669,10 +2669,10 @@
       "name": "Рассрочка кладовые в подземном этаже",
       "project": "da2",
       "kind": "info",
-      "params": {},
       "description": "ПВ от 50 000\n\nРавнями платежами в течении срока  - до 05.06.2027",
       "combination": "Не суммируется с любыми скидками",
       "mode": "none",
+      "params": {},
       "enabled": true
     },
     {
@@ -2682,10 +2682,10 @@
       "name": "Рассрочка на коммерческие помещения",
       "project": "da1",
       "kind": "info",
-      "params": {},
       "description": "Только индивидуальные условия",
       "combination": "Не суммируется с любыми скидками",
       "mode": "none",
+      "params": {},
       "enabled": true
     },
     {
@@ -2695,10 +2695,10 @@
       "name": "Рассрочка на коммерческие помещения",
       "project": "da2",
       "kind": "info",
-      "params": {},
       "description": "Только индивидуальные условия",
       "combination": "Не суммируется с любыми скидками",
       "mode": "none",
+      "params": {},
       "enabled": true
     },
     {
@@ -2708,10 +2708,10 @@
       "name": "Скидка на дожим для АН",
       "project": "da1",
       "kind": "info",
-      "params": {},
       "description": "100 тысяч рублей",
       "combination": "Суммируется со скидками последовательным применением",
       "mode": "sequential",
+      "params": {},
       "enabled": true
     },
     {
@@ -2721,10 +2721,10 @@
       "name": "Скидка на дожим для АН",
       "project": "da2",
       "kind": "info",
-      "params": {},
       "description": "100 тысяч агент может предложит клиенту как доп. скидку",
       "combination": "Суммируется со скидками последовательным применением",
       "mode": "sequential",
+      "params": {},
       "enabled": true
     },
     {
@@ -2734,10 +2734,10 @@
       "name": "Скидки для отдельных категорий клиентов",
       "project": "da1",
       "kind": "info",
-      "params": {},
       "description": "1% на любые квартиры для:\n- участников СВО, учителей, медработников,ИТ специалистов\n- корпоративных партнеров\n- повторные покупки\n- покупка \"Квартира + паркинг + кладовая\" разом",
       "combination": "Суммируется со скидкой за 100% оплату и ипотеку без субсидии\n\nПрименимо к рассрочке",
       "mode": "additive",
+      "params": {},
       "enabled": true
     },
     {
@@ -2747,10 +2747,10 @@
       "name": "Скидки для отдельных категорий клиентов",
       "project": "da2",
       "kind": "info",
-      "params": {},
       "description": "1% на любые квартиры для:\n- участников СВО, учителей, медработников,ИТ специалистов\n- корпоративных партнеров\n- повторные покупки\n- покупка \"Квартира + паркинг + кладовая\" разом",
       "combination": "Суммируется со скидкой за 100% оплату и ипотеку без субсидии\n\nПрименимо к рассрочке",
       "mode": "additive",
+      "params": {},
       "enabled": true
     },
     {
@@ -2760,10 +2760,10 @@
       "name": "Каскадная скидка",
       "project": "da1",
       "kind": "info",
-      "params": {},
       "description": "- 50 000 руб. за встречу в течение 3-х дней с даты первого контакта с клиентом\n- 20 000 руб. за бронь в течение 1-го дня с даты встречи\n- 30 000 руб. за выход на сделку в течение 7 дней с даты брони",
       "combination": "Суммируется со скидкой за 100% оплату и ипотеку без субсидии",
       "mode": "additive",
+      "params": {},
       "enabled": true
     },
     {
@@ -2773,10 +2773,10 @@
       "name": "\"Приведи друга\"",
       "project": "da1",
       "kind": "info",
-      "params": {},
       "description": "Скидка 1% для рекомендателя и 1% для его контакта\n1 .Рекомендатель отправляет контактный номер телефона менеджеру отдела продаж\n2. Менеджер отдела продаж проверяет клиента на уникальность. \n  2.1. Если клиент не уникальный, сообщает об этом клиенту, который порекомендовал, что ранее с клиентом уже была проведена работа.\n  2.2. Если клиент уникальный, сообщает об этом рекомендателю, и сообщает что получение вознаграждение будет в случае приобретения клиентом квартиры.\n  2.3. Менеджер обязательно фиксирует первичные данные об уникальности либо не уникальности в CRM.\n  2.4. Если клиент порекомендовал клиента, с которым в CRM ранее была проиграна сделка, клиент считается уникальным\n3. После проведения сделки менеджер отдела продаж/служба сопровождения приглашает клиента в центральный офис для получения вознаграждения\n  3.1. Вознаграждение выплачивается в денежном эквиваленте",
       "combination": "Суммируется со скидкой за 100% оплату и ипотеку без субсидии",
       "mode": "additive",
+      "params": {},
       "enabled": true
     },
     {
@@ -2786,10 +2786,10 @@
       "name": "Ремонт в подарок на 2кк в первой очереди",
       "project": "da1",
       "kind": "info",
-      "params": {},
       "description": "Действует при 100% оплате любым способом (ипотека/наличные)",
       "combination": "Только скидка за 100% оплату",
       "mode": "individual",
+      "params": {},
       "enabled": true
     },
     {
@@ -2799,10 +2799,10 @@
       "name": "Купон 500 тысяч рублей на покупку паркинга/кладовки или скидку  на 3кк в первой очереди",
       "project": "da1",
       "kind": "info",
-      "params": {},
       "description": "Действует при 100% оплате любым способом (ипотека/наличные)",
       "combination": "Только скидка за 100% оплату",
       "mode": "individual",
+      "params": {},
       "enabled": true
     },
     {
@@ -2812,10 +2812,10 @@
       "name": "Скидка 50% на приобретение паркинга при покупке квартиры с терассой",
       "project": "da1",
       "kind": "info",
-      "params": {},
       "description": "Действует при 100% оплате любым способом (ипотека/наличные)",
       "combination": "Не суммируется с другими акциями",
       "mode": "none",
+      "params": {},
       "enabled": true
     },
     {
@@ -2825,10 +2825,10 @@
       "name": "Платное бронирование только на жилые помещения",
       "project": "da1",
       "kind": "info",
-      "params": {},
       "description": "50 000 - месяц \n15 000 - 10 дней",
       "combination": "-",
       "mode": "individual",
+      "params": {},
       "enabled": true
     },
     {
@@ -2838,10 +2838,10 @@
       "name": "Платное бронирование только на жилые помещения",
       "project": "da2",
       "kind": "info",
-      "params": {},
       "description": "50 000 - месяц \n15 000 - 10 дней",
       "combination": "-",
       "mode": "individual",
+      "params": {},
       "enabled": true
     },
     {
@@ -2851,10 +2851,10 @@
       "name": "Trade-in",
       "project": "dnk2",
       "kind": "info",
-      "params": {},
       "description": "(под реализацию)\n\n   * Платная бронь на 3 мес - 100 тыс руб (ждет продажу текущей недвижимости, открытия вклада и т.п), входит в стоимость квартиры\n   * Риэлтор сопровождает продажу за комиссионное вознаграждение в размере 50 т.р+1,5% от цены продажи. Комиссионное вознаграждение оплачивает счастливчик\n\n5%",
       "combination": "По правилам программы",
       "mode": "individual",
+      "params": {},
       "enabled": true
     },
     {
@@ -2864,10 +2864,10 @@
       "name": "Trade-in (srg) - срочная продажа",
       "project": "dnk2",
       "kind": "info",
-      "params": {},
       "description": "Продажа по рыночной стоимости\nСрок продажи - около 1-2 мес. \nБез гарантии продажи\n\n5%",
       "combination": "По правилам программы",
       "mode": "individual",
+      "params": {},
       "enabled": true
     },
     {
@@ -2877,10 +2877,10 @@
       "name": "Trade-in (srg) - выкуп",
       "project": "dnk2",
       "kind": "info",
-      "params": {},
       "description": "Выкуп с дисконтом 10% к реальной рыночной цене (100% гарантия продажи)\nСрок выкупа - около 2 недель\nВозможность проживания до конца строительства\nУсловия выкупа:\n- квартира (не Апартаменты/ Таунхаус / Дом/Доля в Кв и т.д.);\n- расположена в городе РФ с населением более 200 тыс чел.;\n- часовой пояс не более +6 ч с Мск;\n- дом не старше 1970г. постройки;\n- этажность более 3 х этажей;\n- сумма выкупа не дороже 15 млн. руб.;\n- площадь квартиры не более 100 м2;\n- право собственности на квартиру зарегистрировано в Росреестре;\n- дом не признан ветхим, не стоит в очереди на снос;\n- при использовании маткапитала на детей оформлена собственность;\n- в отношении Квартиры не ведутся судебные споры;\n- отсутствуют правопритязания третьих лиц.\n\n5%",
       "combination": "По правилам программы",
       "mode": "individual",
+      "params": {},
       "enabled": true
     },
     {
@@ -2890,10 +2890,10 @@
       "name": "Скидка на старт продаж",
       "project": "dnk2",
       "kind": "info",
-      "params": {},
       "description": "Дополнительная скидка при покупке квартиры на старте:\n- 100% оплата и ипотека без субсидий: +5% к текущей скидке\n- по рассрочкам (кроме рассрочки без ПВ), траншевой, субсидированной ипотеке: +2% к текущим скидкам \nСкидка на старте действуют до конца ноября 2026 года\n Скидка будет заложена в цену на сайте\n\n5% и 2% в зав-ти от типа оплаты\n(суммируется)",
       "combination": "По правилам программы",
       "mode": "individual",
+      "params": {},
       "enabled": true
     },
     {
@@ -2903,10 +2903,10 @@
       "name": "Доп. скидка на дожим",
       "project": "dnk2",
       "kind": "info",
-      "params": {},
       "description": "Дополнительная скидка на дожим в размере 1% от стоимости квартиры на прямые и агентские сделки. \nПо агентским сделкам скидка на дожим не суммируется с купонными скидками для агентов\nНе действует на рассрочки без ПВ\n\n1%\n(суммируется)",
       "combination": "По правилам программы",
       "mode": "individual",
+      "params": {},
       "enabled": true
     },
     {
@@ -2916,10 +2916,10 @@
       "name": "Агентская скидка",
       "project": "dnk2",
       "kind": "info",
-      "params": {},
       "description": "Купоны  на скидку агентам на старте продаж:\nстудия - 50 тыс\n1-комн - 80 тыс\n2-комн - 100 тыс\n3/4-комн - 130 тыс\nДействуют при покупке квартиры до конца 2026 года\nНе суммируются со скидкой на дожим\nНе действует на рассрочки без ПВ\nСкидка агентам по купонам осуществляется после применения всех скидок (чтобы на купоны скидки не применялись)",
       "combination": "По правилам программы",
       "mode": "individual",
+      "params": {},
       "enabled": true
     },
     {
@@ -2929,10 +2929,10 @@
       "name": "Агентское вознаграждение",
       "project": "dnk2",
       "kind": "info",
-      "params": {},
       "description": "Размер АВ: 2,5% - рассрочка, 3,5% - 100% оплата и ипотека (+0,3% агрегаторам)",
       "combination": "По правилам программы",
       "mode": "individual",
+      "params": {},
       "enabled": true
     },
     {
@@ -2942,10 +2942,10 @@
       "name": "Скидка за повторную покупку",
       "project": "dnk2",
       "kind": "info",
-      "params": {},
       "description": "* Скидка – 1,5%\n      * Срок действия скидки - без ограничений по сроку с момента первой покупки\n      * Распространяется на  родственников клиента первого круга (родители, дети, братья/сестры)\n      * Действует при одновременной покупке 2х и более объектов недвижимости (только на квартиры). На коммерцию, кладовки, машиноместа скидка не распространяется\n      * Суммируется с акционными предложениями, кроме “Квартир месяца”",
       "combination": "По правилам программы",
       "mode": "individual",
+      "params": {},
       "enabled": true
     },
     {
@@ -2955,10 +2955,10 @@
       "name": "Скоринг",
       "project": "dnk2",
       "kind": "info",
-      "params": {},
       "description": "АНАЛИЗ ПЛАТЕЖЕСПОСОБНОСТИ КЛИЕНТА\nДля кого:\n      * для всех сделок при оплате в рассрочку\n      * ипотечные клиенты без ПВ, с ПВ в рассрочку\n      * клиенты  со вкладами с отсрочкой даты погашения\nНеобходимые данные для анализа:\n      * Справка из банка о наличии вклада\n      * Кредитная история",
       "combination": "По правилам программы",
       "mode": "individual",
+      "params": {},
       "enabled": true
     },
     {
@@ -2968,10 +2968,10 @@
       "name": "Скидки сотрудникам baza/свобода мысли",
       "project": "dnk2",
       "kind": "info",
-      "params": {},
       "description": "BAZA\n      * Размер скидки равен сумме лет, отработанных в BAZA (минимальная 3%)\n      * Суммируется с акционными предложениями\nСВОБОДА МЫСЛИ - ???",
       "combination": "По правилам программы",
       "mode": "individual",
+      "params": {},
       "enabled": true
     },
     {
@@ -2981,10 +2981,10 @@
       "name": "Устная бронь",
       "project": "dnk2",
       "kind": "info",
-      "params": {},
       "description": "Срок устной брони - 3 рабочих дня, при предоставлении паспортных данных по электронной почте (т.е день постановки брони+следующий рабочий день бронь действует)",
       "combination": "По правилам программы",
       "mode": "individual",
+      "params": {},
       "enabled": true
     },
     {
@@ -2994,10 +2994,10 @@
       "name": "Платная бронь",
       "project": "dnk2",
       "kind": "info",
-      "params": {},
       "description": "* Платное бронирование на 10 дней: 15 000 руб на квартиру, 10 000 руб на паркинг, 5 000 руб на кладовку. Возврат суммы брони только при неодобрении ипотеки, засчитывается в стоимость квартиры\n         * Подписываем договор бронирования.\n         * Объект и цена фиксируются на срок действия договора",
       "combination": "По правилам программы",
       "mode": "individual",
+      "params": {},
       "enabled": true
     },
     {
@@ -3007,10 +3007,10 @@
       "name": "Электронная регистрация",
       "project": "dnk2",
       "kind": "info",
-      "params": {},
       "description": "* Для сделок ВТБ - через м2\n         * Для сделок Сбера - через Домклик\n         * Для остальных сделок через нашего регистратора\n         * Регистрация через м2 и Домклик платные, расход на Застройщике\n\n*Предложение все расходы за счет СМ кроме СБР, СБР обязательно",
       "combination": "По правилам программы",
       "mode": "individual",
+      "params": {},
       "enabled": true
     },
     {
@@ -3020,10 +3020,10 @@
       "name": "Отделка",
       "project": "dnk2",
       "kind": "info",
-      "params": {},
       "description": "Базовая отделка - whitebox\nСтоимость чистовой отделки  - 22 тыс.р./м2\nРасчет ведется от площади с коэф-том на летние помещения\n\nСкидки и акции на отделку не распространяются\nАгентское вознаграждение выплачивается с полной стоимости квартиры, включая отделку\n\nСпособы оплаты\n         * При покупке квартиры в рассрочку - отделка оплачивается пропорционально графику платежей по квартире",
       "combination": "По правилам программы",
       "mode": "individual",
+      "params": {},
       "enabled": true
     },
     {
@@ -3033,10 +3033,10 @@
       "name": "Стандартная семейная ипотека",
       "project": "dnk2",
       "kind": "info",
-      "params": {},
       "description": "БАЗОВАЯ ПРОГРАММА\n\nСумма кредита и ставка зависит от кол-ва детей (как минимум один из детей должен быть младше 7 лет):\n* для семей с пятью и более детьми — 10 млн под 2% годовых;\n* с четырьмя — 10 млн под 4%;\n* с тремя — 10 млн под 6%;\n* с двумя — 8 млн под 8%;\n* с одним ребенком — 6 млн под 10%.\nПВ - от 20%\nБанки: уточняется\n\nМакс. срок субсидирования займа — до 15 лет.\nПри ПВ 50% и выше - ставка 6%\n\n14%\n+5% на старте\n(суммируется)",
       "combination": "По документу инструментов; применимость уточняется",
       "mode": "individual",
+      "params": {},
       "enabled": true
     },
     {
@@ -3046,10 +3046,10 @@
       "name": "Стандартная it- ипотека",
       "project": "dnk2",
       "kind": "info",
-      "params": {},
       "description": "БАЗОВАЯ ПРОГРАММА\n\nСтавка - 6%\nСумма кредита - до 9 млн руб.\nПВ - от 20%\n\nБанки: Уточняется\n\n14%\n+5% на старте\n(суммируется)",
       "combination": "По документу инструментов; применимость уточняется",
       "mode": "individual",
+      "params": {},
       "enabled": true
     },
     {
@@ -3059,10 +3059,10 @@
       "name": "Субсидированная it- ипотека",
       "project": "dnk2",
       "kind": "info",
-      "params": {},
       "description": "Банки: Сбер \nПВ - от 20%\nСтавка:\n* 3,5% на весь срок - Металлинвест\n* 4% на весь срок - Совком\n* 5% на весь срок - ДОМ.РФ\n\n *Итоговая сумма = Сумма за нал + размер субсидии (размер субсидии в рамках скидки 15%)\n\nзависит от размера субсидии",
       "combination": "По документу инструментов; применимость уточняется",
       "mode": "individual",
+      "params": {},
       "enabled": true
     },
     {
@@ -3072,11 +3072,12 @@
       "name": "Комбо ипотека",
       "project": "dnk2",
       "kind": "info",
-      "params": {},
       "description": "(семейная и IT)\n\n   * Ставка для клиента от 2,98% в зависимости от кол-ва детей и суммы кредита\n   * Сумма кредита выше 6 млн для семейки, 9 млн для IT\n\n14%\n+5% на старте\n(суммируется)",
       "combination": "По документу инструментов; применимость уточняется",
       "mode": "individual",
+      "params": {},
       "enabled": true
     }
-  ]
+  ],
+  "full_checked_at": "2026-11-06T10:23:28.019575+00:00"
 }

@@ -4,7 +4,7 @@
   var U = window.SMUi, F = window.SMCalc.fmt, calc = window.SMChpvCalc, esc = U.esc;
   var $ = function (id) { return document.getElementById(id); };
   var els = { project: $('sm-project'), flat: $('sm-flat'), price: $('sm-price'), cash: $('sm-cash'), program: $('sm-program'), client: $('sm-client'), ddu: $('sm-ddu'), result: $('sm-result') };
-  var projects = ['ДА — 1 очередь', 'ДА — 2 очередь'], project = projects[0];
+  var projects = window.SM_DATA.chpv ? window.SM_DATA.projects.filter(function(project){return window.SM_DATA.chpv.some(function(p){return p.projects.includes(project);});}) : ['ДА — 1 очередь', 'ДА — 2 очередь'];if(!projects.length)projects=['ДА — 1 очередь'];var project = projects[0];
   var programs = [
     ['Семейная ипотека, 1 ребёнок', 6000000, 15, .10], ['Семейная ипотека, 2 ребёнка', 8000000, 15, .08],
     ['Семейная ипотека, 3 ребёнка', 10000000, 15, .06], ['Семейная ипотека, 4 ребёнка', 10000000, 15, .04],

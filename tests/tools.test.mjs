@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 import M from '../assets/tools-model.js';
-const data=JSON.parse(fs.readFileSync(new URL('../assets/tools.json',import.meta.url)));
+M.validate(JSON.parse(fs.readFileSync(new URL('../assets/tools.json',import.meta.url))));
+const data=JSON.parse(fs.readFileSync(new URL('./fixtures/tools-initial.json',import.meta.url)));
 M.validate(data);
 const ctx={window:{},console,Intl,Date};vm.createContext(ctx);for(const file of ['data.js','engine.js','transh-engine.js','chpv-engine.js']){if(fs.existsSync('assets/'+file))vm.runInContext(fs.readFileSync('assets/'+file,'utf8'),ctx);}
 const before=ctx.window.SMCalc.buildData(ctx.window.SM_DATA);const mapped=M.calcData(data);const after=ctx.window.SMCalc.buildData({...ctx.window.SM_DATA,...mapped});

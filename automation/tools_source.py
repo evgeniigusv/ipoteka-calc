@@ -15,7 +15,7 @@ def curl(url, method='GET', body=None, headers=None):
     if not url.startswith('https://'): raise ValueError('Нужен HTTPS')
     lines = (['location', 'max-redirs = 3', 'proto-redir = "=https"'] if url.startswith('https://docs.google.com/') else []) + ['url = '+json.dumps(url), 'request = '+json.dumps(method), 'silent', 'show-error', 'max-time = 40', 'max-filesize = 5000000', 'proto = "=https"', 'write-out = "\\n%{http_code}"']
     for key,value in (headers or {}).items(): lines.append('header = '+json.dumps(key+': '+value))
-    if body is not None: lines.append('data-binary = '+json.dumps(body))
+    if body is not None: lines.append('data-binary = '+json.dumps(body,ensure_ascii=False))
     r=subprocess.run(['curl','--config','-'],input='\n'.join(lines),text=True,capture_output=True,timeout=50)
     if r.returncode: raise RuntimeError('Не удалось связаться с источником: проверьте сеть.')
     data,status=r.stdout.rsplit('\n',1)

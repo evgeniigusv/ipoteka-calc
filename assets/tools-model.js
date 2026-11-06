@@ -70,14 +70,14 @@
   }
   function validate(data){
     required(data&&data.version===1&&Array.isArray(data.records)&&data.records.length>0&&data.records.length<=600,'Неверный формат справочника.');
-    var ids=new Set();data.records.forEach(function(r){validateRecord(r);required(!ids.has(r.id),'Повтор ID программы.');ids.add(r.id);});
+    var ids=new Set(),cash=new Set();data.records.forEach(function(r){validateRecord(r);required(!ids.has(r.id),'Повтор ID программы.');ids.add(r.id);if(r.enabled&&r.kind==='discount'){required(!cash.has(r.project),'Для проекта допустима одна основная скидка за полную оплату.');cash.add(r.project);}});
     Object.keys(projects).forEach(function(project){required(data.records.some(function(r){return r.project===project&&r.kind==='installment'&&r.enabled;}),'Нет рассрочек одного из проектов.');required(data.records.some(function(r){return r.project===project&&r.kind==='mortgage'&&r.enabled;}),'Нет ипотеки одного из проектов.');});
     return data;
   }
   function calcData(data){validate(data);var out={mortgage:[],installments:[],tranche:[],chpv:[],cashDiscounts:{}};
     data.records.filter(function(r){return r.enabled;}).forEach(function(r){var p=clone(r.params);p.projects=[projects[r.project]];p.name=r.name;p.note=[p.note,r.description].filter(Boolean).join(' ');p.catalogId=r.id;
       if(r.kind==='mortgage')out.mortgage.push(p);
-      if(r.kind==='installment'){p.extraSequential=r.mode==='sequential';p.noExtra=r.mode==='none'||r.mode==='individual'||!!p.noExtra;out.installments.push(p);}
+      if(r.kind==='installment'){p.extraSequential=r.mode==='sequential';p.noExtra=r.mode==='none'||r.mode==='individual';out.installments.push(p);}
       if(r.kind==='tranche')out.tranche.push(p);
       if(r.kind==='chpv')out.chpv.push(p);
       if(r.kind==='discount'&&p.scope==='cash')out.cashDiscounts[projects[r.project]]=p;

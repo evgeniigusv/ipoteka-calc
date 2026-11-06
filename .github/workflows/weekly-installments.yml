@@ -1,19 +1,17 @@
-name: Обновление рассрочек ДА
-
+name: Обновление инструментов
 on:
   schedule:
-    # 06:00 Екатеринбург (UTC+5), каждый понедельник.
+    # Полный справочник: понедельник, 06:00 Екатеринбург (UTC+5).
     - cron: '0 1 * * 1'
+    # Ставки и комиссии: каждые три часа.
+    - cron: '15 */3 * * *'
   workflow_dispatch:
-
 permissions:
   contents: write
   pages: write
-
 concurrency:
-  group: installment-sync
+  group: tools-sync
   cancel-in-progress: false
-
 jobs:
   sync:
     if: github.ref == 'refs/heads/main'
@@ -21,17 +19,26 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - name: Проверить разбор условий и графики платежей
+      - name: Проверить правила справочника
         run: |
-          python3 tests/sync_installments_test.py
-          node tests/installments.test.mjs
-          node tests/installments-loader.test.mjs
-      - name: Сверить таблицу и обновить снимок
+          node tests/tools.test.mjs
+          python3 tests/tools_source_test.py
+      - name: Сверить Google и подготовить снимок
         env:
-          INSTALLMENT_SOURCES: ${{ secrets.INSTALLMENT_SOURCES }}
+          TOOLS_SOURCE: ${{ secrets.TOOLS_SOURCE }}
+          EVENT_SCHEDULE: ${{ github.event.schedule }}
+        run: |
+          if [ "$EVENT_SCHEDULE" = '15 */3 * * *' ]; then
+            python3 automation/sync_tools.py --mortgage-only
+          else
+            python3 automation/sync_tools.py
+          fi
+      - name: Сохранить снимок
+        env:
           GH_TOKEN: ${{ github.token }}
-        run: python3 automation/sync_installments.py
-      # Коммит от GITHUB_TOKEN сам не запускает legacy GitHub Pages.
+        run: |
+          python3 automation/publish_tools.py
+      # Коммит GITHUB_TOKEN сам не запускает legacy Pages.
       - name: Обновить GitHub Pages
         env:
           GH_TOKEN: ${{ github.token }}

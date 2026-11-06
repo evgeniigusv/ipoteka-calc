@@ -110,7 +110,7 @@
     var h = Math.max(size[1], node.offsetHeight);
     var done = function () { host.remove(); };
     return window.html2canvas(node, {
-      scale: 2, backgroundColor: '#ECE8EF', logging: false, width: size[0], height: h,
+      scrollX: 0, scrollY: 0, scale: 2, backgroundColor: node.classList.contains('tools-pdf') ? '#FFFFFF' : '#ECE8EF', logging: false, width: size[0], height: h,
       windowWidth: size[0] + 200, windowHeight: h + 200
     }).then(function (c) { done(); return c; }, function (e) { done(); throw e; });
   }

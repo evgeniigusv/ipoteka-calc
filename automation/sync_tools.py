@@ -4,6 +4,12 @@ import argparse, json
 from tools_source import ROOT, read, validate
 p=argparse.ArgumentParser(); p.add_argument('--mortgage-only',action='store_true'); p.add_argument('--dry-run',action='store_true'); args=p.parse_args()
 data=read()
+previous=json.loads((ROOT/'assets/tools.json').read_text())
+for project in ['da1','da2','dnk2']:
+    for category in ['mortgage','installment']:
+        old=sum(r['project']==project and r['category']==category for r in previous['records'])
+        new=sum(r['project']==project and r['category']==category for r in data['records'])
+        if new < old/2: raise SystemExit('Резкое уменьшение справочника: снимок не обновлён. Проверьте Google.')
 if args.mortgage_only:
     previous=json.loads((ROOT/'assets/tools.json').read_text())
     data['records']=[r for r in data['records'] if r['category']=='mortgage']+[r for r in previous['records'] if r['category']!='mortgage']

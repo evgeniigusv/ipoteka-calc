@@ -9,6 +9,7 @@
       var response=await fetch(local?'/api/tools':'assets/tools.json',{cache:'no-store',signal:controller.signal});
       if(!response.ok)throw new Error('Источник не ответил');
       var data=window.SMToolsModel.validate(await response.json()),calc=window.SMToolsModel.calcData(data);
+      if(!Number.isFinite(Date.parse(data.checked_at)))throw new Error('Не указана дата проверки справочника');
       window.SM_TOOLS_DATA=data;window.SM_TOOLS_STATUS={fallback:false,checkedAt:Date.parse(data.checked_at),local:local};
       if(window.SM_DATA){window.SM_DATA.mortgage=calc.mortgage;window.SM_DATA.installments=calc.installments;window.SM_DATA.tranche=calc.tranche;window.SM_DATA.chpv=calc.chpv;window.SM_DATA.cashDiscounts=calc.cashDiscounts;}
       window.SM_MORTGAGE_STATUS={checkedAt:Date.parse(data.checked_at),stale:Date.now()-Date.parse(data.checked_at)>12*3600000,fallback:false};
