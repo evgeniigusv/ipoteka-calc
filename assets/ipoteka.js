@@ -11,7 +11,8 @@
     defaultPrice: 10000000
   }, window.SM_CALC_CONFIG || {});
 
-  if(window.SM_MORTGAGE_READY)await window.SM_MORTGAGE_READY;
+  if(window.SM_TOOLS_READY)await window.SM_TOOLS_READY;
+  else if(window.SM_MORTGAGE_READY)await window.SM_MORTGAGE_READY;
   var D = C.buildData(window.SM_DATA);
   var $ = function (id) { return document.getElementById(id); };
   var el = {
@@ -21,6 +22,7 @@
     updated: $('sm-rate-status')
   };
   var state = { project: D.projects[0], type: D.types[0], pick: null };
+  function catalogDiscount(){var p=(window.SM_DATA.cashDiscounts||{})[state.project];if(!p)return D.defaultDiscount;var today=new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Yekaterinburg'});return p.percent+(p.launchUntil&&today<=p.launchUntil?(p.launchDiscount||0):0);}
   var last = null; // последний расчёт — из него собирается PDF
 
   function readInputs() {
@@ -163,7 +165,7 @@
   // На кнопках — без слова «ипотека»: оно уже есть в подписи поля
   U.pills(el.type, D.types.map(function (t) { return { value: t, label: t.replace(/[\s-]ипотека$/i, '') }; }), state.type, 'v');
   el.price.value = F.int(CONFIG.defaultPrice);
-  el.disc.value = String(+(D.defaultDiscount * 100).toFixed(2)).replace('.', ',');
+  el.disc.value = String(+(catalogDiscount() * 100).toFixed(2)).replace('.', ',');
   var rateStatus=window.SM_MORTGAGE_STATUS||{fallback:true};
   el.updated.textContent=rateStatus.fallback
     ? 'Не удалось загрузить обновления. Показана резервная копия ставок от '+window.SM_DATA.updated+'. Перезагрузите страницу перед расчётом.'
@@ -174,7 +176,7 @@
   var pickPill = function (box, key) {
     U.onPill(box, 'v', function (v, btn) {
       state[key] = v; state.pick = null;
-      if (key === 'project') { flats.setProject(v); $('sm-pv-hint').textContent=(v==='ДНК — 2 очередь'?'От 20%':'От 20,1%')+' цены по прайсу. Недостаточный взнос увеличивается до минимального.'; }
+      if (key === 'project') { flats.setProject(v); el.disc.value=String(+(catalogDiscount()*100).toFixed(2)).replace('.',','); $('sm-pv-hint').textContent=(v==='ДНК — 2 очередь'?'От 20%':'От 20,1%')+' цены по прайсу. Недостаточный взнос увеличивается до минимального.'; }
       Array.prototype.forEach.call(box.children, function (b) { b.setAttribute('aria-pressed', String(b === btn)); });
       setupKids();
       render();

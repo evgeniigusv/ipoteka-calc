@@ -1,7 +1,7 @@
 /* Рассрочка: условия слева, выбранный расчёт справа, сравнение снизу. */
 (async function () {
   'use strict';
-  await window.SM_INSTALLMENTS_READY;
+  await (window.SM_TOOLS_READY||window.SM_INSTALLMENTS_READY);
   var C = window.SMCalc, U = window.SMUi, F = C.fmt, esc = U.esc;
   var D = C.buildData(window.SM_DATA), $ = function (id) { return document.getElementById(id); };
   var el = {project:$('sm-project'),flat:$('sm-flat'),price:$('sm-price'),rooms:$('sm-rooms'),extra:$('sm-extra'),date:$('sm-date'),
@@ -61,7 +61,7 @@
   }
   function render() {
     var status=window.SM_INSTALLMENTS_STATUS||{fallback:true};
-    $('sm-updated').textContent=state.project==='ДНК — 2 очередь'?'ДНК: сверено вручную '+window.SM_DATA.updated+'.':
+    $('sm-updated').textContent=status.catalog?'Справочник: проверено '+new Date(status.checkedAt).toLocaleString('ru-RU',{timeZone:'Asia/Yekaterinburg',dateStyle:'short',timeStyle:'short'})+' · Екатеринбург. Обновление по понедельникам в 06:00.'+(status.stale?' Проверка задерживается; подтвердите условия.':''):state.project==='ДНК — 2 очередь'?'ДНК: сверено вручную '+window.SM_DATA.updated+'.':
       status.fallback?'ДА: резервная копия от '+window.SM_DATA.updated+'. Обновлённые условия загрузить не удалось.':
       'ДА: проверено '+new Date(status.checkedAt).toLocaleString('ru-RU',{timeZone:'Asia/Yekaterinburg',dateStyle:'short',timeStyle:'short'})+
       ' (Екатеринбург). Обновление по понедельникам в 06:00.'+(status.stale?' Проверка задерживается; подтвердите условия.':'');
