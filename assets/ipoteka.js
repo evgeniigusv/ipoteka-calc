@@ -1,5 +1,5 @@
 /* Ипотечный калькулятор: страница. Расчёт — в engine.js, данные — в data.js. */
-(function () {
+(async function () {
   'use strict';
   var C = window.SMCalc, U = window.SMUi, F = C.fmt, esc = U.esc;
 
@@ -11,13 +11,14 @@
     defaultPrice: 10000000
   }, window.SM_CALC_CONFIG || {});
 
+  if(window.SM_MORTGAGE_READY)await window.SM_MORTGAGE_READY;
   var D = C.buildData(window.SM_DATA);
   var $ = function (id) { return document.getElementById(id); };
   var el = {
     project: $('sm-project'), flat: $('sm-flat'), price: $('sm-price'), disc: $('sm-disc'), type: $('sm-type'),
     kidsField: $('sm-kids-field'), kids: $('sm-kids'), pv: $('sm-pv'), term: $('sm-term'),
     detail: $('sm-detail'), title: $('sm-table-title'), tip: $('sm-tip'), thead: $('sm-thead'), tbody: $('sm-tbody'),
-    updated: $('sm-updated')
+    updated: $('sm-rate-status')
   };
   var state = { project: D.projects[0], type: D.types[0], pick: null };
   var last = null; // последний расчёт — из него собирается PDF
@@ -163,7 +164,11 @@
   U.pills(el.type, D.types.map(function (t) { return { value: t, label: t.replace(/[\s-]ипотека$/i, '') }; }), state.type, 'v');
   el.price.value = F.int(CONFIG.defaultPrice);
   el.disc.value = String(+(D.defaultDiscount * 100).toFixed(2)).replace('.', ',');
-  el.updated.textContent = window.SM_DATA.updated;
+  var rateStatus=window.SM_MORTGAGE_STATUS||{fallback:true};
+  el.updated.textContent=rateStatus.fallback
+    ? 'Не удалось загрузить обновления. Показана резервная копия ставок от '+window.SM_DATA.updated+'. Перезагрузите страницу перед расчётом.'
+    : 'Ставки и комиссии проверены '+new Date(rateStatus.checkedAt).toLocaleString('ru-RU',{timeZone:'Asia/Yekaterinburg',dateStyle:'short',timeStyle:'short'})+' (Екатеринбург). Обновление каждые 3 часа.'+(rateStatus.stale?' Проверка задерживается — подтвердите актуальность условий.':'');
+  if(rateStatus.fallback || rateStatus.stale)el.updated.classList.add('sm-why');
   setupKids();
 
   var pickPill = function (box, key) {

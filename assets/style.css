@@ -183,12 +183,12 @@ html, body { margin: 0; padding: 0; background: var(--bg); }
 .sm-total { display: flex; flex-wrap: wrap; gap: 12px 36px; background: var(--sky); color: var(--white); border-radius: var(--r-md); padding: 20px 22px; margin-bottom: 8px; }
 .sm-total .sm-v { font-size: clamp(22px, 2.3vw, 30px); }
 .sm-total .sm-v.sm-v2 { font-size: clamp(17px, 1.7vw, 22px); }
-.sm-cards td:first-child { min-width: 0; font-weight: 500; color: var(--muted); white-space: normal; overflow-wrap: anywhere; }
-.sm-cards th:first-child, .sm-cards td:first-child { padding-left: 0; }
-.sm-cards th:last-child, .sm-cards td:last-child { padding-right: 0; }
-.sm-cards th:nth-child(2), .sm-cards td:nth-child(2) { text-align: left; white-space: normal; }
-.sm-cards th { padding-top: 12px; }
-.sm-cards td:last-child { font-weight: 700; }
+.sm-schedule td:first-child { min-width: 0; font-weight: 500; color: var(--muted); white-space: normal; overflow-wrap: anywhere; }
+.sm-schedule th:first-child, .sm-schedule td:first-child { padding-left: 0; }
+.sm-schedule th:last-child, .sm-schedule td:last-child { padding-right: 0; }
+.sm-schedule th:nth-child(2), .sm-schedule td:nth-child(2) { text-align: left; white-space: normal; }
+.sm-schedule th { padding-top: 12px; }
+.sm-schedule td:last-child { font-weight: 700; }
 .sm-term { display: flex; justify-content: space-between; gap: 12px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); font-size: 14px; color: var(--muted); }
 .sm-term b { color: var(--black); }
 
@@ -232,13 +232,13 @@ html, body { margin: 0; padding: 0; background: var(--bg); }
   .sm:not(.sm-pdf) .sm-tablecard .sm-sub { display: inline; margin: 0 0 0 6px; }
   .sm:not(.sm-pdf) .sm-tablecard td:first-child .sm-sub { display: block; margin: 2px 0 0; }
   /* График рассрочки на телефоне: сверху — когда и сумма, ниже — что за платёж */
-  .sm:not(.sm-pdf) .sm-cards table, .sm:not(.sm-pdf) .sm-cards tbody { display: block; }
-  .sm:not(.sm-pdf) .sm-cards thead { display: none; }
-  .sm:not(.sm-pdf) .sm-cards tr { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; padding: 12px 0; border-bottom: 1px solid var(--line); }
-  .sm:not(.sm-pdf) .sm-cards tbody tr:last-child { border-bottom: 0; }
-  .sm:not(.sm-pdf) .sm-cards td { padding: 0; border: 0; }
-  .sm:not(.sm-pdf) .sm-cards td:nth-child(2) { grid-column: 1 / -1; grid-row: 2; font-weight: 700; }
-  .sm:not(.sm-pdf) .sm-cards td:nth-child(3) { grid-column: 2; grid-row: 1; }
+  .sm:not(.sm-pdf) .sm-schedule table, .sm:not(.sm-pdf) .sm-schedule tbody { display: block; }
+  .sm:not(.sm-pdf) .sm-schedule thead { display: none; }
+  .sm:not(.sm-pdf) .sm-schedule tr { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+  .sm:not(.sm-pdf) .sm-schedule tbody tr:last-child { border-bottom: 0; }
+  .sm:not(.sm-pdf) .sm-schedule td { padding: 0; border: 0; }
+  .sm:not(.sm-pdf) .sm-schedule td:nth-child(2) { grid-column: 1 / -1; grid-row: 2; font-weight: 700; }
+  .sm:not(.sm-pdf) .sm-schedule td:nth-child(3) { grid-column: 2; grid-row: 1; }
   .sm:not(.sm-pdf) .sm-term { flex-wrap: wrap; }
   .sm:not(.sm-pdf) .sm-foot { flex-direction: column; align-items: stretch; }
   .sm:not(.sm-pdf) .sm-actions { margin-left: 0; }
@@ -274,7 +274,7 @@ html, body { margin: 0; padding: 0; background: var(--bg); }
 .sm-pdf .sm-legal { margin-top: 14px; max-width: none; font-size: 11px; }
 .sm-pdf .sm-cards { grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
 .sm-pdf .sm-cards.sm-one { grid-template-columns: 1fr; }
-.sm-pdf .sm-cards td:first-child { min-width: 0; }
+.sm-pdf .sm-schedule td:first-child { min-width: 0; }
 .sm-pdf .sm-facts { display: flex; flex-wrap: wrap; gap: 8px 28px; }
 .sm-pdf .sm-facts div { font-size: 12px; color: var(--muted); }
 .sm-pdf .sm-facts b { display: block; font-size: 14px; color: var(--black); }
@@ -346,3 +346,27 @@ html, body { margin: 0; padding: 0; background: var(--bg); }
 @media (max-width: 640px) { .sm-date-grid { grid-template-columns:1fr; } .sm-stage-metrics { grid-template-columns:1fr 1fr; } .sm-stage-metrics div:last-child { grid-column:1/-1; } }
 .sm-date-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
 @media (max-width: 640px) { .sm-date-grid { grid-template-columns:1fr; } }
+
+/* Рассрочка: та же композиция, что у ипотеки. */
+.sm-grid + .sm-tablecard { margin-top:16px; }
+.sm-program-options { margin-top:24px; padding-top:20px; border-top:1px solid var(--line); }
+.sm-options-name { color:var(--black); font-weight:700; margin-bottom:14px; }
+.sm-program-options .sm-choice:last-child { margin-bottom:0; }
+.sm-program-pick { font:inherit; font-weight:700; color:var(--sky); border:0; background:none; padding:4px 0; text-align:left; cursor:pointer; }
+.sm-schedule { margin-top:24px; }
+.sm h3 { font-size:14px; margin:0 0 12px; font-weight:700; color:var(--black); }
+.sm-schedule table { table-layout:fixed; }
+.sm-schedule th:first-child { width:27%; }
+.sm-schedule th:last-child { width:29%; }
+.sm-schedule td { overflow-wrap:anywhere; }
+.sm-schedule td:last-child { white-space:normal; }
+.sm-program-note { margin:18px 0 0; }
+.sm.sm-pdf .sm-installment-report { margin-top:12px; }
+.sm-pdf .sm-schedule { margin-top:16px; }
+@media (max-width:640px) {
+  .sm:not(.sm-pdf) .sm-program-pick { min-height:44px; }
+  .sm:not(.sm-pdf) .sm-program-options .sm-pills button { min-height:44px; }
+  .sm:not(.sm-pdf) .sm-schedule td:last-child { white-space:nowrap; }
+  #sm-rassrochka dd { white-space:normal; }
+}
+@media print { #sm-rassrochka .sm-tablecard { display:none; } }
