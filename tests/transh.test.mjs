@@ -17,3 +17,11 @@ assert.throws(()=>SMTranshCalc.calculate({...x,first:.6,second:.3}),/остат�
 assert.throws(()=>SMTranshCalc.calculate({...x,date3:'2027-01-01'}),/даты/);
 assert.throws(()=>SMTranshCalc.calculate({...x,date3:'2057-01-01'}),/окончания/);
 console.log('Транши 2 → 5 → 8 млн, минимум 100 тыс., валидация дат и суммы проверены');
+const da=SMTranshCalc.calculate({...x,down:.201,tranches:2,firstRub:100000,date2:'2028-09-20',date3:''});
+assert.equal(da.total,7990000); assert.equal(da.stages.length,2);
+assert.deepEqual(da.stages.map(s=>s.amount),[100000,7890000]);
+assert.deepEqual(da.stages.map(s=>s.issued),[100000,7990000]);
+assert.ok(Math.abs(da.stages[0].payment-SMCalc.pmt(.192/12,360,100000))<.001);
+assert.throws(()=>SMTranshCalc.calculate({...x,tranches:2,firstRub:8000000,date3:''}),/меньше суммы кредита/);
+assert.throws(()=>SMTranshCalc.calculate({...x,tranches:2,firstRub:100000,date2:'',date3:''}),/дату/);
+console.log('ДА: первый транш 100 тыс., второй — весь остаток, проверены');

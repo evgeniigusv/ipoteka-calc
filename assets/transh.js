@@ -23,20 +23,22 @@
     selected=dnk?programs.find(function(p){return p.id===el.program.value;}):null;
     el.bank.value=dnk?'Сбербанк':'';el.rate.value=selected?String(selected.rate).replace('.',','):'';
     el.first.value=selected?String(selected.first):'';el.second.value=selected?String(selected.second):'';
+    $('sm-da-tranches').hidden=dnk; $('sm-dnk-tranches').hidden=!dnk; $('sm-dnk-stage-hint').hidden=!dnk; $('sm-third-date').hidden=!dnk;
     el.discount.value=selected?String(selected.discount):'';el.pv.value=dnk?'20':'20,1';
-    el.info.textContent=dnk?'Условия из «Инструментов продаж ДНК-2»: ставка 19,2%, срок до 30 лет. Базовая скидка '+selected.discount+'%; дополнительную стартовую скидку 2% до конца ноября 2026 при подтверждении добавьте вручную.':'В инструментах «ДА» указаны ПВ от 20,1% и ориентир 1 500 ₽ до 20.03.2027 / 20.09.2028. Банк, ставка и размеры траншей не указаны — введите подтверждённые условия. Строка действовала до 30.10.2026.';
-    el.dateHint.textContent=dnk?'В документе — за месяц до ввода, май 2029. Укажите точную дату.':'Укажите дату по условиям банка.';
+    el.info.textContent=dnk?'Условия из «Инструментов продаж ДНК-2»: ставка 19,2%, срок до 30 лет. Базовая скидка '+selected.discount+'%; дополнительную стартовую скидку 2% до конца ноября 2026 при подтверждении добавьте вручную.':'Для «ДА»: первый транш 100 000 ₽, второй — весь остаток кредита. В инструментах указан ориентир платежа 1 500 ₽; банк и ставку уточните. Строка действовала до 30.10.2026.';
+    el.dateHint.textContent=dnk?'В документе — за месяц до ввода, май 2029. Укажите точную дату.':'';
+    $('sm-date2-hint').textContent=dnk?'Через год после сделки; дату можно изменить.':('В источнике ориентир — до '+(project===projects[0]?'20.03.2027':'20.09.2028')+'. Уточните дату выдачи в банке.');
     render();
   }
   function read(){
     var base=U.parseMoney(el.price.value)||0, discount=U.parsePct(el.discount.value);
-    return {base:base,discount:discount,price:Math.round(base*(1-discount)),down:U.parsePct(el.pv.value),rate:U.parsePct(el.rate.value),years:Number(el.term.value),first:U.parsePct(el.first.value),second:U.parsePct(el.second.value),date1:el.date1.value,date2:el.date2.value,date3:el.date3.value,minFirst:selected?selected.minFirst||0:0,bank:el.bank.value.trim()};
+    return {base:base,discount:discount,price:Math.round(base*(1-discount)),down:U.parsePct(el.pv.value),rate:U.parsePct(el.rate.value),years:Number(el.term.value),first:U.parsePct(el.first.value),second:U.parsePct(el.second.value),date1:el.date1.value,date2:el.date2.value,date3:el.date3.value,minFirst:selected?selected.minFirst||0:0,tranches:selected?3:2,firstRub:selected?null:100000,bank:el.bank.value.trim()};
   }
   function results(x,r){
     var html='<div class="sm-hero"><div class="sm-hero-name">'+esc(x.bank)+'</div><div class="sm-hero-flat">'+esc(project)+(flats.selectedNumber()?' · кв. '+esc(flats.selectedNumber()):'')+'</div><div class="sm-pay"><div><div class="sm-k">Платёж после первого транша</div><div class="sm-v">'+F.rub(r.stages[0].payment)+'</div></div></div></div>';
     html+='<dl><dt>Программа</dt><dd>'+esc(selected ? selected.name.replace('Сбербанк · ', '') : 'Индивидуальные условия')+'</dd><dt>Ставка и срок</dt><dd>'+F.pct(x.rate)+' · '+F.years(x.years)+'</dd><dt>Стоимость квартиры после скидки</dt><dd>'+F.rub(r.price)+'</dd><dt>Первоначальный взнос</dt><dd>'+F.rub(r.down)+'</dd><dt>Общий кредит</dt><dd>'+F.rub(r.total)+'</dd></dl>';
-    r.stages.forEach(function(s,i){var end=i<2?' — до '+showDate(r.stages[i+1].date):' и далее';
-      html+='<div class="sm-stage"><div class="sm-stage-heading"><strong>'+(i===2?'Последний':(i+1)+'-й')+' транш</strong><span class="sm-stage-date">с '+showDate(s.date)+end+'</span></div><div class="sm-stage-metrics"><div><span>Сумма транша</span><b>'+F.rub(s.amount)+'</b></div><div><span>Всего выдано</span><b>'+F.rub(s.issued)+'</b></div><div><span>Платёж в месяц</span><b class="sm-stage-payment">'+F.rub(s.payment)+'</b></div></div></div>';});
+    r.stages.forEach(function(s,i){var end=i<r.stages.length-1?' — до '+showDate(r.stages[i+1].date):' и далее';
+      html+='<div class="sm-stage"><div class="sm-stage-heading"><strong>'+(i===r.stages.length-1?(r.stages.length===2?'2-й (остаток)':'Последний'):(i+1)+'-й')+' транш</strong><span class="sm-stage-date">с '+showDate(s.date)+end+'</span></div><div class="sm-stage-metrics"><div><span>Сумма транша</span><b>'+F.rub(s.amount)+'</b></div><div><span>Всего выдано</span><b>'+F.rub(s.issued)+'</b></div><div><span>Платёж в месяц</span><b class="sm-stage-payment">'+F.rub(s.payment)+'</b></div></div></div>';});
     html+='<div class="sm-note">Оценка: аннуитет считается от суммы выданных траншей на исходный срок '+F.years(x.years)+'. Уменьшение долга между траншами, неполные месяцы и изменение срока не учитываются. Точный график предоставит банк.</div>';
     if(selected&&selected.id==='sber1')html+='<div class="sm-note">Первый транш — не менее 100 000 ₽. Последний транш рассчитан как остаток кредита.</div>';
     if(project==='ДНК — 2 очередь' && x.date3.slice(0,7)!=='2029-05')html+='<div class="sm-note">В документе для ДНК-2 последний транш указан на май 2029 года. Проверьте выбранную дату с банком.</div>';
@@ -50,12 +52,12 @@
   }
   var flats=window.SMFlats.setup({select:el.flat,info:$('sm-flat-info'),price:el.price,project:project,onChange:render});
   U.pills(el.project,projects.map(function(p){return {value:p,label:p};}),project,'v');
-  U.onPill(el.project,'v',function(v,btn){project=v;flats.setProject(v);Array.prototype.forEach.call(el.project.children,function(b){b.setAttribute('aria-pressed',String(b===btn));});setupProgram();});
+  U.onPill(el.project,'v',function(v,btn){project=v;flats.setProject(v);el.date2.value=v==='ДНК — 2 очередь'&&el.date1.value?addYear(el.date1.value):'';el.date3.value='';Array.prototype.forEach.call(el.project.children,function(b){b.setAttribute('aria-pressed',String(b===btn));});setupProgram();});
   el.program.addEventListener('change',applyProgram);U.moneyInput(el.price,render);
   [el.discount,el.rate,el.pv,el.first,el.second].forEach(function(e){U.pctInput(e,render);});
   [el.bank,el.term,el.date2,el.date3].forEach(function(e){e.addEventListener('input',render);});
-  el.date1.addEventListener('input',function(){if(el.date1.value)el.date2.value=addYear(el.date1.value);render();});
-  el.date1.value=iso(new Date());el.date2.value=addYear(el.date1.value);
+  el.date1.addEventListener('input',function(){if(project==='ДНК — 2 очередь'&&el.date1.value)el.date2.value=addYear(el.date1.value);render();});
+  el.date1.value=iso(new Date());el.date2.value='';
   $('sm-print').addEventListener('click',function(){window.print();});
   U.saveButton($('sm-save'),$('sm-msg'),function(){
     if(!last)return Promise.resolve(null);
