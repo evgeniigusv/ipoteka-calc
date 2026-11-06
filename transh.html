@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Траншевая ипотека — Свобода мысли</title><link rel="icon" type="image/svg+xml" href="assets/mark-da.svg">
+<meta name="theme-color" content="#355DB3"><meta name="robots" content="noindex, nofollow">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;700&family=Unbounded:wght@500;600&display=swap">
+<link rel="stylesheet" href="assets/style.css?v=20261106b">
+</head>
+<body>
+<main class="sm" id="sm-transh">
+  <header class="sm-head"><h1>Траншевая ипотека</h1><a class="sm-logo" href="https://da-dom.life/" target="_blank" rel="noopener"><img src="assets/logo-svoboda-dark.svg" width="106" height="56" alt="Свобода мысли"></a></header>
+  <nav class="sm-navigation" aria-label="Калькуляторы"><a class="sm-nav" href="./">Ипотека</a><a class="sm-nav" href="rassrochka.html">Рассрочка</a><a class="sm-nav" href="chpv.html">ЧПВ</a><a class="sm-nav" href="transh.html" aria-current="page">Траншевая ипотека</a></nav>
+  <p class="sm-lede">Выберите квартиру и условия — покажем, как меняется платёж после выдачи каждого транша.</p>
+  <div class="sm-grid">
+    <section class="sm-card">
+      <h2>Условия сделки</h2>
+      <div class="sm-field"><span class="sm-label" id="sm-project-l">Проект</span><div class="sm-pills" id="sm-project" role="group" aria-labelledby="sm-project-l"></div></div>
+      <div class="sm-field sm-flat-field"><div class="sm-flat-pair"><div><label for="sm-flat-search">Номер квартиры</label><input id="sm-flat-search" type="text" autocomplete="off" placeholder="Введите номер"></div><div><label for="sm-flat">Или выберите из списка</label><select id="sm-flat"><option value="">Выбрать из списка</option></select></div></div><span id="sm-flat-info" class="sm-hint">Загрузка квартир из Macro…</span></div>
+      <div class="sm-row2"><div class="sm-field"><label for="sm-price">Цена по прайсу, ₽</label><input id="sm-price" type="text" inputmode="numeric" placeholder="Укажите цену"></div><div class="sm-field"><label for="sm-discount">Скидка, %</label><div class="sm-suffix"><input id="sm-discount" type="text" inputmode="decimal"><span>%</span></div><span class="sm-hint">Доля скидки от цены по прайсу</span></div></div>
+      <div class="sm-field"><label for="sm-program">Программа и банк</label><select id="sm-program"></select><span id="sm-program-info" class="sm-hint"></span></div>
+      <div class="sm-row2"><div class="sm-field"><label for="sm-bank">Банк</label><input id="sm-bank" type="text" placeholder="Укажите банк"></div><div class="sm-field"><label for="sm-rate">Ставка, % годовых</label><div class="sm-suffix"><input id="sm-rate" type="text" inputmode="decimal" placeholder="Укажите ставку"><span>%</span></div></div></div>
+      <div class="sm-row2"><div class="sm-field"><label for="sm-pv">Первоначальный взнос, %</label><div class="sm-suffix"><input id="sm-pv" type="text" inputmode="decimal" value="20"><span>%</span></div></div><div class="sm-field"><label for="sm-term">Срок, лет</label><input id="sm-term" type="number" min="1" max="30" step="1" value="30"></div></div>
+      <div class="sm-row2"><div class="sm-field"><label for="sm-first">Первый транш, % цены</label><div class="sm-suffix"><input id="sm-first" type="text" inputmode="decimal"><span>%</span></div></div><div class="sm-field"><label for="sm-second">Второй транш, % цены</label><div class="sm-suffix"><input id="sm-second" type="text" inputmode="decimal"><span>%</span></div></div></div>
+      <p class="sm-hint sm-stage-hint">Последний транш — остаток кредита. Доли и сроки можно уточнить с банком.</p>
+      <div class="sm-date-grid"><div class="sm-field"><label for="sm-date1">Дата сделки</label><input id="sm-date1" type="date"></div><div class="sm-field"><label for="sm-date2">Второй транш</label><input id="sm-date2" type="date"></div><div class="sm-field"><label for="sm-date3">Последний транш</label><input id="sm-date3" type="date"><span id="sm-date-hint" class="sm-hint"></span></div></div>
+    </section>
+    <section class="sm-card" aria-live="polite"><h2>Как меняется платёж</h2><div id="sm-result"></div></section>
+  </div>
+  <footer class="sm-foot"><p class="sm-legal">Предварительный расчёт без учёта страховки и банковских комиссий. Окончательный график, остаток долга и условия определяет банк.</p><div class="sm-actions"><span id="sm-msg" class="sm-msg" role="status"></span><button id="sm-print" type="button" class="sm-btn sm-btn2">Распечатать</button><button id="sm-save" type="button" class="sm-btn">Сохранить PDF</button></div></footer>
+</main>
+<script src="assets/data.js"></script><script src="assets/engine.js"></script><script src="assets/common.js"></script><script src="assets/flats.js"></script><script src="assets/transh-engine.js"></script><script src="assets/transh.js"></script>
+</body></html>

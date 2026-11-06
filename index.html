@@ -10,19 +10,13 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;700&family=Unbounded:wght@500;600&display=swap">
-<link rel="stylesheet" href="assets/style.css">
+<link rel="stylesheet" href="assets/style.css?v=20261106b">
 </head>
 <body>
 
 <main class="sm" id="sm-ipoteka">
-  <header class="sm-head">
-    <h1>Ипотечный калькулятор</h1>
-    <div class="sm-head-r">
-      <a class="sm-nav" href="rassrochka.html">Калькулятор рассрочки</a>
-      <a class="sm-nav" href="chpv.html">Калькулятор ЧПВ</a>
-      <a class="sm-logo" href="https://da-dom.life/" target="_blank" rel="noopener"><img src="assets/logo-svoboda-dark.svg" width="106" height="56" alt="Свобода мысли"></a>
-    </div>
-  </header>
+  <header class="sm-head"><h1>Ипотечный калькулятор</h1><a class="sm-logo" href="https://da-dom.life/" target="_blank" rel="noopener"><img src="assets/logo-svoboda-dark.svg" width="106" height="56" alt="Свобода мысли"></a></header>
+  <nav class="sm-navigation" aria-label="Калькуляторы"><a class="sm-nav" href="./" aria-current="page">Ипотека</a><a class="sm-nav" href="rassrochka.html">Рассрочка</a><a class="sm-nav" href="chpv.html">ЧПВ</a><a class="sm-nav" href="transh.html">Траншевая ипотека</a></nav>
   <p class="sm-lede">Выберите очередь и условия покупки. Калькулятор посчитает платёж по каждой программе и покажет ту, где он наименьший.</p>
 
   <div class="sm-grid">
@@ -32,20 +26,12 @@
         <span class="sm-label" id="sm-project-l">Проект</span>
         <div class="sm-pills" id="sm-project" role="group" aria-labelledby="sm-project-l"></div>
       </div>
-      <div class="sm-row2">
-        <div class="sm-field">
-          <label for="sm-price">Стоимость квартиры, ₽</label>
-          <input id="sm-price" type="text" inputmode="numeric" autocomplete="off">
-          <span class="sm-hint">Цена по прайсу, без скидки</span>
-        </div>
-        <div class="sm-field">
-          <label for="sm-flat-search">Номер квартиры</label>
-          <input id="sm-flat-search" type="text" inputmode="text" autocomplete="off" placeholder="Введите номер квартиры">
-          <label class="sm-flat-list-label" for="sm-flat">Или выберите из списка</label>
-          <select id="sm-flat"><option value="">Выбрать из списка</option></select>
-          <span id="sm-flat-info" class="sm-hint">Загрузка квартир из Macro…</span>
-        </div>
+      <div class="sm-field sm-flat-field">
+        <div class="sm-flat-pair"><div><label for="sm-flat-search">Номер квартиры</label><input id="sm-flat-search" type="text" autocomplete="off" placeholder="Введите номер"></div>
+        <div><label for="sm-flat">Или выберите из списка</label><select id="sm-flat"><option value="">Выбрать из списка</option></select></div></div>
+        <span id="sm-flat-info" class="sm-hint">Загрузка квартир из Macro…</span>
       </div>
+      <div class="sm-field"><label for="sm-price">Стоимость квартиры, ₽</label><input id="sm-price" type="text" inputmode="numeric" autocomplete="off"><span class="sm-hint">Цена по прайсу, без скидки</span></div>
       <div class="sm-field">
         <label for="sm-disc">Скидка</label>
         <div class="sm-suffix"><input id="sm-disc" type="text" inputmode="decimal" autocomplete="off" placeholder="0"><span aria-hidden="true">%</span></div>
