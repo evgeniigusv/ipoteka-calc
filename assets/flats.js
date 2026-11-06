@@ -3,6 +3,7 @@
   'use strict';
   var houses = { 'ДА — 1 очередь': [6736582], 'ДА — 2 очередь': [6871059], 'ДНК — 2 очередь': [11013930] };
   function setup(options) {
+    var selectedCash = null, selectedPrice = '', selectedDiscount = '';
     var list = [], project = options.project, updated = '', loaded = false, failed = false;
     var select = options.select, search = document.getElementById('sm-flat-search'), info = options.info;
     function normalize(value) { return String(value || '').trim().replace(/^(?:кв\.?\s*)?№?\s*/i, '').toLowerCase(); }
@@ -34,13 +35,16 @@
       return exact;
     }
     function apply(row) {
+      selectedCash=null;
+      if (options.onClear) options.onClear();
       if (row) {
         options.price.value = Number(row.price).toLocaleString('ru-RU');
         if (options.rooms) options.rooms.value = String(row.studio || Number(row.rooms) <= 1 ? 1 : Math.min(3, Number(row.rooms)));
         if (options.onSelect) options.onSelect(row);
         if (options.discount) {
           var price = Number(row.price), action = Number(row.action);
-          options.discount.value = action > 0 && action < price ? ((price - action) / price * 100).toFixed(2).replace('.', ',') : '0';
+          options.discount.value = action > 0 && action <= price ? ((price - action) / price * 100).toFixed(2).replace('.', ',') : '';
+          if(action>0 && action<=price){selectedCash=action;selectedPrice=options.price.value;selectedDiscount=options.discount.value;}
         }
       }
     }
@@ -70,7 +74,8 @@
       if (normalize(search.value) && exact.length === 1) { select.value = String(exact[0].index + 1); apply(exact[0].row); options.onChange(); }
     }).catch(function () { failed = true; refresh(); });
     return {
-      setProject: function (next) { project = next; search.value = ''; options.price.value = ''; refresh(); },
+      setProject: function (next) { project = next; selectedCash=null; search.value = ''; options.price.value = ''; if(options.discount) options.discount.value=''; if(options.onClear) options.onClear(); refresh(); },
+      cashPrice: function(){return current() && options.discount && options.price.value===selectedPrice && options.discount.value===selectedDiscount ? selectedCash : null;},
       isPif: function () { var row = current(); return !!row && row.house_id === 10899161; },
       selectedNumber: function () { var row = current(); return row ? String(row.num) + (row.house_id === 10899161 ? ' (ПИФ)' : '') : search.value.trim(); }
     };

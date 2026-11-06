@@ -12,3 +12,6 @@ assert.equal(r.verdict, 'Подходит');
 const s = SMChpvCalc.suggested(x); assert.ok(SMChpvCalc.calculate({...x,ddu:s}).profit <= 1000); assert.ok(SMChpvCalc.calculate({...x,ddu:s-1000}).profit > 1000);
 const combo = SMChpvCalc.calculate({...x,limit:6000000}); assert.equal(combo.verdict, 'Комбо-ипотека'); assert.equal(combo.rate,.14);
 console.log('ЧПВ совпадает с примером таблицы; подбор цены и сверхлимит проверены');
+
+assert.throws(()=>SMChpvCalc.calculate({...x,client:2000000}),/Субсидирование ПВ не требуется/);
+assert.throws(()=>SMChpvCalc.calculate({...x,ddu:0}),/Проверьте/);

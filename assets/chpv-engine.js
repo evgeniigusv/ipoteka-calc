@@ -2,6 +2,8 @@
 (function (root) {
   'use strict';
   function calculate(x) {
+    if(![x.base,x.cash,x.ddu].every(function(v){return Number.isFinite(v)&&v>0;}) || !(Number.isFinite(x.client)&&x.client>=0) || !(x.minDown>0&&x.minDown<1) || !(x.years>0&&x.years<=30)) throw new Error('Проверьте цены, средства клиента, взнос и срок.');
+    if(x.client>x.ddu*x.minDown) throw new Error('Средств клиента больше суммы ПВ по ДДУ. Субсидирование ПВ не требуется; используйте обычную ипотеку.');
     var m = x.minDown, loanMonths = x.years * 12;
     var minimum = x.base * m, shortage = minimum - x.client;
     var down = x.ddu * m, funded = down - x.client, cost = funded * x.cost;

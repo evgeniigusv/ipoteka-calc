@@ -23,11 +23,11 @@ vm.runInNewContext(fs.readFileSync(new URL('../assets/flats.js', import.meta.url
 const flats = context.window.SMFlats.setup({ select, info, price, discount: disc, project: 'ДА — 1 очередь', onChange() {} });
 await new Promise(resolve => setTimeout(resolve, 0));
 search.value = 'кв. № 1'; search.trigger('input');
-assert.equal(select.value, '1'); assert.equal(price.value.replace(/\D/g, ''), '10000000'); assert.equal(disc.value, '10,00');
+assert.equal(select.value, '1'); assert.equal(price.value.replace(/\D/g, ''), '10000000'); assert.equal(disc.value, '10,00'); assert.equal(flats.cashPrice(),9000000); disc.value='11'; assert.equal(flats.cashPrice(),null);
 search.value = '7'; search.trigger('input');
 assert.equal(select.value, '2'); assert.equal(price.value.replace(/\D/g, ''), '11000000'); assert.equal(flats.isPif(), false);
 assert.equal(select.children.some(item => /ПИФ/.test(item.text)), false);
 search.value = '9'; search.trigger('input'); assert.equal(select.value, ''); assert.match(info.textContent, /несколько квартир/);
 search.value = '9999'; search.trigger('input'); assert.equal(price.value, ''); assert.equal(flats.selectedNumber(), '9999'); assert.match(info.textContent, /не найдена/);
-flats.setProject('ДА — 2 очередь'); search.value = '1'; search.trigger('input'); assert.equal(price.value.replace(/\D/g, ''), '13000000'); assert.equal(flats.isPif(), false);
+flats.setProject('ДА — 2 очередь'); assert.equal(disc.value,''); assert.equal(flats.cashPrice(),null); search.value = '1'; search.trigger('input'); assert.equal(price.value.replace(/\D/g, ''), '13000000'); assert.equal(flats.isPif(), false);
 console.log('Поиск по номеру, исключение ПИФ, ручной ввод и очереди — проверены');

@@ -26,7 +26,7 @@
     var term = parseFloat(String(el.term.value).replace(',', '.'));
     return {
       project: state.project, type: state.type, kids: el.kids.value,
-      base: U.parseMoney(el.price.value) || 0, disc: U.parsePct(el.disc.value), pv: U.parseMoney(el.pv.value),
+      base: U.parseMoney(el.price.value) || 0, disc: U.parsePct(el.disc.value), cash: flats.cashPrice(), pv: U.parseMoney(el.pv.value),
       term: isFinite(term) && term > 0 ? term : null, pick: state.pick
     };
   }
@@ -40,7 +40,7 @@
 
   /* ---------- Расчёт выбранной программы ---------- */
   function detailHtml(inp, r) {
-    var grace = r.graceMonths > 0, rows = [];
+    var grace = r.graceMonths > 0, rows = [], source = D.programs.find(function(p){return p.id===r.id;});
     var add = function (k, v, cls) {
       var c = cls ? ' class="' + cls + '"' : '';
       rows.push('<dt' + c + '>' + k + '</dt><dd' + c + '>' + v + '</dd>');
@@ -69,6 +69,8 @@
           (grace ? '<div><div class="sm-k">Платёж после</div><div class="sm-v sm-v2">' + F.rub(r.pay2) + '</div></div>' : '') +
         '</div></div>' +
       '<dl>' + rows.join('') + '</dl>' +
+      '<div class="sm-note">Комиссия банку считается от прайса за вычетом взноса; платёж — от цены ДДУ за вычетом взноса.</div>' +
+      (source && source.sub>0 && r.term<source.maxTerm ? '<div class="sm-note">Срок сокращён; ставка и комиссия взяты из программы на '+F.years(source.maxTerm)+'. Подтвердите их у банка для выбранного срока.</div>' : '') +
       (r.note ? '<div class="sm-note">' + esc(r.note) + '</div>' : '');
   }
 
@@ -104,6 +106,8 @@
       last = null;
       return;
     }
+    if(!el.disc.value.trim()){el.detail.innerHTML='<p class="sm-empty">Укажите скидку при полной оплате. Если скидки нет, введите 0.</p>';el.thead.innerHTML=el.tbody.innerHTML=el.tip.innerHTML='';last=null;return;}
+    if(inp.disc>=1 || (el.term.value && !(Number.isInteger(Number(el.term.value))&&Number(el.term.value)>=1&&Number(el.term.value)<=30))){el.detail.innerHTML='<p class="sm-empty">Скидка должна быть меньше 100%, срок — целое число от 1 до 30 лет.</p>';el.thead.innerHTML=el.tbody.innerHTML=el.tip.innerHTML='';last=null;return;}
     var res = C.mortgage(D, inp, { loanFromBase: CONFIG.loanFromBase });
     if (state.pick != null && !res.picked) state.pick = null; // выбранная вручную перестала подходить — снова автоподбор
     last = { inp: inp, res: res };
@@ -165,7 +169,7 @@
   var pickPill = function (box, key) {
     U.onPill(box, 'v', function (v, btn) {
       state[key] = v; state.pick = null;
-      if (key === 'project') flats.setProject(v);
+      if (key === 'project') { flats.setProject(v); $('sm-pv-hint').textContent=(v==='ДНК — 2 очередь'?'От 20%':'От 20,1%')+' цены по прайсу. Недостаточный взнос увеличивается до минимального.'; }
       Array.prototype.forEach.call(box.children, function (b) { b.setAttribute('aria-pressed', String(b === btn)); });
       setupKids();
       render();

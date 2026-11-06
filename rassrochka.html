@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;700&family=Unbounded:wght@500;600&display=swap">
-<link rel="stylesheet" href="assets/style.css?v=20261106b">
+<link rel="stylesheet" href="assets/style.css?v=20261106-audit">
 </head>
 <body>
 
@@ -31,7 +31,7 @@
         <span id="sm-flat-info" class="sm-hint">Загрузка квартир из Macro…</span>
       </div>
       <div class="sm-field">
-        <label for="sm-price">Стоимость квартиры, ₽</label>
+        <label for="sm-price">Цена по прайсу, ₽</label>
         <input id="sm-price" type="text" inputmode="numeric" autocomplete="off">
       </div>
       <div class="sm-field">
@@ -42,6 +42,7 @@
           <option value="3">3-комнатная и больше</option>
         </select>
       </div>
+      <div class="sm-field"><label for="sm-date">Дата сделки</label><input id="sm-date" type="date"></div>
       <div class="sm-field">
         <label for="sm-extra">Доп. скидка</label>
         <div class="sm-suffix"><input id="sm-extra" type="text" inputmode="decimal" autocomplete="off" placeholder="0"><span aria-hidden="true">%</span></div>
@@ -52,7 +53,7 @@
   <div class="sm-cards" id="sm-cards" aria-live="polite"></div>
 
   <footer class="sm-foot">
-    <p class="sm-legal"><span id="sm-legal">Расчёт предварительный и не является офертой. График и сумму платежей фиксирует договор.</span> Условия программ — на <span id="sm-updated"></span>.</p>
+    <p class="sm-legal"><span id="sm-legal">Расчёт предварительный и не является офертой. График и сумму платежей фиксирует договор.</span> Сверено с источниками <span id="sm-updated"></span>.</p>
     <div class="sm-actions">
       <span class="sm-msg" id="sm-msg" role="status"></span>
       <button type="button" class="sm-btn sm-btn2" id="sm-print">Распечатать</button>
@@ -61,10 +62,10 @@
   </footer>
 </main>
 
-<script src="assets/data.js"></script>
-<script src="assets/engine.js"></script>
-<script src="assets/common.js"></script>
-<script src="assets/flats.js"></script>
-<script src="assets/rassrochka.js"></script>
+<script src="assets/data.js?v=20261106-audit"></script>
+<script src="assets/engine.js?v=20261106-audit"></script>
+<script src="assets/common.js?v=20261106-audit"></script>
+<script src="assets/flats.js?v=20261106-audit"></script>
+<script src="assets/rassrochka.js?v=20261106-audit"></script>
 </body>
 </html>

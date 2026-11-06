@@ -183,7 +183,7 @@ html, body { margin: 0; padding: 0; background: var(--bg); }
 .sm-total { display: flex; flex-wrap: wrap; gap: 12px 36px; background: var(--sky); color: var(--white); border-radius: var(--r-md); padding: 20px 22px; margin-bottom: 8px; }
 .sm-total .sm-v { font-size: clamp(22px, 2.3vw, 30px); }
 .sm-total .sm-v.sm-v2 { font-size: clamp(17px, 1.7vw, 22px); }
-.sm-cards td:first-child { min-width: 0; font-weight: 500; color: var(--muted); white-space: nowrap; }
+.sm-cards td:first-child { min-width: 0; font-weight: 500; color: var(--muted); white-space: normal; overflow-wrap: anywhere; }
 .sm-cards th:first-child, .sm-cards td:first-child { padding-left: 0; }
 .sm-cards th:last-child, .sm-cards td:last-child { padding-right: 0; }
 .sm-cards th:nth-child(2), .sm-cards td:nth-child(2) { text-align: left; white-space: normal; }
@@ -234,7 +234,7 @@ html, body { margin: 0; padding: 0; background: var(--bg); }
   /* График рассрочки на телефоне: сверху — когда и сумма, ниже — что за платёж */
   .sm:not(.sm-pdf) .sm-cards table, .sm:not(.sm-pdf) .sm-cards tbody { display: block; }
   .sm:not(.sm-pdf) .sm-cards thead { display: none; }
-  .sm:not(.sm-pdf) .sm-cards tr { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+  .sm:not(.sm-pdf) .sm-cards tr { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; padding: 12px 0; border-bottom: 1px solid var(--line); }
   .sm:not(.sm-pdf) .sm-cards tbody tr:last-child { border-bottom: 0; }
   .sm:not(.sm-pdf) .sm-cards td { padding: 0; border: 0; }
   .sm:not(.sm-pdf) .sm-cards td:nth-child(2) { grid-column: 1 / -1; grid-row: 2; font-weight: 700; }

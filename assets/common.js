@@ -8,7 +8,7 @@
   }
 
   /* ---------- Поля ---------- */
-  function parseMoney(s) { var d = String(s).replace(/[^\d]/g, ''); return d ? parseInt(d, 10) : null; }
+  function parseMoney(s) { var d=String(s).trim().replace(/(?:₽|руб\.?|р\.)$/i,'').replace(/\s/g,'').replace(',','.'); if(!/^\d+(?:\.\d{1,2})?$/.test(d))return null; var n=Number(d);return Number.isSafeInteger(Math.round(n))?Math.round(n):null; }
   // Сумма с пробелами между разрядами; курсор остаётся на месте
   function moneyInput(input, onChange) {
     input.addEventListener('input', function () {

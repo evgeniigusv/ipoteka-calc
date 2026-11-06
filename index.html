@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;700&family=Unbounded:wght@500;600&display=swap">
-<link rel="stylesheet" href="assets/style.css?v=20261106b">
+<link rel="stylesheet" href="assets/style.css?v=20261106-audit">
 </head>
 <body>
 
@@ -49,7 +49,7 @@
         <div class="sm-field">
           <label for="sm-pv">Первоначальный взнос, ₽</label>
           <input id="sm-pv" type="text" inputmode="numeric" autocomplete="off" placeholder="минимальный">
-          <span class="sm-hint">От 20,1% цены по прайсу. Меньше минимального по программе — посчитаем с минимальным</span>
+          <span class="sm-hint" id="sm-pv-hint">От 20,1% цены по прайсу. Меньше минимального по программе — посчитаем с минимальным</span>
         </div>
         <div class="sm-field">
           <label for="sm-term">Срок, лет</label>
@@ -79,7 +79,7 @@
   </section>
 
   <footer class="sm-foot">
-    <p class="sm-legal"><span id="sm-legal">Расчёт предварительный и не является офертой. Окончательные условия, страхование и комиссии определяет банк.</span> Условия программ — на <span id="sm-updated"></span>.</p>
+    <p class="sm-legal"><span id="sm-legal">Расчёт предварительный и не является офертой. Окончательные условия, страхование и комиссии определяет банк.</span> Сверено с источниками <span id="sm-updated"></span>.</p>
     <div class="sm-actions">
       <span class="sm-msg" id="sm-msg" role="status"></span>
       <button type="button" class="sm-btn sm-btn2" id="sm-print">Распечатать</button>
@@ -88,10 +88,10 @@
   </footer>
 </main>
 
-<script src="assets/data.js"></script>
-<script src="assets/engine.js"></script>
-<script src="assets/common.js"></script>
-<script src="assets/flats.js"></script>
-<script src="assets/ipoteka.js"></script>
+<script src="assets/data.js?v=20261106-audit"></script>
+<script src="assets/engine.js?v=20261106-audit"></script>
+<script src="assets/common.js?v=20261106-audit"></script>
+<script src="assets/flats.js?v=20261106-audit"></script>
+<script src="assets/ipoteka.js?v=20261106-audit"></script>
 </body>
 </html>

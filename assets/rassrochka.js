@@ -6,7 +6,7 @@
   var CONFIG = Object.assign({ defaultPrice: 10000000 }, window.SM_CALC_CONFIG || {});
   var D = C.buildData(window.SM_DATA);
   var $ = function (id) { return document.getElementById(id); };
-  var el = { project: $('sm-project'), flat: $('sm-flat'), price: $('sm-price'), rooms: $('sm-rooms'), extra: $('sm-extra'), cards: $('sm-cards') };
+  var el = { project: $('sm-project'), flat: $('sm-flat'), price: $('sm-price'), rooms: $('sm-rooms'), extra: $('sm-extra'), cards: $('sm-cards'), date: $('sm-date') };
   // pv и step — выбор взноса и периодичности по каждой программе
   var state = { project: D.projects[0], pv: {}, step: {} };
 
@@ -21,7 +21,7 @@
     if (!c.disc && !c.extra) return 'без скидки';
     if (!c.extra) return 'скидка ' + F.pct1(c.disc);
     if (!c.disc) return 'доп. скидка ' + F.pct1(c.extra);
-    return 'скидка ' + F.pct1(c.disc) + ' + ' + F.pct1(c.extra);
+    return 'скидка ' + F.pct1(c.disc) + (c.extraSequential?' и затем ':' + ') + F.pct1(c.extra);
   }
   function choice(label, attr, items, current) {
     return '<div class="sm-choice"><span class="sm-label">' + label + '</span><div class="sm-pills sm-sm" data-' + attr + '>' +
@@ -35,7 +35,9 @@
     var html = '<section class="sm-card" data-id="' + c.id + '">' +
       '<div class="sm-cardhead"><h2>' + esc(c.name) + '</h2><span class="sm-badge' + (c.disc || c.extra ? '' : ' sm-zero') + '">' + discLabel(c) + '</span></div>' +
       '<p class="sm-desc">' + esc(c.note) + '</p>';
-    if (!forPdf && c.pvOptions) html += choice('Первый взнос', 'pv', c.pvOptions.map(function (o) {
+    if(c.warning)html+='<p class="sm-note">'+esc(c.warning)+'</p>';
+    if(c.error)return html+'<p class="sm-empty">'+esc(c.error)+'</p></section>';
+    if (!forPdf && c.pvOptions) html += choice(c.pvFromBase?'Первый взнос от прайса':'Первый взнос', 'pv', c.pvOptions.map(function (o) {
       return { value: o.share, label: F.pct1(o.share) + ' · скидка ' + F.pct1(o.disc) };
     }), c.share);
     if (!forPdf && c.steps) html += choice('Платежи', 'step', c.steps.map(function (s) { return { value: s.step, label: s.name }; }), c.step);
@@ -49,35 +51,35 @@
     return html + '</section>';
   }
 
+  function dealDate(){return el.date.value?new Date(el.date.value+'T00:00:00'):null;}
   function render() {
     var inp = readInputs();
+    if(!dealDate()){el.cards.innerHTML='<section class="sm-card">Укажите дату сделки.</section>';return;}
     if (flats.isPif()) { el.cards.innerHTML = '<section class="sm-card"><p class="sm-empty">Для квартиры ПИФ условия рассрочки нужно уточнить. Расчёт отключён.</p></section>'; return; }
     if (!inp.base) { el.cards.innerHTML = '<section class="sm-card"><p class="sm-empty">Укажите стоимость квартиры.</p></section>'; return; }
-    var cards = C.installments(D, inp);
+    var cards = C.installments(D, inp, dealDate());
     el.cards.innerHTML = cards.length ? cards.map(function (c) { return cardHtml(c); }).join('')
       : '<section class="sm-card"><p class="sm-empty">Условия рассрочки для этого проекта готовятся.</p></section>';
   }
 
-  /* ---------- PDF: один лист A4 ---------- */
+  /* ---------- PDF: каждая программа на отдельном листе A4 ---------- */
   function buildReport(png) {
-    var inp = readInputs(), flat = flats.selectedNumber(), cards = C.installments(D, inp);
+    var inp = readInputs(), flat = flats.selectedNumber(), cards = C.installments(D, inp, dealDate());
     var fact = function (k, v) { return '<div>' + k + '<b>' + v + '</b></div>'; };
-    var page = U.page(U.reportHead('Расчёт рассрочки', inp.project + (flat ? ' · кв. ' + flat : '') + ' · ' + U.stamp(), png) +
-      '<section class="sm-card"><div class="sm-facts">' + fact('Проект', esc(inp.project)) + (flat ? fact('Номер квартиры', esc(flat)) : '') +
-        fact('Стоимость по прайсу', F.rub(inp.base)) + fact('Квартира', esc(el.rooms.options[el.rooms.selectedIndex].text)) +
-        (inp.extra ? fact('Доп. скидка', F.pct1(inp.extra)) : '') + '</div></section>' +
-      // одна-две рассрочки — во всю ширину листа, больше — в две колонки
-      '<div class="sm-cards' + (cards.length <= 2 ? ' sm-one' : '') + '">' + cards.map(function (c) { return cardHtml(c, true); }).join('') + '</div>' +
-      '<p class="sm-legal">' + esc($('sm-legal').textContent) + '</p>', 'portrait');
-    return { pages: [page], file: 'Расчёт рассрочки ' + inp.project + (flat ? ' кв ' + flat : '') + ' ' + new Date().toLocaleDateString('ru-RU') };
+    var facts='<section class="sm-card"><div class="sm-facts">'+fact('Проект',esc(inp.project))+(flat?fact('Квартира',esc(flat)):'')+fact('Цена по прайсу',F.rub(inp.base))+fact('Дата сделки',F.dmy(dealDate()))+'</div></section>';
+    var pages=cards.map(function(c){return U.page(U.reportHead('Расчёт рассрочки',inp.project+' · '+U.stamp(),png)+facts+cardHtml(c,true)+'<p class="sm-legal">'+esc($('sm-legal').textContent)+'</p>','portrait');});
+    return {pages:pages,file:'Расчёт рассрочки '+inp.project+' '+new Date().toLocaleDateString('ru-RU')};
   }
-  function createPdf() { return !flats.isPif() && readInputs().base && C.installments(D, readInputs()).length ? U.makePdf(buildReport, 'portrait') : Promise.resolve(null); }
+
+  function createPdf() { return dealDate() && !flats.isPif() && readInputs().base && C.installments(D, readInputs(), dealDate()).length ? U.makePdf(buildReport, 'portrait') : Promise.resolve(null); }
 
   var flats = window.SMFlats.setup({ select: el.flat, info: $('sm-flat-info'), price: el.price, rooms: el.rooms,
     discount: null, project: state.project, onChange: function () { render(); } });
 
   /* ---------- Запуск ---------- */
   U.pills(el.project, D.projects.map(function (p) { return { value: p, label: p }; }), state.project, 'v');
+  var now=new Date();el.date.value=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');
+  el.date.addEventListener('input',render);
   el.price.value = F.int(CONFIG.defaultPrice);
   $('sm-updated').textContent = window.SM_DATA.updated;
 

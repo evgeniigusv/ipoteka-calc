@@ -66,7 +66,10 @@
         id: i + 1, projects: p.projects || [], name: p.name, kind: p.scheme,
         minPv: p.minPv || 0, pay: p.pay || {}, end: toDate(p.end), months: p.months || 0,
         disc: p.disc || 0, discFromPv: p.discFromPv || 0, maxDisc: or(p.maxDisc, null),
-        steps: p.steps && p.steps.length ? p.steps : [1], note: p.note || ''
+        steps: p.steps && p.steps.length ? p.steps : [1], note: p.note || '',
+        pvFromBase: !!p.pvFromBase, extraSequential: !!p.extraSequential, validUntil: toDate(p.validUntil),
+        milestones: p.milestones || [], pvChoices: p.pvChoices, discAt70: p.discAt70,
+        launchDiscount: p.launchDiscount || 0, launchUntil: toDate(p.launchUntil), noExtra: !!p.noExtra
       };
     });
     return {
@@ -99,7 +102,7 @@
 
   // opts.loanFromBase — показывать кредит и платёж от «прайс − ПВ», как в таблице; иначе — от цены в договоре
   function calcProgram(p, inp, opts) {
-    var B = inp.base, D = Math.round(B * (1 - inp.disc)), pvIn = Math.round(inp.pv || 0);
+    var B = inp.base, D = inp.cash > 0 ? Math.round(inp.cash) : Math.round(B * (1 - inp.disc)), pvIn = Math.round(inp.pv || 0);
     var s = p.sub, m = p.minPv, lim = p.limit;
 
     // Взнос считается от цены по прайсу; «прайс − взнос» не больше лимита кредита
@@ -158,6 +161,7 @@
 
   // inp: { project, type, kids, base, disc, pv, term, pick } — pick: id программы, выбранной вручную
   function mortgage(D, inp, opts) {
+    if (!(Number.isFinite(inp.base) && inp.base > 0 && Number.isFinite(inp.disc) && inp.disc >= 0 && inp.disc < 1)) return {rows:[],best:null,picked:false};
     var rows = D.programs.filter(function (p) {
       return forProject(p, inp.project) && p.type === inp.type && (!p.kids || p.kids === inp.kids);
     }).map(function (p) { return calcProgram(p, inp, opts); });
@@ -190,6 +194,7 @@
     return p.maxDisc == null ? d : Math.min(d, p.maxDisc);
   }
   function pvOptions(p) {
+    if(p.pvChoices) return p.pvChoices;
     if (p.kind !== 'equal') return [p.minPv];
     return uniq([p.minPv].concat([0.4, 0.5, 0.6, 0.7].filter(function (v) { return v > p.minPv + 1e-9; })));
   }
@@ -197,42 +202,44 @@
   // inp: { project, base, rooms: 1|2|3, extra, pv: {id: доля}, step: {id: месяцев} }
   function installments(D, inp, today) {
     today = startOfDay(today || new Date());
-    return D.installments.filter(function (p) { return forProject(p, inp.project); }).map(function (p) {
-      var opts = pvOptions(p);
-      var share = inp.pv && opts.indexOf(inp.pv[p.id]) >= 0 ? inp.pv[p.id] : opts[0];
-      var own = instDisc(p, share), extra = inp.extra || 0;
-      var total = Math.round(inp.base * (1 - Math.min(own + extra, 1)));
-      var pv = Math.round(total * share), rest = total - pv;
-      var end = p.end || addMonths(today, p.months);
-      var card = {
-        id: p.id, name: p.name, kind: p.kind, note: p.note, disc: own, extra: extra, total: total, saved: inp.base - total,
-        end: end, termMonths: monthsBetween(today, end), share: share,
-        pvOptions: opts.length > 1 ? opts.map(function (v) { return { share: v, disc: instDisc(p, v) }; }) : null,
-        rows: [{ when: 'в день сделки', label: 'Первый взнос', sub: pct1(share) + ' стоимости', amount: pv }]
-      };
-
-      if (p.kind === 'equal') {
-        var step = inp.step && p.steps.indexOf(inp.step[p.id]) >= 0 ? inp.step[p.id] : p.steps[0];
-        var n = Math.max(Math.floor(card.termMonths / step), 1);
-        var last = n > 1 ? addMonths(today, n * step) : end;
-        card.step = step;
-        card.steps = p.steps.length > 1 ? p.steps.map(function (s) { return { step: s, name: STEP_NAMES[s] }; }) : null;
-        card.payment = rest / n;
-        card.rows.push({
-          when: n > 1 ? STEP_NAMES[step] : 'до ' + dmy(last), label: n > 1 ? 'Равные платежи' : 'Остаток',
-          sub: n > 1 ? n + ' ' + plural(n, 'платёж', 'платежа', 'платежей') + ' по ' + rub(rest / n) + ', последний — до ' + dmy(last) : 'одним платежом',
-          amount: rest, final: true
-        });
-      } else if (p.kind === 'monthly') {
-        var monthly = p.pay[inp.rooms] || p.pay[1] || 0;
-        // Платежи — в каждом месяце между месяцем сделки и месяцем погашения; не больше, чем остаток долга
-        var cnt = Math.max((end.getFullYear() - today.getFullYear()) * 12 + end.getMonth() - today.getMonth() - 1, 0);
-        if (monthly > 0) cnt = Math.min(cnt, Math.floor(rest / monthly));
-        card.payment = monthly;
-        if (cnt > 0 && monthly > 0) card.rows.push({ when: 'ежемесячно', label: 'Платежи', sub: rub(monthly) + ' × ' + months(cnt), amount: monthly * cnt });
-        card.rows.push({ when: 'до ' + dmy(end), label: 'Остаток', sub: pct1(total > 0 ? (rest - monthly * cnt) / total : 0) + ' стоимости', amount: rest - monthly * cnt, final: true });
-      } else {
-        card.rows.push({ when: 'до ' + dmy(end), label: 'Остаток', sub: pct1(1 - share) + ' стоимости', amount: rest, final: true });
+    if (!(Number.isFinite(inp.base) && inp.base > 0)) return [];
+    return D.installments.filter(function(p){return forProject(p,inp.project);}).map(function(p){
+      var opts=pvOptions(p), share=inp.pv && opts.indexOf(inp.pv[p.id])>=0 ? inp.pv[p.id] : opts[0];
+      var launch=p.launchUntil && today<=p.launchUntil ? p.launchDiscount : 0;
+      function discount(v){return (p.discAt70!=null && v>=.7 ? p.discAt70 : instDisc(p,v))+launch;}
+      var own=discount(share), extra=p.noExtra?0:Math.max(0,inp.extra||0);
+      var factor=p.extraSequential?(1-own)*(1-extra):1-own-extra;
+      var total=Math.round(inp.base*factor), pv=Math.round((p.pvFromBase?inp.base:total)*share), rest=total-pv;
+      var end=p.end || addMonths(today,p.months);
+      var card={id:p.id,name:p.name,kind:p.kind,note:p.note,disc:own,extra:extra,total:total,saved:inp.base-total,end:end,
+        termMonths:monthsBetween(today,end),share:share,pvFromBase:p.pvFromBase,extraSequential:p.extraSequential,
+        warning:p.validUntil && today>p.validUntil?'Срок действия условий в источнике истёк '+dmy(p.validUntil)+'. Расчёт справочный; подтвердите условия.':'',
+        pvOptions:opts.length>1?opts.map(function(v){return {share:v,disc:discount(v)};}):null,
+        rows:[{when:'в день сделки',label:'Первый взнос',sub:pct1(share)+(p.pvFromBase?' прайса':' стоимости'),amount:pv}]};
+      if(end<=today){card.error='Срок погашения уже прошёл. Программа не рассчитывается.';card.rows=[];return card;}
+      if(!(total>0) || rest<0){card.error='Скидка и взнос несовместимы: взнос превышает стоимость или стоимость не положительна.';card.rows=[];return card;}
+      var milestones=p.milestones.map(function(m){var month=m.date && m.date.length===7;return {date:m.months?addMonths(today,m.months):toDate(month?m.date+'-31':m.date),when:month?toDate(m.date+'-01').toLocaleDateString('ru-RU',{month:'long',year:'numeric'})+' (день уточняется)':'до '+dmy(m.months?addMonths(today,m.months):toDate(m.date)),amount:Math.round(total*m.share),sub:pct1(m.share)+' стоимости'};});
+      if(milestones.some(function(m){return m.date<=today || m.date>=end;})){card.error='Дата промежуточного платежа не входит в срок рассрочки. Уточните индивидуальный график.';card.rows=[];return card;}
+      var reserved=milestones.reduce(function(sum,m){return sum+m.amount;},0);
+      if(reserved>rest){card.error='Промежуточные платежи превышают остаток.';card.rows=[];return card;}
+      if(p.kind==='equal'){
+        var step=inp.step && p.steps.indexOf(inp.step[p.id])>=0?inp.step[p.id]:p.steps[0];
+        var n=Math.max(Math.ceil(((end.getFullYear()-today.getFullYear())*12+end.getMonth()-today.getMonth()+(end.getDate()>today.getDate()?1:0))/step),1);
+        card.step=step;card.steps=p.steps.length>1?p.steps.map(function(v){return {step:v,name:STEP_NAMES[v]};}):null;
+        card.payment=Math.floor(rest/n);var finalPay=rest-card.payment*(n-1);
+        if(n>1)card.rows.push({when:STEP_NAMES[step],label:'Равные платежи',sub:(n-1)+' '+plural(n-1,'платёж','платежа','платежей')+' по '+rub(card.payment),amount:card.payment*(n-1)});
+        card.rows.push({when:'до '+dmy(end),label:'Последний платёж',sub:'с учётом округления',amount:finalPay,final:true});
+      }else{
+        if(p.kind==='monthly'){
+          var monthly=p.pay[inp.rooms]||p.pay[1]||0;
+          var cnt=Math.max((end.getFullYear()-today.getFullYear())*12+end.getMonth()-today.getMonth()-1,0);
+          cnt=monthly>0?Math.min(cnt,Math.floor((rest-reserved)/monthly)):0;
+          card.payment=cnt?monthly:0;
+          if(cnt)card.rows.push({when:'ежемесячно',label:'Платежи',sub:rub(monthly)+' × '+months(cnt)+'; со следующего месяца, до месяца погашения',amount:monthly*cnt});
+          rest-=monthly*cnt;
+        }
+        milestones.forEach(function(m){card.rows.push({when:m.when,label:'Промежуточный платёж',sub:m.sub,amount:m.amount});rest-=m.amount;});
+        card.rows.push({when:'до '+dmy(end),label:'Остаток',sub:pct1(rest/total)+' стоимости',amount:rest,final:true});
       }
       return card;
     });

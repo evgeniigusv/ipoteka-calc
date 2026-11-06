@@ -1,12 +1,13 @@
 /* Предварительная модель: платёж на сумму уже выданных траншей на исходный срок. */
 (function(root){
   'use strict';
+  function validDate(s){if(!/^\d{4}-\d{2}-\d{2}$/.test(s||''))return false;var d=new Date(s+'T00:00:00');return Number.isFinite(d.getTime())&&d.getFullYear()===Number(s.slice(0,4))&&d.getMonth()+1===Number(s.slice(5,7))&&d.getDate()===Number(s.slice(8,10));}
   function calculate(x){
-    if (!(x.price > 0) || !(x.rate > 0) || !(Number.isInteger(x.years) && x.years >= 1 && x.years <= 30)) throw new Error('Укажите стоимость, ставку и срок от 1 до 30 лет.');
+    if (!(Number.isFinite(x.price) && x.price > 0) || !(Number.isFinite(x.rate) && x.rate > 0 && x.rate <= 1) || !(Number.isInteger(x.years) && x.years >= 1 && x.years <= 30)) throw new Error('Укажите стоимость, ставку и срок от 1 до 30 лет.');
     if (!(x.down >= 0.20 && x.down < 1)) throw new Error('Первоначальный взнос должен быть от 20% и меньше 100%.');
     var two = x.tranches === 2;
     if (two ? !(x.firstRub > 0) : !(x.first > 0 && x.second > 0)) throw new Error('Укажите сумму первого транша и условия программы.');
-    if (!x.date1 || !x.date2 || !(x.date1 < x.date2) || (!two && (!x.date3 || !(x.date2 < x.date3)))) throw new Error(two ? 'Укажите дату сделки и дату второго транша по порядку.' : 'Укажите три даты по порядку: сделка, второй и последний транш.');
+    if (!validDate(x.date1) || !validDate(x.date2) || !(x.date1 < x.date2) || (!two && (!validDate(x.date3) || !(x.date2 < x.date3)))) throw new Error(two ? 'Укажите дату сделки и дату второго транша по порядку.' : 'Укажите три даты по порядку: сделка, второй и последний транш.');
     var start = new Date(x.date1 + 'T00:00:00'), end = new Date(start); end.setFullYear(end.getFullYear() + x.years);
     if (new Date((two ? x.date2 : x.date3) + 'T00:00:00') >= end) throw new Error('Последний транш должен быть выдан до окончания срока ипотеки.');
     var pv = Math.round(x.price*x.down), total = x.price-pv;

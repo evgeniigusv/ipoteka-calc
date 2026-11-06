@@ -23,7 +23,8 @@
   function render() {
     var x = inputs();
     if (!x.base || !x.cash || x.client == null || !x.ddu) { els.result.innerHTML = '<p class="sm-empty">Укажите цену по прайсу, цену за наличные, средства клиента и цену ДДУ.</p>'; return; }
-    var r = calc.calculate(x), rows = [];
+    var r;try{r=calc.calculate(x);}catch(e){els.result.innerHTML='<p class="sm-empty">'+esc(e.message)+'</p>';return;}
+    var rows=[];
     function add(k,v) { rows.push('<dt>' + k + '</dt><dd>' + v + '</dd>'); }
     add('Минимальный ПВ от прайса', F.rub(r.minimum)); add('Нехватка ПВ', F.rub(r.shortage));
     add('Сумма ПВ по ДДУ', F.rub(r.down)); add('Финансируемая сумма', F.rub(r.funded) + ' · ' + F.pct1(r.fundedPct));
