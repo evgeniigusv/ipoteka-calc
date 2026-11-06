@@ -224,7 +224,8 @@
       if(reserved>rest){card.error='Промежуточные платежи превышают остаток.';card.rows=[];return card;}
       if(p.kind==='equal'){
         var step=inp.step && p.steps.indexOf(inp.step[p.id])>=0?inp.step[p.id]:p.steps[0];
-        var n=Math.max(Math.ceil(((end.getFullYear()-today.getFullYear())*12+end.getMonth()-today.getMonth()+(end.getDate()>today.getDate()?1:0))/step),1);
+        // Один платёж на период со следующего месяца; более поздний день погашения не добавляет ещё один платёж.
+        var n=Math.max(Math.ceil(((end.getFullYear()-today.getFullYear())*12+end.getMonth()-today.getMonth())/step),1);
         card.step=step;card.steps=p.steps.length>1?p.steps.map(function(v){return {step:v,name:STEP_NAMES[v]};}):null;
         card.payment=Math.floor(rest/n);var finalPay=rest-card.payment*(n-1);
         if(n>1)card.rows.push({when:STEP_NAMES[step],label:'Равные платежи',sub:(n-1)+' '+plural(n-1,'платёж','платежа','платежей')+' по '+rub(card.payment),amount:card.payment*(n-1)});

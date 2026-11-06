@@ -1,0 +1,38 @@
+name: Обновление рассрочек ДА
+
+on:
+  schedule:
+    # 06:00 Екатеринбург (UTC+5), каждый понедельник.
+    - cron: '0 1 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+
+concurrency:
+  group: installment-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Проверить разбор условий и графики платежей
+        run: |
+          python3 tests/sync_installments_test.py
+          node tests/installments.test.mjs
+          node tests/installments-loader.test.mjs
+      - name: Сверить таблицу и обновить снимок
+        env:
+          INSTALLMENT_SOURCES: ${{ secrets.INSTALLMENT_SOURCES }}
+          GH_TOKEN: ${{ github.token }}
+        run: python3 automation/sync_installments.py
+      # Коммит от GITHUB_TOKEN сам не запускает legacy GitHub Pages.
+      - name: Обновить GitHub Pages
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api --method POST repos/${{ github.repository }}/pages/builds

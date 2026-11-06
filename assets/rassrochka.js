@@ -1,6 +1,7 @@
 /* Рассрочка: условия слева, выбранный расчёт справа, сравнение снизу. */
-(function () {
+(async function () {
   'use strict';
+  await window.SM_INSTALLMENTS_READY;
   var C = window.SMCalc, U = window.SMUi, F = C.fmt, esc = U.esc;
   var D = C.buildData(window.SM_DATA), $ = function (id) { return document.getElementById(id); };
   var el = {project:$('sm-project'),flat:$('sm-flat'),price:$('sm-price'),rooms:$('sm-rooms'),extra:$('sm-extra'),date:$('sm-date'),
@@ -59,6 +60,11 @@
     el.options.innerHTML=el.thead.innerHTML=el.tbody.innerHTML='';el.tip.textContent='';$('sm-save').disabled=true;
   }
   function render() {
+    var status=window.SM_INSTALLMENTS_STATUS||{fallback:true};
+    $('sm-updated').textContent=state.project==='ДНК — 2 очередь'?'ДНК: сверено вручную '+window.SM_DATA.updated+'.':
+      status.fallback?'ДА: резервная копия от '+window.SM_DATA.updated+'. Обновлённые условия загрузить не удалось.':
+      'ДА: проверено '+new Date(status.checkedAt).toLocaleString('ru-RU',{timeZone:'Asia/Yekaterinburg',dateStyle:'short',timeStyle:'short'})+
+      ' (Екатеринбург). Обновление по понедельникам в 06:00.'+(status.stale?' Проверка задерживается; подтвердите условия.':'');
     var inp=readInputs(),date=dealDate();
     if(!date)return empty('Укажите корректную дату сделки.');
     if(flats.isPif())return empty('Для квартиры ПИФ условия рассрочки нужно уточнить.');
@@ -82,7 +88,7 @@
   var flats=window.SMFlats.setup({select:el.flat,info:$('sm-flat-info'),price:el.price,rooms:el.rooms,discount:null,project:state.project,onChange:render});
   U.pills(el.project,D.projects.map(function(p){return {value:p,label:p};}),state.project,'v');
   var now=new Date();el.date.value=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');
-  el.price.value=F.int(10000000);$('sm-updated').textContent=window.SM_DATA.updated;
+  el.price.value=F.int(10000000);
   U.onPill(el.project,'v',function(v,btn){state.project=v;flats.setProject(v);Array.prototype.forEach.call(el.project.children,function(b){b.setAttribute('aria-pressed',String(b===btn));});render();});
   el.tbody.addEventListener('click',function(e){var row=e.target.closest('tr[data-id]');if(!row)return;state.picks[state.project]=+row.dataset.id;render();el.tbody.querySelector('tr.sm-sel button').focus({preventScroll:true});});
   el.options.addEventListener('click',function(e){var b=e.target.closest('button[data-v]');if(!b||!last)return;var key=b.parentNode.hasAttribute('data-pv')?'pv':'step';var value=b.getAttribute('data-v');state[key][last.id]=+value;render();el.options.querySelector('[data-'+key+'] button[data-v="'+value+'"]').focus({preventScroll:true});});
