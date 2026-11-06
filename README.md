@@ -51,3 +51,5 @@ GitHub Actions: полный справочник — каждый понеде�
 ## Проверки
 
 `node tests/tools.test.mjs`, `python3 tests/tools_source_test.py`, остальные `tests/*.test.mjs` и `tests/*_test.py`. Фикстура `tests/fixtures/tools-initial.json` фиксирует перенос исходных формул; текущие условия могут меняться в Google независимо от неё. Локальный просмотр без редактирования: `python3 -m http.server 8796`.
+
+Прежняя служба `ru.svobodamysli.ipoteka-mortgage` отключена через `launchctl disable` и `bootout`; её plist сохранён для восстановления. Повторно включать её следует только при сознательном возврате к прежним отдельным источникам, вместе с изменением загрузчика сайта.
