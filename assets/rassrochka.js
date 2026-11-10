@@ -18,9 +18,10 @@
   }
   function discLabel(c) {
     if (!c.disc && !c.extra) return 'Без скидки';
-    if (!c.extra) return 'Скидка '+F.pct1(c.disc);
+    var own=c.launchDisc?F.pct1(c.baseDisc)+' + '+F.pct1(c.launchDisc)+' на старте':F.pct1(c.disc);
+    if (!c.extra) return 'Скидка '+own;
     if (!c.disc) return 'Доп. скидка '+F.pct1(c.extra);
-    return 'Скидка '+F.pct1(c.disc)+(c.extraSequential?' и затем ':' + ')+F.pct1(c.extra);
+    return 'Скидка '+own+(c.extraSequential?' и затем ':' + ')+F.pct1(c.extra);
   }
   function choice(label, attr, items, current) {
     return '<div class="sm-choice"><span class="sm-label">'+label+'</span><div class="sm-pills sm-sm" role="group" aria-label="'+label+'" data-'+attr+'>'+items.map(function(it){
@@ -29,8 +30,9 @@
   }
   function optionsHtml(c) {
     var html='';
-    if(c.pvOptions)html+=choice(c.pvFromBase?'Первый взнос от прайса':'Первый взнос', 'pv', c.pvOptions.map(function(o){return {value:o.share,label:F.pct1(o.share)};}),c.share);
+    if(c.pvOptions)html+=choice(c.pvFromBase?'Первый взнос от прайса':'Первый взнос', 'pv', c.pvOptions.map(function(o){return {value:o.share,label:F.pct1(o.share)+' · скидка '+F.pct1(o.disc)};}),c.share);
     if(c.steps)html+=choice('Периодичность платежей','step',c.steps.map(function(s){return {value:s.step,label:s.name};}),c.step);
+    if(c.pvOptions && c.pvFromBase)html+='<p class="sm-hint">Скидка применяется к сумме взноса; в вариантах указан её размер от прайса.'+(c.maxDisc!=null?' Потолок скидки программы — '+F.pct1(c.maxDisc)+'.':'')+'</p>';
     return html?'<div class="sm-program-options"><div class="sm-options-name">'+esc(c.name)+'</div>'+html+'</div>':'';
   }
   function detailHtml(c) {
@@ -51,7 +53,7 @@
   var cols=['Программа','Стоимость в договоре','Первый взнос','Платежи','Погашение'];
   function rowHtml(c,selected) {
     var pay=c.payment?F.rub(c.payment)+(c.kind==='equal'?(c.step===3?' / квартал':c.step===6?' / полгода':' / месяц'):' / месяц'):'По графику';
-    var values=['<button type="button" class="sm-program-pick" aria-pressed="'+selected+'" aria-controls="sm-detail">'+esc(c.name)+'</button><span class="sm-sub'+(c.error?' sm-why':'')+'">'+esc(c.error||discLabel(c))+'</span>',
+    var values=['<button type="button" class="sm-program-pick" aria-pressed="'+selected+'" aria-controls="sm-detail">'+esc(c.name)+'</button><span class="sm-sub'+(c.error?' sm-why':'')+'">'+esc(c.error||c.warning||discLabel(c))+'</span>',
       c.error?'—':F.rub(c.total),c.error?'—':F.rub(c.rows[0].amount)+'<span class="sm-sub">'+F.pct1(c.share)+(c.pvFromBase?' прайса':' стоимости')+'</span>',c.error?'—':pay,F.dmy(c.end)];
     return '<tr class="sm-pick'+(selected?' sm-sel':'')+(c.error?' sm-off':'')+'" data-id="'+c.id+'">'+values.map(function(v,i){return '<td data-l="'+cols[i]+'"><span>'+v+'</span></td>';}).join('')+'</tr>';
   }

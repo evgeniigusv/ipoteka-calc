@@ -4,6 +4,8 @@ import vm from 'node:vm';
 globalThis.window=globalThis;
 for(const file of ['data','engine','common','transh-engine'])vm.runInThisContext(fs.readFileSync(new URL('../assets/'+file+'.js',import.meta.url),'utf8'));
 const C=SMCalc,D=C.buildData(SM_DATA),now=new Date(2026,10,6),dnk='ДНК — 2 очередь';
+// Здесь проверяются исторические формулы; доступность по сроку — в installments-validity.test.mjs.
+D.installments.forEach(p=>p.validUntil=null);
 assert.equal(D.programs.filter(p=>p.projects.includes(dnk)).length,23);
 assert.equal(D.programs.filter(p=>p.projects.includes('ДА — 1 очередь')).length,30);
 // Independent amortization: every payment stream must close the actual loan.
