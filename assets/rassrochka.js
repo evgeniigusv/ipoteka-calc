@@ -53,7 +53,7 @@
   var cols=['Программа','Стоимость в договоре','Первый взнос','Платежи','Погашение'];
   function rowHtml(c,selected) {
     var pay=c.payment?F.rub(c.payment)+(c.kind==='equal'?(c.step===3?' / квартал':c.step===6?' / полгода':' / месяц'):' / месяц'):'По графику';
-    var values=['<button type="button" class="sm-program-pick" aria-pressed="'+selected+'" aria-controls="sm-detail">'+esc(c.name)+'</button><span class="sm-sub'+(c.error?' sm-why':'')+'">'+esc(c.error||c.warning||discLabel(c))+'</span>',
+    var values=['<button type="button" class="sm-program-pick" aria-pressed="'+selected+'" aria-controls="sm-detail">'+esc(c.name)+'</button><span class="sm-sub'+(c.error?' sm-why':'')+'">'+esc(c.error||discLabel(c))+'</span>',
       c.error?'—':F.rub(c.total),c.error?'—':F.rub(c.rows[0].amount)+'<span class="sm-sub">'+F.pct1(c.share)+(c.pvFromBase?' прайса':' стоимости')+'</span>',c.error?'—':pay,F.dmy(c.end)];
     return '<tr class="sm-pick'+(selected?' sm-sel':'')+(c.error?' sm-off':'')+'" data-id="'+c.id+'">'+values.map(function(v,i){return '<td data-l="'+cols[i]+'"><span>'+v+'</span></td>';}).join('')+'</tr>';
   }

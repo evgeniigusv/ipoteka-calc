@@ -1,16 +1,34 @@
 import assert from 'node:assert/strict';import fs from 'node:fs';import vm from 'node:vm';
 globalThis.window=globalThis;for(const name of ['data','engine'])vm.runInThisContext(fs.readFileSync('assets/'+name+'.js','utf8'));
 const D=SMCalc.buildData(SM_DATA),input={project:'ДА — 1 очередь',base:10000000,rooms:1,extra:0};
-// Истёкшее предложение одинаково блокирует все четыре механики, даже с будущим погашением.
-for(const scheme of ['equal','monthly','deferred','scheduled']){
- const raw={projects:['Тест'],installments:[{name:'Тест',scheme,minPv:.2,months:6,steps:[1],pay:{1:50000},validUntil:'2026-11-10'}]};
- const data=SMCalc.buildData(raw),inp={...input,project:'Тест'};
- const lastDay=SMCalc.installments(data,inp,new Date(2026,10,10))[0];assert.ok(!lastDay.error);assert.ok(lastDay.rows.length);
- const expired=SMCalc.installments(data,inp,new Date(2026,10,11))[0];assert.match(expired.error,/Срок действия программы истёк 10.11.2026/);assert.deepEqual(expired.rows,[]);
+// Дата в справочнике меняет только примечание. Дата погашения ограничивает график.
+for (const scheme of ['equal', 'monthly', 'deferred', 'scheduled']) {
+  const data = SMCalc.buildData({projects: ['Тест'], installments: [{
+    name: 'Тест', scheme, minPv: .2, end: '2027-03-20',
+    steps: [1], pay: {1: 50000}, validUntil: '2026-11-10'
+  }]});
+  const calc = date => SMCalc.installments(data, {...input, project: 'Тест'}, date)[0];
+  assert.equal(calc(new Date(2026, 10, 10)).warning, '');
+  const next = calc(new Date(2026, 10, 11));
+  assert.match(next.warning, /10.11.2026/);
+  assert.ok(!next.error);
+  assert.equal(next.rows.reduce((sum, row) => sum + row.amount, 0), next.total);
+  for (const day of [20, 21]) {
+    const closed = calc(new Date(2027, 2, day));
+    assert.match(closed.error, /Срок погашения/);
+    assert.deepEqual(closed.rows, []);
+  }
 }
-for(const project of ['ДА — 1 очередь','ДА — 2 очередь']){
- const cards=SMCalc.installments(D,{...input,project},new Date(2026,10,10));
- assert.ok(cards.every(c=>c.error&&c.rows.length===0));assert.ok(cards.filter(c=>c.name.includes('родителей')).every(c=>c.error.includes('30.07.2026')));
+for (const project of ['ДА — 1 очередь', 'ДА — 2 очередь']) {
+  const cards = SMCalc.installments(D, {...input, project}, new Date(2026, 10, 11));
+  assert.equal(cards.length, 4);
+  for (const card of cards) {
+    assert.ok(!card.error, card.name);
+    assert.ok(card.rows.length >= 2);
+    assert.equal(card.rows.reduce((sum, row) => sum + row.amount, 0), card.total);
+  }
+  const parents = cards.filter(card => card.name.includes('родителей'));
+  assert.deepEqual(parents.map(card => SMCalc.fmt.dmy(card.end)), ['11.02.2027', '11.05.2027']);
 }
 const dnk={...input,project:'ДНК — 2 очередь'},date=new Date(2026,10,10);
 const half=SMCalc.installments(D,dnk,date).find(c=>c.name==='Рассрочка 50/50');

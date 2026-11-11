@@ -217,7 +217,6 @@
         pvOptions:opts.length>1?opts.map(function(v){return {share:v,disc:discount(v)};}):null,
         rows:[{when:'в день сделки',label:'Первый взнос',sub:pct1(share)+(p.pvFromBase?' прайса':' стоимости'),amount:pv}]};
       if(end<=today){card.error='Срок погашения уже прошёл. Программа не рассчитывается.';card.rows=[];return card;}
-      if(p.validUntil && today>p.validUntil){card.error='Срок действия программы истёк '+dmy(p.validUntil)+'. Для новой сделки нужны актуальные условия.';card.rows=[];return card;}
       if(!(total>0) || rest<0){card.error='Скидка и взнос несовместимы: взнос превышает стоимость или стоимость не положительна.';card.rows=[];return card;}
       var milestones=p.milestones.map(function(m){var month=m.date && m.date.length===7;return {date:m.months?addMonths(today,m.months):toDate(month?m.date+'-31':m.date),when:month?toDate(m.date+'-01').toLocaleDateString('ru-RU',{month:'long',year:'numeric'})+' (день уточняется)':'до '+dmy(m.months?addMonths(today,m.months):toDate(m.date)),amount:Math.round(total*m.share),sub:pct1(m.share)+' стоимости'};});
       if(milestones.some(function(m){return m.date<=today || m.date>=end;})){card.error='Дата промежуточного платежа не входит в срок рассрочки. Уточните индивидуальный график.';card.rows=[];return card;}

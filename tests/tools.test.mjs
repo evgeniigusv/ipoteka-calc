@@ -7,8 +7,6 @@ const data=JSON.parse(fs.readFileSync(new URL('./fixtures/tools-initial.json',im
 M.validate(data);
 const ctx={window:{},console,Intl,Date};vm.createContext(ctx);for(const file of ['data.js','engine.js','transh-engine.js','chpv-engine.js']){if(fs.existsSync('assets/'+file))vm.runInContext(fs.readFileSync('assets/'+file,'utf8'),ctx);}
 const before=ctx.window.SMCalc.buildData(ctx.window.SM_DATA);const mapped=M.calcData(data);const after=ctx.window.SMCalc.buildData({...ctx.window.SM_DATA,...mapped});
-// Сравнение формул переноса независимо от исторической даты окончания предложения.
-before.installments.concat(after.installments).forEach(p=>p.validUntil=null);
 const plain=v=>JSON.parse(JSON.stringify(v));
 for(const project of Object.values(M.projects)){
  const input={project,base:10000000,disc:.13,pv:2010000,extraPct:0,extraRub:0,rooms:2,picks:{},shares:{},steps:{}};

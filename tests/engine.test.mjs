@@ -11,8 +11,6 @@ vm.runInThisContext(fs.readFileSync(new URL('data.js', dir), 'utf8'));
 vm.runInThisContext(fs.readFileSync(new URL('engine.js', dir), 'utf8'));
 const C = globalThis.SMCalc;
 const D = C.buildData(globalThis.SM_DATA);
-// Здесь проверяются исторические формулы; доступность по сроку — в installments-validity.test.mjs.
-D.installments.forEach(p=>p.validUntil=null);
 const today = new Date(2026, 9, 13);
 const near = (a, b, eps = 1) => assert.ok(Math.abs(a - b) <= eps, `${a} ≠ ${b}`);
 let n = 0;

@@ -4,8 +4,6 @@ import vm from 'node:vm';
 globalThis.window=globalThis;
 for(const file of ['data','engine'])vm.runInThisContext(fs.readFileSync(new URL('../assets/'+file+'.js',import.meta.url),'utf8'));
 const D=SMCalc.buildData(SM_DATA),project='ДА — 1 очередь';
-// Здесь проверяются исторические формулы; доступность по сроку — в installments-validity.test.mjs.
-D.installments.forEach(p=>p.validUntil=null);
 const input={project,base:10000000,rooms:1,extra:0};
 // Четыре платёжных месяца: декабрь, январь, февраль и погашение в марте.
 for(const day of [1,6,20,30]) {
