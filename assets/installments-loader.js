@@ -17,7 +17,7 @@
         !validDate(p.validUntil) || p.extraSequential!==true ||
         (p.end?(!validDate(p.end)||p.months!=null):(!Number.isInteger(p.months)||!number(p.months,1,60))))throw new Error('Условия программы');
       if(p.scheme==='equal'){
-        if(!number(p.discFromPv,0,.9)||!number(p.maxDisc,0,.9)||p.pvFromBase!==true||
+        if(!number(p.discFromPv,0,.9)||(p.maxDisc!=null && !number(p.maxDisc,0,.9))||p.pvFromBase!==true||
           !Array.isArray(p.steps)||!p.steps.length||p.steps.some(function(n){return ![1,3,6].includes(n);}))throw new Error('Равные платежи');
       }else if(p.scheme==='monthly'){
         if(!p.pay || [1,2,3].some(function(n){return !Number.isInteger(p.pay[n])||!number(p.pay[n],1,1000000);}) || !number(p.disc,0,.9))throw new Error('Ежемесячные платежи');

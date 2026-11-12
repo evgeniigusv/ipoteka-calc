@@ -160,7 +160,8 @@ test('рассрочка от 30%, ДА-2: скидка от суммы взно
   near(half.disc, 0.065, 1e-9);
   near(half.payment, Math.floor((half.total - half.rows[0].amount) / 8), 0.01);
   const big = C.installments(D, { project: DA2, base: 10000000, rooms: 1, extra: 0, pv: { [c.id]: 0.7 } }, today)[0];
-  near(big.disc, 0.07, 1e-9);
+  near(big.disc, 0.091, 1e-9);
+  assert.equal(big.total, 9090000);
   const extra = C.installments(D, { project: DA2, base: 10000000, rooms: 1, extra: 0.01 }, today)[0];
   assert.equal(extra.total, 9513900);
 });

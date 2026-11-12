@@ -23,6 +23,7 @@ class InstallmentsTest(unittest.TestCase):
         self.assertEqual(len(rows),8)
         self.assertEqual(rows[0]['end'],'2027-03-20')
         self.assertEqual(rows[0]['discFromPv'],.13)
+        self.assertTrue(all('maxDisc' not in row for row in rows if row['scheme'] == 'equal'))
         self.assertEqual(rows[4]['months'],24)
         self.assertEqual(rows[1]['pay'],{'1':50000,'2':75000,'3':100000})
         self.assertEqual(rows[1]['disc'],.06)
@@ -39,11 +40,11 @@ class InstallmentsTest(unittest.TestCase):
         self.f['tools'][7][2]='До 12%'
         self.f['tools'][7][3]='До 12%'
         self.f['discounts'][0][2]='12'
-        self.f['discounts'][2][2]='Максимальная скидка 8%'
+        self.f['discounts'][2][2]=''
         rows=self.parse()
         self.assertEqual(rows[0]['end'],'2027-06-20')
         self.assertEqual(rows[4]['months'],36)
-        self.assertEqual(rows[0]['maxDisc'],.08)
+        self.assertNotIn('maxDisc', rows[0])
         self.assertEqual(rows[2]['disc'],.06)
         self.assertEqual(rows[3]['months'],9)
         self.assertEqual(rows[1]['pay']['2'],80000)

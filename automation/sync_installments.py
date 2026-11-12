@@ -117,7 +117,6 @@ def parse(rows, discount_rows):
             if signature(row[col]) != templates[key][str(col)]:
                 raise ValueError('Изменилась механика: ' + key + '; сохранены прежние условия')
     discount_text = ' '.join(' '.join(r) for r in discount_rows)
-    cap = percent(match(rf'Максимальная скидка ({NUM})%', discount_text)[1])
     threshold = percent(match(rf'ДО ({NUM})% ПВ скидок нет', discount_text)[1])
     cash_rows = [r for r in discount_rows if len(r)>2 and norm(r[1]) == 'скидка 100%']
     if len(cash_rows) != 1: raise ValueError('Не найдена базовая скидка в таблице скидок')
@@ -132,7 +131,7 @@ def parse(rows, discount_rows):
             raise ValueError('Минимальные взносы в источниках не совпадают')
         common = {'projects':[project], 'extraSequential':True}
         equal = dict(common, name=f'Рассрочка от {share*100:g}%', scheme='equal', minPv=share,
-                     steps=[1,3] if col==2 else [1,3,6], discFromPv=cash, maxDisc=cap,
+                     steps=[1,3] if col==2 else [1,3,6], discFromPv=cash,
                      pvFromBase=True, validUntil=date(eq[5]),
                      note='Взнос и скидка от него — по прайсу, как в таблице скидок. Остаток — равными платежами.')
         if col == 2: equal['end'] = date(match(rf'до ({DATE})', eq[col])[1])
