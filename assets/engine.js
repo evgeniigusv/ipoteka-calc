@@ -207,9 +207,28 @@
       var opts=pvOptions(p), share=inp.pv && opts.indexOf(inp.pv[p.id])>=0 ? inp.pv[p.id] : opts[0];
       var launch=p.launchUntil && today<=p.launchUntil ? p.launchDiscount : 0;
       function discount(v){return (p.discAt70!=null && v>=.7 ? p.discAt70 : instDisc(p,v))+launch;}
-      var own=discount(share), extra=p.noExtra?0:Math.max(0,inp.extra||0);
-      var factor=p.extraSequential?(1-own)*(1-extra):1-own-extra;
-      var total=Math.round(inp.base*factor), pv=Math.round((p.pvFromBase?inp.base:total)*share), rest=total-pv;
+      var extra=p.noExtra?0:Math.max(0,inp.extra||0);
+      function priceAt(v){
+        var d=discount(v);
+        return Math.round(inp.base*(p.extraSequential?(1-d)*(1-extra):1-d-extra));
+      }
+      function downAt(v){return Math.round((p.pvFromBase?inp.base:priceAt(v))*v);}
+      var manual=inp.downRub!=null, pvError='';
+      if(manual){
+        var amount=inp.downRub, min=downAt(p.minPv);
+        if(!Number.isSafeInteger(amount)||amount<0)pvError='Введите корректную сумму взноса.';
+        else if(amount<min)pvError='Минимальный взнос '+rub(min)+'. Не хватает '+rub(min-amount)+'.';
+        else if(p.pvChoices){
+          var exact=opts.find(function(v){return downAt(v)===amount;});
+          if(exact==null)pvError='По условиям программы взнос '+opts.map(function(v){return pct1(v)+' ('+rub(downAt(v))+')';}).join(' или ')+'.';
+          else share=exact;
+        }else{
+          // Скидка от взноса задана только для взноса от прайса. При фиксированной скидке цена ДДУ уже известна.
+          var basis=p.pvFromBase?inp.base:priceAt(p.minPv);
+          share=basis>0?amount/basis:0;
+        }
+      }
+      var own=discount(share), total=priceAt(share), pv=manual?inp.downRub:downAt(share), rest=total-pv;
       var end=p.end || addMonths(today,p.months);
       var card={id:p.id,name:p.name,kind:p.kind,note:p.note,disc:own,baseDisc:own-launch,launchDisc:launch,maxDisc:p.maxDisc,extra:extra,total:total,saved:inp.base-total,end:end,
         termMonths:monthsBetween(today,end),share:share,pvFromBase:p.pvFromBase,extraSequential:p.extraSequential,
@@ -217,6 +236,8 @@
         pvOptions:opts.length>1?opts.map(function(v){return {share:v,disc:discount(v)};}):null,
         rows:[{when:'в день сделки',label:'Первый взнос',sub:pct1(share)+(p.pvFromBase?' прайса':' стоимости'),amount:pv}]};
       if(end<=today){card.error='Срок погашения уже прошёл. Программа не рассчитывается.';card.rows=[];return card;}
+      if(pvError){card.error=pvError;card.rows=[];return card;}
+      if(pv>total){card.error='Введённый взнос превышает цену в договоре '+rub(total)+'.';card.rows=[];return card;}
       if(!(total>0) || rest<0){card.error='Скидка и взнос несовместимы: взнос превышает стоимость или стоимость не положительна.';card.rows=[];return card;}
       var milestones=p.milestones.map(function(m){var month=m.date && m.date.length===7;return {date:m.months?addMonths(today,m.months):toDate(month?m.date+'-31':m.date),when:month?toDate(m.date+'-01').toLocaleDateString('ru-RU',{month:'long',year:'numeric'})+' (день уточняется)':'до '+dmy(m.months?addMonths(today,m.months):toDate(m.date)),amount:Math.round(total*m.share),sub:pct1(m.share)+' стоимости'};});
       if(milestones.some(function(m){return m.date<=today || m.date>=end;})){card.error='Дата промежуточного платежа не входит в срок рассрочки. Уточните индивидуальный график.';card.rows=[];return card;}

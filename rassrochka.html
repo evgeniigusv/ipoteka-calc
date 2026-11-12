@@ -36,6 +36,14 @@
         <input id="sm-price" type="text" inputmode="numeric" autocomplete="off">
       </div>
       <div class="sm-field">
+        <span class="sm-label">Первоначальный взнос клиента</span>
+        <div class="sm-row2">
+          <div><label for="sm-down-rub">Сумма, ₽</label><input id="sm-down-rub" type="text" inputmode="numeric" placeholder="По программе" autocomplete="off"></div>
+          <div><label for="sm-down-pct">Доля от прайса, %</label><input id="sm-down-pct" type="text" inputmode="decimal" placeholder="По программе" autocomplete="off"></div>
+        </div>
+        <span class="sm-hint">Введите сумму или процент. Пустое поле — взнос по условиям каждой программы.</span>
+      </div>
+      <div class="sm-field">
         <label for="sm-rooms">Квартира</label>
         <select id="sm-rooms">
           <option value="1">Студия или 1-комнатная</option>
@@ -82,13 +90,13 @@
   </footer>
 </main>
 
-<script src="assets/data.js?v=20261112-sum"></script>
-<script src="assets/installments-loader.js?v=20261112-sum"></script>
+<script src="assets/data.js?v=20261112-down"></script>
+<script src="assets/installments-loader.js?v=20261112-down"></script>
 <script src="assets/tools-model.js?v=20261106-tools"></script>
 <script src="assets/tools-loader.js?v=20261106-tools2"></script>
-<script src="assets/engine.js?v=20261111-repayment"></script>
+<script src="assets/engine.js?v=20261112-down"></script>
 <script src="assets/common.js?v=20261106-tools"></script>
 <script src="assets/flats.js?v=20261106-switch"></script>
-<script src="assets/rassrochka.js?v=20261111-repayment"></script>
+<script src="assets/rassrochka.js?v=20261112-down"></script>
 </body>
 </html>

@@ -8,8 +8,31 @@
     detail:$('sm-detail'),options:$('sm-program-options'),thead:$('sm-thead'),tbody:$('sm-tbody'),tip:$('sm-tip')};
   var state = {project:D.projects[0],pv:{},step:{},picks:{}}, last = null;
 
+  var downUnit=null, downRub=$('sm-down-rub'), downPct=$('sm-down-pct');
+  function manualDown(base){
+    if(downUnit==='pct'){
+      var raw=downPct.value.trim().replace(',','.');
+      if(!/^\d+(?:\.\d*)?$/.test(raw))return NaN;
+      var amount=Math.round(base*Number(raw)/100);
+      downRub.value=F.int(amount);return amount;
+    }
+    if(downUnit==='rub'){
+      var entered=U.parseMoney(downRub.value);
+      if(entered==null)return NaN;
+      downPct.value=base?(entered*100/base).toLocaleString('ru-RU',{maximumFractionDigits:4}):'';
+      return entered;
+    }
+    return null;
+  }
+  function changeDown(unit){
+    var input=unit==='rub'?downRub:downPct;
+    downUnit=input.value.trim()?unit:null;
+    if(!downUnit){downRub.value='';downPct.value='';}
+    render();
+  }
   function readInputs() {
-    return {project:state.project,base:U.parseMoney(el.price.value)||0,rooms:+el.rooms.value,extra:U.parsePct(el.extra.value),pv:state.pv,step:state.step};
+    var base=U.parseMoney(el.price.value)||0;
+    return {project:state.project,downRub:manualDown(base),base:base,rooms:+el.rooms.value,extra:U.parsePct(el.extra.value),pv:state.pv,step:state.step};
   }
   function dealDate() {
     if (!el.date.value || !el.date.validity.valid) return null;
@@ -70,11 +93,12 @@
     var inp=readInputs(),date=dealDate();
     if(!date)return empty('Укажите корректную дату сделки.');
     if(flats.isPif())return empty('Для квартиры ПИФ условия рассрочки нужно уточнить.');
+    if(inp.downRub!=null&&(!Number.isSafeInteger(inp.downRub)||inp.downRub<0))return empty('Укажите корректный первоначальный взнос.');
     if(!inp.base)return empty('Укажите стоимость квартиры.');
     var cards=C.installments(D,inp,date);
     if(!cards.length)return empty('Условия рассрочки для этого проекта готовятся.');
     var selected=cards.find(function(c){return c.id===state.picks[state.project];})||cards.find(function(c){return !c.error;})||cards[0];
-    state.picks[state.project]=selected.id;last=selected;
+    last=selected;
     el.detail.innerHTML=detailHtml(selected);el.options.innerHTML=optionsHtml(selected);
     el.thead.innerHTML='<tr>'+cols.map(function(c){return '<th>'+c+'</th>';}).join('')+'</tr>';
     el.tbody.innerHTML=cards.map(function(c){return rowHtml(c,c.id===selected.id);}).join('');
@@ -93,7 +117,9 @@
   el.price.value=F.int(10000000);
   U.onPill(el.project,'v',function(v,btn){state.project=v;flats.setProject(v);Array.prototype.forEach.call(el.project.children,function(b){b.setAttribute('aria-pressed',String(b===btn));});render();});
   el.tbody.addEventListener('click',function(e){var row=e.target.closest('tr[data-id]');if(!row)return;state.picks[state.project]=+row.dataset.id;render();el.tbody.querySelector('tr.sm-sel button').focus({preventScroll:true});});
-  el.options.addEventListener('click',function(e){var b=e.target.closest('button[data-v]');if(!b||!last)return;var key=b.parentNode.hasAttribute('data-pv')?'pv':'step';var value=b.getAttribute('data-v');state[key][last.id]=+value;render();el.options.querySelector('[data-'+key+'] button[data-v="'+value+'"]').focus({preventScroll:true});});
+  el.options.addEventListener('click',function(e){var b=e.target.closest('button[data-v]');if(!b||!last)return;var key=b.parentNode.hasAttribute('data-pv')?'pv':'step';var value=b.getAttribute('data-v');state[key][last.id]=+value;if(key==='pv'){state.picks[state.project]=last.id;downUnit=null;downRub.value='';downPct.value='';}render();el.options.querySelector('[data-'+key+'] button[data-v="'+value+'"]').focus({preventScroll:true});});
+  downRub.addEventListener('input',function(){changeDown('rub');});
+  U.pctInput(downPct,function(){changeDown('pct');});
   U.moneyInput(el.price,render);U.pctInput(el.extra,render);el.rooms.addEventListener('change',render);el.date.addEventListener('input',render);
   $('sm-print').addEventListener('click',function(){window.print();});U.saveButton($('sm-save'),$('sm-msg'),createPdf);
   window.SMRassrochka={createPdf:createPdf,data:D};render();

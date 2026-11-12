@@ -39,3 +39,26 @@ for(const [share,discount,total,down] of [[.5,.12,8800000,4400000],[.7,.14,86000
 for(const [share,discount] of [[.5,.1],[.7,.12]]){const c=SMCalc.installments(D,{...dnk,pv:{[half.id]:share}},new Date(2026,11,1)).find(c=>c.id===half.id);assert.equal(c.disc,discount);assert.equal(c.launchDisc,0);}
 const future=SMCalc.installments(D,input,new Date(2027,3,1))[0];assert.match(future.error,/Срок погашения уже прошёл/);
 console.log('ПВ 50→70→50, окончание стартовой акции, четыре механики и будущие родители: проверено.');
+
+// Один и тот же бюджет проверяется по каждому проекту и механике без округления до кнопки ПВ.
+const dealDate=new Date(2026,10,12);
+function manual(project,name,downRub,extra=0){
+ const card=SMCalc.installments(D,{project,base:10000000,rooms:1,downRub,extra},dealDate).find(c=>c.name===name);
+ if(!card.error){
+  assert.equal(card.rows[0].amount,downRub);
+  assert.equal(card.rows.reduce((s,r)=>s+r.amount,0),card.total);
+ }
+ return card;
+}
+for(const project of ['ДА — 1 очередь','ДА — 2 очередь']){
+ const equal=manual(project,'Рассрочка от 30%',4150000);
+ assert.equal(equal.total,9460500); // 13% от фактических 4 150 000 ₽.
+ assert.match(manual(project,'Рассрочка от 30%',1700000).error,/Не хватает/);
+ assert.ok(!manual(project,'Рассрочка с ежемесячным платежом',1700000).error);
+}
+assert.equal(manual('ДА — 1 очередь','Рассрочка от 30%',6000000,.02).total,9020000);
+assert.match(manual('ДА — 1 очередь','Для будущих родителей · 6 мес.',11000000).error,/превышает/);
+assert.equal(manual('ДНК — 2 очередь','Рассрочка 50/50',6020000).total,8600000);
+assert.match(manual('ДНК — 2 очередь','Рассрочка 50/50',5500000).error,/50%/);
+assert.ok(!manual('ДНК — 2 очередь','Без первоначального взноса',0).error);
+assert.match(manual('ДНК — 2 очередь','Рассрочка 4/25',3000000).error,/25%/);
