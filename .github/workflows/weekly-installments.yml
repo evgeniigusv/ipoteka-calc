@@ -25,6 +25,7 @@ jobs:
           python3 tests/tools_source_test.py
       - name: Сверить Google и подготовить снимок
         env:
+          SUBSIDY_SOURCES: ${{ secrets.SUBSIDY_SOURCES }}
           TOOLS_SOURCE: ${{ secrets.TOOLS_SOURCE }}
           EVENT_SCHEDULE: ${{ github.event.schedule }}
         run: |

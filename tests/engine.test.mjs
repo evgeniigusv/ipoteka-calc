@@ -163,7 +163,7 @@ test('рассрочка от 30%, ДА-2: скидка от суммы взно
   near(big.disc, 0.091, 1e-9);
   assert.equal(big.total, 9090000);
   const extra = C.installments(D, { project: DA2, base: 10000000, rooms: 1, extra: 0.01 }, today)[0];
-  assert.equal(extra.total, 9513900);
+  assert.equal(extra.total, 9510000);
 });
 
 test('рассрочка с ежемесячным платежом: ДА-1 до 01.03.2027 — 4 платежа, скидка 6%; ДА-2 — 20 платежей без скидки', () => {

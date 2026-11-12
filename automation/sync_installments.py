@@ -129,7 +129,7 @@ def parse(rows, discount_rows):
         share = pv(eq[col])
         if share != threshold or share != percent(match(rf'от ({NUM})%', eq[0])[1]):
             raise ValueError('Минимальные взносы в источниках не совпадают')
-        common = {'projects':[project], 'extraSequential':True}
+        common = {'projects':[project], 'extraSequential':False}
         equal = dict(common, name=f'Рассрочка от {share*100:g}%', scheme='equal', minPv=share,
                      steps=[1,3] if col==2 else [1,3,6], discFromPv=cash,
                      pvFromBase=True, validUntil=date(eq[5]),

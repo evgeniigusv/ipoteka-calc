@@ -6,7 +6,7 @@
       "projects": [
         "ДА — 1 очередь"
       ],
-      "extraSequential": true,
+      "extraSequential": false,
       "name": "Рассрочка от 30%",
       "scheme": "equal",
       "minPv": 0.3,
@@ -24,7 +24,7 @@
       "projects": [
         "ДА — 1 очередь"
       ],
-      "extraSequential": true,
+      "extraSequential": false,
       "name": "Рассрочка с ежемесячным платежом",
       "scheme": "monthly",
       "minPv": 0.1,
@@ -42,7 +42,7 @@
       "projects": [
         "ДА — 1 очередь"
       ],
-      "extraSequential": true,
+      "extraSequential": false,
       "name": "Для будущих родителей · 3 мес.",
       "scheme": "deferred",
       "minPv": 0.201,
@@ -55,7 +55,7 @@
       "projects": [
         "ДА — 1 очередь"
       ],
-      "extraSequential": true,
+      "extraSequential": false,
       "name": "Для будущих родителей · 6 мес.",
       "scheme": "deferred",
       "minPv": 0.201,
@@ -68,7 +68,7 @@
       "projects": [
         "ДА — 2 очередь"
       ],
-      "extraSequential": true,
+      "extraSequential": false,
       "name": "Рассрочка от 30%",
       "scheme": "equal",
       "minPv": 0.3,
@@ -87,7 +87,7 @@
       "projects": [
         "ДА — 2 очередь"
       ],
-      "extraSequential": true,
+      "extraSequential": false,
       "name": "Рассрочка с ежемесячным платежом",
       "scheme": "monthly",
       "minPv": 0.1,
@@ -105,7 +105,7 @@
       "projects": [
         "ДА — 2 очередь"
       ],
-      "extraSequential": true,
+      "extraSequential": false,
       "name": "Для будущих родителей · 3 мес.",
       "scheme": "deferred",
       "minPv": 0.201,
@@ -118,7 +118,7 @@
       "projects": [
         "ДА — 2 очередь"
       ],
-      "extraSequential": true,
+      "extraSequential": false,
       "name": "Для будущих родителей · 6 мес.",
       "scheme": "deferred",
       "minPv": 0.201,

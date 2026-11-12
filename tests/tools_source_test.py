@@ -26,9 +26,10 @@ class SourceTests(unittest.TestCase):
 class HttpTests(unittest.TestCase):
  @classmethod
  def setUpClass(cls):
+  cls.subsidies=patch.object(editor,'with_subsidies',side_effect=lambda d:d);cls.subsidies.start()
   cls.server=editor.ThreadingHTTPServer(('127.0.0.1',0),editor.Handler);cls.port=cls.server.server_port;cls.thread=threading.Thread(target=cls.server.serve_forever,daemon=True);cls.thread.start()
  @classmethod
- def tearDownClass(cls):cls.server.shutdown();cls.server.server_close()
+ def tearDownClass(cls):cls.server.shutdown();cls.server.server_close();cls.subsidies.stop()
  def request(self,path='/api/tools',body=None,headers=None):
   h={'Host':'127.0.0.1:8795','Cookie':'sm_owner='+editor.SESSION,'Origin':editor.ORIGIN,'X-CSRF-Token':editor.CSRF,'Content-Type':'application/json'};h.update(headers or {})
   conn=http.client.HTTPConnection('127.0.0.1',self.port);conn.request('POST' if body is not None else 'GET',path,json.dumps(body) if body is not None else None,h);r=conn.getresponse();result=(r.status,json.loads(r.read()));conn.close();return result
@@ -41,7 +42,7 @@ class HttpTests(unittest.TestCase):
    self.assertEqual(self.request(body={'revision':'old','changes':[]})[0],409);write.assert_not_called()
  def test_google_saved_publish_failed(self):
   with patch.object(editor,'read',return_value=DATA),patch.object(editor,'write_changes',return_value=DATA),patch.object(editor,'publish',side_effect=RuntimeError('Публикация недоступна')):
-   code,result=self.request(body={'revision':DATA['revision'],'changes':[DATA['records'][0]]});self.assertEqual(code,200);self.assertTrue(result['saved']);self.assertFalse(result['published']);self.assertEqual(result['data']['revision'],DATA['revision'])
+   code,result=self.request(body={'revision':DATA['revision'],'changes':[next(r for r in DATA['records'] if r['kind']=='installment')]});self.assertEqual(code,200);self.assertTrue(result['saved']);self.assertFalse(result['published']);self.assertEqual(result['data']['revision'],DATA['revision'])
  def test_publish_retry_does_not_write_google(self):
   with patch.object(editor,'read',return_value=DATA),patch.object(editor,'write_changes') as write,patch.object(editor,'publish',return_value='sha'):
    code,result=self.request('/api/publish',{});self.assertEqual(code,200);self.assertTrue(result['published']);write.assert_not_called()

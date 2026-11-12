@@ -14,7 +14,7 @@
     data.programs.forEach(function(p){
       if(!p || !Array.isArray(p.projects) || p.projects.length!==1 || !projects.includes(p.projects[0]) ||
         typeof p.name!=='string' || !p.name.trim() || typeof p.note!=='string' || !number(p.minPv,0,.9) ||
-        !validDate(p.validUntil) || p.extraSequential!==true ||
+        !validDate(p.validUntil) || typeof p.extraSequential!=='boolean' ||
         (p.end?(!validDate(p.end)||p.months!=null):(!Number.isInteger(p.months)||!number(p.months,1,60))))throw new Error('Условия программы');
       if(p.scheme==='equal'){
         if(!number(p.discFromPv,0,.9)||(p.maxDisc!=null && !number(p.maxDisc,0,.9))||p.pvFromBase!==true||

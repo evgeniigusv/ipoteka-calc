@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Проверить справочник и обновить безопасный публичный снимок."""
 import argparse, json
+from subsidy_catalog import with_subsidies
 from tools_source import ROOT, read, validate
 p=argparse.ArgumentParser(); p.add_argument('--mortgage-only',action='store_true'); p.add_argument('--dry-run',action='store_true'); args=p.parse_args()
-data=read()
+data=with_subsidies(read())
 previous=json.loads((ROOT/'assets/tools.json').read_text())
 for project in ['da1','da2','dnk2']:
     for category in ['mortgage','installment']:
