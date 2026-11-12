@@ -12,6 +12,11 @@ function cell(r,pdf){var text=M.summary(r),info=r.kind==='info',html='<div class
  if(r.source==='subsidies')html+='<p class="tools-muted">Из справочника субсидий '+(r.project==='dnk2'?'ДНК':'ДА')+'</p>';
  if(local&&!pdf&&r.source!=='subsidies')html+='<button class="t-icon tools-edit" data-edit="'+r.id+'" aria-label="Редактировать '+esc(r.name)+' · '+names[r.project]+'">'+icon('pencil')+'</button>';
  if(r.kind==='mortgage')text=[M.pct(r.params.rate)+' · ПВ от '+M.pct(r.params.minPv),r.params.limit?'До '+M.rub(r.params.limit):'До '+r.params.term+' лет'];
+ if(r.source==='subsidies'){
+  var terms=r.params;
+  text=[terms.bank+' · '+M.pct(terms.rate)+' годовых', 'Кредит до '+terms.term+' лет · ПВ от '+M.pct(terms.minPv),terms.limit?'Лимит кредита '+M.rub(terms.limit):'Лимит в источнике не указан'];
+  if(local&&!pdf)text.push('Комиссия банку '+M.pct(terms.subsidy));
+ }
  if(r.kind==='tranche'&&!pdf){var p=r.params;text=[+p.tranches===2?M.rub(p.firstRub)+' + остаток':M.pct(p.first)+' → '+M.pct(p.second)+' → остаток','ПВ '+M.pct(p.minPv)+' · '+(p.estimate?'≈ '+M.rub(p.referencePayment)+'/мес.':M.pct(p.rate))];}
  if(r.kind==='installment'&&!pdf){var p=r.params;text=['ПВ '+M.pct(p.minPv)+(p.pvFromBase?' от прайса':''),p.scheme==='monthly'?'От '+M.rub(Math.min(...Object.values(p.pay)))+'/мес.':p.scheme==='equal'?'Равные платежи':p.scheme==='scheduled'?'Платежи по этапам':'Взнос и остаток',p.end?'До '+p.end.split('-').reverse().join('.'):p.months+' мес. от сделки'];}
  if(pdf&&r.kind==='installment'){var p=r.params;if(p.pay)text.push('Студия / 1к: '+M.rub(p.pay[1])+' · 2к: '+M.rub(p.pay[2])+' · 3к: '+M.rub(p.pay[3]));if(p.steps)text.push('Платежи каждые '+p.steps.join(' / ')+' мес.');if(p.maxDisc)text.push('Потолок скидки '+M.pct(p.maxDisc));if(p.pvChoices)text.push('Варианты ПВ: '+p.pvChoices.map(M.pct).join(' / '));(p.milestones||[]).forEach(function(m){text.push(M.pct(m.share)+' — '+(m.date?m.date:'через '+m.months+' мес.'));});}
