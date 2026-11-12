@@ -39,6 +39,7 @@ RULES = """Ты переводишь правки инструментов пр�
 Совместимые скидки складываются в процентных пунктах от прайса: 16% и 2% дают 18%.
 Не сворачивай две отдельные скидки в базовую, если одна задана стартовой или дополнительной.
 Правило mode: additive — суммируется, none — запрещено, individual — индивидуально.
+Если combination прямо запрещает сочетание («не суммируется с акциями»), обязательно задай mode=none.
 Сохраняй остальные поля и проект. Поле для даты окончания предложения — validUntil, для погашения — end.
 Не приравнивай процент скидки к ипотечной ставке, сроки акции к сроку кредита или погашения.
 Для информационной записи не придумывай расчётных полей."""
@@ -50,7 +51,7 @@ def fields_by_kind():
     return json.loads(output)
 
 
-def generate(payload):
+def api_key():
     key = os.environ.get('OPENAI_API_KEY')
     if not key:
         path = config().get('openai_env')
@@ -62,12 +63,14 @@ def generate(payload):
                     break
     if not key:
         raise RuntimeError('В личном редакторе не настроен ключ GPT.')
-    schema = deepcopy(REPLY)
-    schema['properties']['edits']['items']['properties']['field'] = {
-        'type': 'string', 'enum': [f['key'] if isinstance(f, dict) else f for f in payload['fields']]}
+    return key
+
+
+def structured(instructions, payload, schema, tokens=3500):
+    key = api_key()
     body = {'model': config().get('openai_model', 'gpt-5.4-mini'), 'store': False,
-            'instructions': RULES, 'input': json.dumps(payload, ensure_ascii=False),
-            'reasoning': {'effort': 'low'}, 'max_output_tokens': 3500,
+            'instructions': instructions, 'input': json.dumps(payload, ensure_ascii=False),
+            'reasoning': {'effort': 'low'}, 'max_output_tokens': tokens,
             'text': {'format': {'type': 'json_schema', 'strict': True, 'name': 'tool_changes', 'schema': schema}}}
     try:
         response = json.loads(curl('https://api.openai.com/v1/responses', 'POST', json.dumps(body, ensure_ascii=False),
@@ -78,6 +81,13 @@ def generate(payload):
                                   if c['type'] == 'output_text'))
     except (RuntimeError, ValueError, KeyError) as exc:
         raise RuntimeError('GPT не завершил разбор. Черновик можно отправить повторно.') from exc
+
+
+def generate(payload):
+    schema = deepcopy(REPLY)
+    schema['properties']['edits']['items']['properties']['field'] = {
+        'type': 'string', 'enum': [f['key'] if isinstance(f, dict) else f for f in payload['fields']]}
+    return structured(RULES, payload, schema)
 
 
 def interpret(previous, draft, context):
@@ -95,7 +105,10 @@ def interpret(previous, draft, context):
     result = deepcopy(draft)
     seen = set()
     for edit in answer['edits']:
-        key, quote = edit['field'], edit['quote'].strip().strip('«»“”"').strip()
+        key, quote = edit['field'], edit['quote'].strip()
+        if not any(quote in draft[k] for k in TEXT_FIELDS) and (quote[:1], quote[-1:]) in (
+                ('«', '»'), ('“', '”'), ('"', '"')):
+            quote = quote[1:-1].strip()
         if key not in allowed or key in seen or not quote or not any(quote in draft[k] for k in TEXT_FIELDS):
             raise ValueError('GPT предложил параметр без однозначного основания в условиях. Уточните текст.')
         seen.add(key)
@@ -130,4 +143,12 @@ def interpret(previous, draft, context):
             parent.pop(leaf, None)
         else:
             parent[leaf] = value
+    # При однозначной формулировке флаг расчёта должен совпадать с текстом карточки.
+    condition = draft['combination'].strip().casefold().rstrip('.').strip()
+    if (not previous or previous['combination'] != draft['combination']) and re.fullmatch(
+            r'(?:(?:с (?:другими )?акциями|со скидками) )?(не )?суммируется(?: с (?:другими )?акциями| со скидками)?', condition):
+        mode = 'none' if 'не суммируется' in condition else 'additive'
+        if previous and draft['mode'] not in (previous['mode'], mode):
+            raise ValueError('Текст и выбранное правило сочетания расходятся.')
+        result['mode'] = mode
     return result
