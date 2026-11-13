@@ -83,7 +83,9 @@ class Handler(SimpleHTTPRequestHandler):
 document.querySelector('#go').onclick=async function(){this.disabled=true;try{const s=await(await fetch('/api/session')).json();const r=await(await fetch('/api/google-connect',{method:'POST',headers:{'X-CSRF-Token':s.csrf,'Content-Type':'application/json'},body:'{}'})).json();if(r.url)location.assign(r.url);else document.querySelector('#msg').textContent=r.connected?'Аккаунт подключён. Можно вернуться в редактор.':r.error;}catch(e){document.querySelector('#msg').textContent='Не удалось подключиться.';}finally{this.disabled=false;}};
 </script></html>'''
             self.wfile.write(page.encode());return
-        if not self.host_ok() or not self.same_site(): return self.respond(403,{'error':'Редактор доступен только на этом Mac.'})
+        # Публичный каталог может открыть страницу редактора в отдельной вкладке.
+        entry = path == '/tools.html' and self.headers.get('Sec-Fetch-Mode') == 'navigate' and self.headers.get('Sec-Fetch-Dest') == 'document'
+        if not self.host_ok() or not (self.same_site() or entry): return self.respond(403,{'error':'Редактор доступен только на этом Mac.'})
         if path=='/api/session':
             c=config(); return self.respond(200,{'csrf':CSRF,'source':'https://docs.google.com/spreadsheets/d/'+c['spreadsheet_id']+'/edit#gid='+str(c['gid'])},True)
         if path=='/api/tools':

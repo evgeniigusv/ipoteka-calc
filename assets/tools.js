@@ -97,5 +97,11 @@ if(local){
  },pending:function(){return Array.from(changes.keys());}});
  $('tools-editor').addEventListener('close',function(){proposalEdit=null;});
  var session=window.SM_TOOLS_SESSION;csrf=session.csrf;$('tools-source').href=session.source;$('tools-source').hidden=false;$('tools-add').hidden=false;$('tools-owner').hidden=true;$('tools-inactive-label').hidden=false;}
-accepted(window.SM_TOOLS_DATA);if(data.writeNotice)alert(data.writeNotice);
+accepted(window.SM_TOOLS_DATA);
+if(local && (location.hash==='#new'||location.hash==='#ai')){
+ var action=location.hash==='#new'?'tools-add':'tools-ai';
+ history.replaceState(null,'',location.pathname+location.search);
+ $(action).click();
+}
+if(data.writeNotice)alert(data.writeNotice);
 })();
