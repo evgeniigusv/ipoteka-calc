@@ -29,7 +29,7 @@ def prepare(current, changes):
         raise ValueError('От 1 до 100 изменений за сохранение.')
     records = {r['id']: r for r in current['records']}
     # В общем листе могут отсутствовать строки, созданные исключительно банковским импортом.
-    # Справочник читается один раз на пакет. Его строки не служат адресами записи в Google.
+    # Для записи адрес строки берётся только из исходного общего листа.
     needs_import = any(r['kind'] == 'mortgage' or r.get('source') or r['id'].startswith('sub-')
                        or (r['id'] in records and bank_row(records[r['id']])) for r in changes)
     visible = with_subsidies(current)['records'] if needs_import else []
@@ -46,6 +46,10 @@ def prepare(current, changes):
         owner_catalog.check_scope(previous, draft)
         if previous and (previous['kind'], previous['project']) != (draft['kind'], draft['project']):
             raise ValueError('Проект и механика существующего инструмента должны совпадать.')
+        if previous and previous.get('source') == 'subsidies':
+            stored = records.get(draft['id'])
+            if stored and (not bank_row(stored) or stored['project'] != previous['project']):
+                raise ValueError('ID банковской строки занят другой записью в каталоге.')
         draft = manual_record(previous, draft, imported.values())
         proposed[draft['id']] = draft
         normalized.append(draft)

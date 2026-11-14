@@ -4,6 +4,7 @@ import sys
 import tempfile
 import threading
 import unittest
+from collections import OrderedDict
 from copy import deepcopy
 from http.client import HTTPConnection
 from pathlib import Path
@@ -49,7 +50,7 @@ class ManualSubsidiesTest(unittest.TestCase):
         self.google = self.mock(store, 'google', side_effect=self.google_request)
         self.ai = self.mock(tools_ai, 'generate', return_value={'question':'', 'edits':[]})
         self.publish = self.mock(editor, 'publish', side_effect=self.write_snapshot)
-        self.mock(owner_catalog, '_retries', new={})
+        self.mock(owner_catalog, '_retries', new=OrderedDict())
         self.mock(editor, 'PREPARED', new=set())
         server = editor.ThreadingHTTPServer(('127.0.0.1', 0), editor.Handler)
         threading.Thread(target=server.serve_forever, daemon=True).start()
@@ -139,6 +140,22 @@ class ManualSubsidiesTest(unittest.TestCase):
             self.assertEqual(bool(self.catalog['mortgageWarnings']), fallback)
             self.assertEqual(len(self.catalog['records']), len({r['id'] for r in self.catalog['records']}))
 
+    def test_interpret_imported_text_then_reject_stale_preview(self):
+        draft = dict(self.adopt(self.virtual), description='Ставка 2%.')
+        self.ai.return_value = {'question':'', 'edits':[
+            dict(field='rate', value_json='0.02', quote='Ставка 2%')]}
+        prepared, = self.edit(draft, preview=True)['changes']
+        self.assertEqual(prepared['params']['rate'], .02)
+        self.assertEqual(self.ai.call_args.args[0]['previous'], self.virtual)
+        self.assertEqual(self.edit(prepared, preview=True)['changes'], [prepared])
+        self.ai.assert_called_once()
+        # Банк сменил ставку ещё до записи. В общем листе исходного ID нет.
+        program = next(p for p in self.source['programs'] if p['bank'] == self.virtual['params']['bank'])
+        program['rate'] = .037
+        self.edit(prepared, status=400)
+        self.assertFalse(any(call.args[0]=='POST' for call in self.google.call_args_list))
+        self.assertNotIn(self.virtual['id'], [r['id'] for r in self.request('/api/tools')['records']])
+
     def test_takeover_checks_and_ambiguous_reimport(self):
         draft = self.adopt(self.virtual)
         wrong_flag = deepcopy(draft)
@@ -148,7 +165,7 @@ class ManualSubsidiesTest(unittest.TestCase):
                         dict(draft, id='sub-unknown'), dict(draft, project='da2')):
             self.edit(invalid, status=400)
         self.assertFalse(any(c.args[0]=='POST' for c in self.google.call_args_list))
-        # Резерв ещё в старом формате, без служебных полей. При принятии во время сбоя
+        # Резерв содержит только импортированные строки, до принятия карточки. При принятии во время сбоя
         # и после возвращения банка архив скрывает только свою исходную программу.
         self.source['errors'] = {'da':'Сбой'}
         archived = dict(self.adopt(self.row), enabled=False)

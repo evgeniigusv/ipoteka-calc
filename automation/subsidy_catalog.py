@@ -74,7 +74,7 @@ def manual_record(previous, draft, imported=()):
     return result
 
 
-def without_claimed(cards, claims, *, fallback=False):
+def without_claimed(cards, claims):
     """Различаем варианты с одинаковыми условиями по исходным ставкам."""
     families = defaultdict(list)
     for card in cards:
@@ -89,7 +89,7 @@ def without_claimed(cards, claims, *, fallback=False):
         if missing:
             peers = {rate for origin in origins for rate in origin['peers']} - claimed
             unknown = rates - claimed - peers
-            if unknown and not fallback and (len(unknown) > len(missing) or peers - rates):
+            if unknown and (len(unknown) > len(missing) or peers - rates):
                 raise ValueError('После изменения ставок невозможно различить варианты одной банковской программы.')
             hide_rates.update(unknown)
         hidden.update(row['id'] for row in rows if row['params']['rate'] in hide_rates)
@@ -167,7 +167,7 @@ def with_subsidies(data, source=None):
                     raise ValueError(f'Нет проверенной копии ставок для {project}')
                 pending = {k: [o for o in origins if (k, o['rate']) not in applied]
                            for k, origins in claims.items()}
-                cards = without_claimed(backup, pending, fallback=True)
+                cards = without_claimed(backup, pending)
                 # Старые резервные снимки предшествуют появлению поля source.
                 cards = [dict(r, source='subsidies') for r in cards]
                 dates = previous.get('mortgageCheckedAt')
