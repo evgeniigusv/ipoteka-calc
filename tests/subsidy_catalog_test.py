@@ -1,5 +1,7 @@
 import copy
 import json
+import http.client
+import threading
 import sys
 import tempfile
 import unittest
@@ -8,6 +10,7 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'automation'))
 import subsidy_catalog as catalog
+import tools_editor as editor
 from tools_source import ROOT, public_snapshot
 
 
@@ -62,6 +65,41 @@ class RecoveryTest(unittest.TestCase):
         self.assertFalse(recovered['mortgageWarnings'])
         self.assertEqual(set(recovered['mortgageCheckedAt'].values()), {self.source['checked_at']})
         self.assertNotEqual(cards(recovered, 'da1'), cards(self.previous, 'da1'))
+
+    def test_editor_saves_other_instrument_during_fallback(self):
+        self.source['errors'] = {'da': 'Ошибка G34'}
+        self.data['revision'] = 'initial'
+        draft = dict(next(r for r in self.data['records'] if r['kind'] == 'info'),
+                     description='Уточнены условия')
+        saved = dict(self.data, revision='updated', records=[
+            draft if r['id'] == draft['id'] else r for r in self.data['records']
+        ])
+        headers = {'Host': '127.0.0.1:8795', 'Origin': editor.ORIGIN,
+                   'Cookie': 'sm_owner='+editor.SESSION, 'X-CSRF-Token': editor.CSRF,
+                   'Content-Type': 'application/json'}
+        with editor.ThreadingHTTPServer(('127.0.0.1', 0), editor.Handler) as server:
+            threading.Thread(target=server.serve_forever, daemon=True).start()
+            try:
+                with patch.object(catalog, 'sources', return_value=self.source), \
+                     patch.object(editor, 'read', return_value=self.data), \
+                     patch.object(editor, 'interpret', return_value=draft), \
+                     patch.object(editor, 'write_changes', return_value=saved) as write, \
+                     patch.object(editor, 'publish', return_value='ok') as publish:
+                    conn = http.client.HTTPConnection('127.0.0.1', server.server_port)
+                    try:
+                        conn.request('POST', editor.EVENT, json.dumps({'revision': 'initial', 'changes': [draft]}), headers)
+                        response = conn.getresponse()
+                        result = json.load(response)
+                    finally:
+                        conn.close()
+                    self.assertEqual(response.status, 200, result)
+                    self.assertTrue(result['saved'] and result['published'])
+                    write.assert_called_once()
+                    payload = public_snapshot(publish.call_args.args[0])
+                    self.assertIn(draft, payload['records'])
+                    self.assertEqual(set(payload['mortgageWarnings']), {'da1', 'da2'})
+            finally:
+                server.shutdown()
 
     def test_sharp_drop_rejects_whole_source_only(self):
         self.source['programs'] = [p for p in self.source['programs'] if p['projects'] == catalog.PROJECTS['da']]
