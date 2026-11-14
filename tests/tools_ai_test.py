@@ -40,7 +40,8 @@ class ConditionsTest(unittest.TestCase):
                 and r['project'] in [subsidy_catalog.PROJECT[p] for p in program['projects']]]
         self.assertEqual(len(same),len(program['projects']))
         self.assertTrue(all(r['params']['subsidy']==.2345 for r in same))
-        with patch.object(ai, 'generate') as generate, self.assertRaisesRegex(ValueError,'справочнике субсидий'):
+        with patch.object(subsidy_catalog, 'sources', return_value=source), patch.object(ai, 'generate') as generate, \
+                self.assertRaisesRegex(ValueError,'справочнике субсидий'):
             tools_editor.prepare(dict(DATA,revision='test'), [same[0]])
         generate.assert_not_called()
 

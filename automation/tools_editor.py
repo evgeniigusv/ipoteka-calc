@@ -9,7 +9,7 @@ from tools_proposals import document, proposals, transcribe
 from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 from urllib.parse import parse_qs, urlsplit
 from tools_source import ROOT, config, write_changes, publish, revision, validate
-from subsidy_catalog import PUBLISHED, managed, with_subsidies
+from subsidy_catalog import PUBLISHED, bank_row, manual_record, with_subsidies
 from subsidy_source import source_link
 from tools_google_connect import start as connect_google
 from tools_ai import interpret
@@ -28,27 +28,40 @@ def prepare(current, changes):
     if not isinstance(changes, list) or not 1 <= len(changes) <= 100:
         raise ValueError('От 1 до 100 изменений за сохранение.')
     records = {r['id']: r for r in current['records']}
+    # В общем листе могут отсутствовать строки, созданные исключительно банковским импортом.
+    # Справочник читается один раз на пакет. Его строки не служат адресами записи в Google.
+    needs_import = any(r['kind'] == 'mortgage' or r.get('source') or r['id'].startswith('sub-')
+                       or (r['id'] in records and bank_row(records[r['id']])) for r in changes)
+    visible = with_subsidies(current)['records'] if needs_import else []
+    imported = {r['id']: r for r in visible if r.get('source') == 'subsidies'}
+    previous_rows = records | imported
     proposed = dict(records)
     seen = set()
+    normalized = []
     for draft in changes:
         if draft['id'] in seen:
             raise ValueError('Повтор ID в изменениях.')
         seen.add(draft['id'])
-        previous = records.get(draft['id'])
+        previous = previous_rows.get(draft['id'])
         owner_catalog.check_scope(previous, draft)
-        if managed(draft) or (previous and managed(previous)) or draft.get('source') or draft['id'].startswith('sub-'):
-            raise ValueError('Субсидированную ипотеку редактируют в справочнике субсидий проекта.')
         if previous and (previous['kind'], previous['project']) != (draft['kind'], draft['project']):
             raise ValueError('Проект и механика существующего инструмента должны совпадать.')
+        draft = manual_record(previous, draft, imported.values())
         proposed[draft['id']] = draft
+        normalized.append(draft)
     prepared = {}
     # Сначала основная скидка, чтобы зависимые условия получили новое значение в том же сохранении.
-    for draft in sorted(changes, key=lambda r: r['kind'] != 'discount'):
+    for draft in sorted(normalized, key=lambda r: r['kind'] != 'discount'):
         context = [r for r in proposed.values() if r['kind']=='discount' and r['enabled'] and r['project']==draft['project']]
         key = (current['revision'], revision(draft), revision(context))
-        result = draft if key in PREPARED else interpret(records.get(draft['id']), draft, context)
+        previous = previous_rows.get(draft['id'])
+        result = draft if key in PREPARED else interpret(previous, draft, context)
+        result = manual_record(previous, result, imported.values())
         proposed[draft['id']] = prepared[draft['id']] = result
-    validate({'version': 1, 'records': list(proposed.values())})
+    candidate = dict(current, records=list(proposed.values()))
+    validate(candidate)
+    if needs_import:
+        validate(with_subsidies(candidate))
     if len(PREPARED) > 500:
         PREPARED.clear()
     for result in prepared.values():
@@ -165,7 +178,7 @@ document.querySelector('#go').onclick=async function(){this.disabled=true;try{co
                     return self.respond(409, {'error':'Справочник изменился. Подготовьте предложения повторно.'})
                 records = {r['id']: r for r in catalog['records']}
                 if (draft['id'] != previous['id'] or draft['group'] != previous['group']
-                        or draft.get('source') or managed(draft)):
+                        or draft.get('source')):
                     raise ValueError('Неверная строка предложения.')
                 if draft['id'] in records and (draft['project'], draft['kind']) != (previous['project'], previous['kind']):
                     raise ValueError('Проект и механика существующего инструмента должны совпадать.')
@@ -174,8 +187,7 @@ document.querySelector('#go').onclick=async function(){this.disabled=true;try{co
                         and r['project']==draft['project']]
                 same_kind = previous['kind'] == draft['kind']
                 revised = interpret(previous if same_kind else None, draft, cash)
-                if managed(revised):
-                    raise ValueError('Измените ставку в справочнике субсидий проекта.')
+                revised = manual_record(records.get(draft['id']), revised)
                 records[revised['id']] = revised
                 validate({'version':1, 'records':list(records.values())})
                 return self.respond(200, {'record':revised, 'ticket':ticket(req['revision'], revised)})
@@ -189,12 +201,15 @@ document.querySelector('#go').onclick=async function(){this.disabled=true;try{co
                     changes = []
                     for item in items:
                         record = item['record']
-                        if (managed(record) or not hmac.compare_digest(item['ticket'], ticket(req['revision'], record))):
+                        if not hmac.compare_digest(item['ticket'], ticket(req['revision'], record)):
                             raise ValueError('Подготовьте предложение повторно.')
                         changes.append(record)
                     existing = {r['id']:r for r in current['records']}
                     for record in changes:
-                        owner_catalog.check_scope(existing.get(record['id']), record)
+                        previous = existing.get(record['id'])
+                        owner_catalog.check_scope(previous, record)
+                        if manual_record(previous, record) != record:
+                            raise ValueError('Подготовьте предложение повторно.')
                     if isinstance(current, owner_catalog.Catalog):
                         current = owner_catalog.save(current, req['revision'], changes, lambda _, rows: rows, 'accept')
                     elif current['revision'] != req['revision']:

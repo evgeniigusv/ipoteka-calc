@@ -80,7 +80,7 @@
 .tool-record-edit:hover,.tool-entry-actions summary:hover{text-decoration:underline}
 .tool-full{padding:6px 0 2px}
 .tool-full p{white-space:pre-line;overflow-wrap:anywhere;margin:0 0 5px}
-.tools-bank-body{padding:0 20px 20px}
+.tools-ownership-note{grid-column:1/-1;color:#525d74;margin:0;font-size:13px}
 @media screen and (max-width:850px){
  #tools-table,#tools-table thead,#tools-table tbody,#tools-table tr,#tools-table th,#tools-table td{display:block;width:100%;min-width:0}
  #tools-table thead{display:none}
@@ -93,3 +93,5 @@
 .tools-param-panel>summary,.tools-alert>summary{cursor:pointer}
 .tools-param-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:14px}
 @media(max-width:650px){.tools-param-grid{grid-template-columns:minmax(0,1fr)}}
+
+.tool-secondary{display:flex;flex-wrap:wrap;gap:5px 14px}

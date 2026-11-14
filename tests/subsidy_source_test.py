@@ -62,7 +62,7 @@ class SourceTest(unittest.TestCase):
     def test_duplicate_possible_duplicate_and_moved_or_missing_program(self):
         other = ROW.copy()
         other[6] = ERROR
-        for rows in ([ROW, ROW], [other, ROW], [ROW, other], [other], []):
+        for rows in ([ROW, ROW], [other, ROW], [ROW, other], [other], [[ERROR] * 11, ROW], []):
             with self.subTest(rows=rows):
                 self.google.return_value = {'sheets': [sheet(*rows)]}
                 self.assertEqual(lookup.source_link(FAMILY),

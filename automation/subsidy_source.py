@@ -42,15 +42,15 @@ def exact_range(sheet, params):
     blocks = sheet.get('data', [])
     if len(blocks) != 1 or blocks[0].get('startRow', 0) or blocks[0].get('startColumn', 0):
         return None
-    rows = [[cell_value(cell) for cell in row.get('values', [])]
-            for row in blocks[0].get('rowData', [])]
-    if not rows or rows[0] != HEADERS:
+    rows = blocks[0].get('rowData', [])
+    if not rows or [cell_value(cell) for cell in rows[0].get('values', [])] != HEADERS:
         return None
     found = None
     for number, row in enumerate(rows[1:], 2):
-        if not any(value is not None and value != '' for value in row):
+        cells = row.get('values', [])
+        if not any(cell.get('effectiveValue') not in (None, {}, {'stringValue': ''}) for cell in cells):
             continue
-        match = row_match(row, params)
+        match = row_match([cell_value(cell) for cell in cells], params)
         if match is False:
             continue
         if match is None or found is not None:

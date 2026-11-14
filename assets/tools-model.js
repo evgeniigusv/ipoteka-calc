@@ -28,6 +28,18 @@
     required(modes[r.mode]&&typeof r.enabled==='boolean','Проверьте сочетание и доступность программы.');
     required(r.params&&typeof r.params==='object'&&!Array.isArray(r.params),'Не заданы параметры.');
     var p=r.params,allowed=fields[r.kind].map(function(f){return f.key.split('.')[0];}).concat(['note','validUntil','milestones','noExtra','extraSequential','scope','date3Approx','ownerOnly']);
+    if(r.kind==='mortgage'){
+      allowed.push('appManaged','subsidyOrigin');
+      if('appManaged' in p)required(p.appManaged===true,'Некорректный признак ручной ипотеки.');
+      if('subsidyOrigin' in p){
+        var origin=p.subsidyOrigin;
+        required(p.appManaged&&!p.ownerOnly&&origin&&typeof origin==='object'&&
+          Object.keys(origin).length===3&&typeof origin.key==='string'&&/^[a-f0-9]{64}$/.test(origin.key)&&
+          number(origin.rate,0,.99)&&Array.isArray(origin.peers)&&origin.peers.length<=200&&
+          origin.peers.every(rate=>number(rate,0,.99)&&rate!==origin.rate)&&
+          new Set(origin.peers).size===origin.peers.length,'Некорректная привязка к программе банка.');
+      }
+    }
     Object.keys(p).forEach(function(k){required(allowed.includes(k),'Неизвестное поле: '+k);});
     if('ownerOnly' in p)required(typeof p.ownerOnly==='boolean','Поле ownerOnly должно быть логическим.');
     fields[r.kind].forEach(function(f){var v=get(p,f.key);if(v==null||v==='')return;

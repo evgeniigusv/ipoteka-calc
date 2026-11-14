@@ -84,13 +84,15 @@ function compactCell(r){
  const lines=reportCell(r);
  const p=r.params;
  if(r.mode&&r.combination.trim()!==M.modes[r.mode])lines.push('Правило сочетания: '+M.modes[r.mode]);
+ if(r.params.appManaged)lines.push('Условия ведутся в приложении');
  if(r.source==='subsidies')lines.push('Из справочника субсидий '+(r.project==='dnk2'?'ДНК':'ДА'));
  if(local&&r.kind==='mortgage')lines.push('Комиссия банку '+M.pct(p.subsidy));
  if(r.combination.trim()&&r.combination.trim()!=='-')lines.push('Сочетание: '+r.combination.trim());
- const archive=local&&r.source!=='subsidies'?'<button type="button" class="tools-add-cell" data-toggle="'+r.id+'">'+(r.enabled?'В архив':'Восстановить')+'</button>':'';
+ const copy=local?'<button type="button" class="tools-add-cell" data-copy="'+r.id+'">Создать копию</button>':'';
+ const archive=local?'<button type="button" class="tools-add-cell" data-toggle="'+r.id+'">'+(r.source==='subsidies'?'Вести здесь и архивировать':r.enabled?'В архив':'Восстановить')+'</button>':'';
  return '<article class="tool-entry" data-record="'+r.id+'">'+(p.ownerOnly?'<span class="tools-tag tools-private">Только владельцу</span>':'')+
    '<p class="tool-brief">'+esc(brief(r))+'</p><div class="tool-entry-actions"><details><summary>Подробнее</summary><div class="tool-full">'+
-   [...new Set(lines)].filter(Boolean).map(line=>'<p>'+esc(line)+'</p>').join('')+archive+'</div></details>'+editAction(r)+'</div></article>';
+   [...new Set(lines)].filter(Boolean).map(line=>'<p>'+esc(line)+'</p>').join('')+'<div class="tool-secondary">'+copy+archive+'</div></div></details>'+editAction(r)+'</div></article>';
 }
 
 function compactRow(group){
@@ -105,26 +107,20 @@ function compactRow(group){
  return '<tr><th class="tools-name" scope="row">'+esc(group.name)+'</th>'+cells.join('')+'</tr>';
 }
 
-async function editRecord(id){
+function editRecord(id){
  const record=data.records.find(r=>r.id===id);
  if(!record){alert('Инструмент больше не найден. Выберите его в каталоге.');return;}
  if(!record.enabled)$('tools-inactive').value='archive';
- if(record.source!=='subsidies'){openEditor(id);return;}
- const dialog=$('tools-bank-dialog'),message=$('tools-bank-status'),link=$('tools-bank-link');
- $('tools-bank-title').textContent=record.name+' · '+names[record.project];
- message.textContent='Ищу строку в справочнике субсидий…';link.hidden=true;
- dialog.showModal();
- const lookup=++bankLookup;
- try{
-  const result=await api('/api/subsidy-source?id='+encodeURIComponent(id));
-  if(lookup!==bankLookup||!dialog.open)return;
-  message.textContent=result.exact?'Ставку и комиссию этой программы можно изменить в Google.':'Строка программы изменилась. Найдите её по банку и условиям в справочнике проекта.';
-  link.textContent=result.exact?'Редактировать строку в Google':'Открыть справочник в Google';
-  link.href=result.url;link.hidden=false;
- }catch(e){if(lookup===bankLookup)message.textContent=e.message;}
+ openEditor(id);
 }
-let bankLookup=0;
-$('tools-bank-close').onclick=()=>$('tools-bank-dialog').close();
+
+function takeOwnership(record){
+ const draft=M.clone(record);
+ delete draft.source;
+ draft.params.appManaged=true;
+ return draft;
+}
+
 function render(){if(!data)return;$('tools-head').innerHTML=compactHeader();$('tools-table').dataset.single=String(project!=='all');var gs=filtered(),query=$('tools-search').value.trim(),n=1+projects().length,html='';
  var archive=local&&$('tools-inactive').value==='archive';
  var overview=!query&&category==='all'&&!archive;
@@ -140,7 +136,7 @@ function render(){if(!data)return;$('tools-head').innerHTML=compactHeader();$('t
  var empty=archive?'В архиве нет записей по выбранным условиям.':'По выбранным условиям инструментов нет.';
  $('tools-rows').innerHTML=html||'<tr><td colspan="'+n+'" class="tools-empty">'+empty+'</td></tr>';
  $('tools-savebar').hidden=!local;
- $('tools-change-count').textContent=busy?'Подождите…':changes.size?'Записей в черновике: '+changes.size+'. Для записи в Google и обновления сайта нажмите «Сохранить и опубликовать».':pendingPublish?'В Google сохранено. Публикация ожидает повтора.':'Несохранённых изменений нет';
+ $('tools-change-count').textContent=busy?'Подождите…':changes.size?'Записей в черновике: '+changes.size+'. Нажмите «Сохранить и опубликовать».':pendingPublish?'Изменения сохранены. Публикация ожидает повтора.':'Несохранённых изменений нет';
  $('tools-save').disabled=$('tools-reset').disabled=!changes.size||busy;
  $('tools-reload').disabled=$('tools-add').disabled=$('tools-ai').disabled=busy;
  $('tools-rows').inert=busy;
@@ -170,10 +166,12 @@ function editorFields(r,isNew){
    +field('Название','name',r.name,'text',true)
    +field('Механика расчёта','kind',r.kind,'select',true,kinds.length?kinds.map(k=>[k,kindNames[k]]):[['','Сначала выберите раздел']]);
  html+=field('Условия инструмента','description',r.description,'textarea',true)+field('Сочетание с акциями','combination',r.combination,'textarea',true)+field('Правило сочетания','mode',r.mode,'select',true,Object.entries(M.modes));
- const hasParams=(M.fields[r.kind]||[]).length>0 || r.params.validUntil;
+ if(isNew&&!proposalEdit)html+=field('Кому виден инструмент','visibility',r.params.ownerOnly?'private':'public','select',true,[['public','Партнёрам'],['private','Только мне']]);
+ if(r.source==='subsidies')html+='<p class="tools-ownership-note">После сохранения вы ведёте эту программу здесь. Импорт больше не меняет её условия.</p>';
+ const hasParams=!!r.kind;
  if(hasParams)html+='<details class="tools-param-panel"><summary>Параметры расчёта</summary><div class="tools-param-grid">';
  (M.fields[r.kind]||[]).forEach(function(f){var v=M.get(r.params,f.key),type=f.type;if(type==='percent'&&v!=null)v=+(v*100).toFixed(6);if(type==='steps')v=(v||[]).join(', ');if(type==='percentList')v=(v||[]).map(function(n){return +(n*100).toFixed(4);}).join('; ');var opts=type==='select'?f.options.map(function(o,i){return [o,f.labels?f.labels[i]:o||'Не применяется'];}):null;if(r.kind==='tranche'&&f.key==='tranches')opts=[['','По согласованию'],...opts];html+=field(f.label,'p:'+f.key,v,type==='boolean'?'checkbox':type==='date'?'date':'text',false,opts);});
- if(r.params.validUntil)html+=field('Дата окончания действия в источнике','validUntil',r.params.validUntil,'date',true);
+ if(hasParams)html+=field('Условия действуют до','validUntil',r.params.validUntil,'date',true);
  if(r.kind==='installment'){html+='<div class="tools-field wide">Промежуточные этапы (% от стоимости)<div id="tools-milestones" class="tools-milestones"></div><button type="button" id="tools-add-stage" class="t-btn">Добавить этап</button><small>Для этапа укажите дату или количество месяцев после сделки. Остаток рассчитывается автоматически.</small></div>';}
  if(hasParams)html+='</div></details>';
  $('tools-editor-fields').innerHTML=html;var form=$('tools-form');form.elements.kind.disabled=!isNew||kinds.length<2;
@@ -186,17 +184,22 @@ function editorFields(r,isNew){
    const input=form.elements[key];
    if(input.disabled)input.closest('label').hidden=true;
   });
-  const mainFields={mortgage:['rate','minPv'],installment:['minPv',r.params.discFromPv?'discFromPv':'disc'],
-   tranche:['minPv',r.params.estimate?'referencePayment':'rate'],chpv:['rate','limit'],discount:['percent']};
-  const description=form.elements.description.closest('label');
-  for(const key of mainFields[r.kind]||[]){
-   const input=form.elements['p:'+key];
-   if(input)description.before(input.closest('label'));
-  }
  }
-
+ const mainFields={
+  mortgage:['bank','type','kids','term','rate','subsidy','minPv','limit'],
+  installment:['minPv',r.params.discFromPv?'discFromPv':'disc'],
+  tranche:['minPv',r.params.estimate?'referencePayment':'rate'],
+  chpv:['rate','limit'],discount:['percent']
+ };
+ const keys=r.kind==='mortgage'&&!isNew?['rate','minPv','subsidy']:mainFields[r.kind]||[];
+ const description=form.elements.description.closest('label');
+ for(const key of keys){
+  const input=form.elements['p:'+key];
+  if(input)description.before(input.closest('label'));
+ }
  if(r.kind==='installment')(r.params.milestones||[]).forEach(addStage);
  function switchFields(event){
+   if(form.elements.visibility){if(form.elements.visibility.value==='private')r.params.ownerOnly=true;else delete r.params.ownerOnly;}
    ['name','project','description','combination','mode'].forEach(function(k){r[k]=form.elements[k].value;});
    var nextCategory=form.elements.category.value,options=kindsByCategory[nextCategory]||[];
    var kind=event.target.name==='category'?(isNew?options[0]:'info'):form.elements.kind.value;
@@ -216,7 +219,7 @@ function openEditor(id,group,targetProject,draft,newProposal){
    editing=M.clone(draft||data.records.find(r=>r.id===id));
  }else if(group){
    var template=data.records.find(r=>r.group===group&&r.enabled);
-   editing=Object.assign(M.clone(template),{id:'tool-'+crypto.randomUUID(),project:targetProject});
+   editing=Object.assign(copyAsNew(template),{project:targetProject});
  }else{
    var kind=(kindsByCategory[category]||[])[0];
    editing={id:'tool-'+crypto.randomUUID(),group:'group-'+crypto.randomUUID(),name:'',
@@ -226,19 +229,44 @@ function openEditor(id,group,targetProject,draft,newProposal){
  $('tools-editor-title').textContent=id?editing.name:'Новый инструмент';
  $('tools-editor-project').textContent=[names[editing.project]||'Черновик инструмента',editing.params.ownerOnly?'Только владельцу':''].filter(Boolean).join(' · ');
  $('tools-form-error').textContent='';
- $('tools-form').querySelector('button[type=submit]').textContent=draft?'Обновить предложение':'В черновик';
+ $('tools-form').querySelector('button[type=submit]').textContent=draft?'Обновить предложение':editing.source==='subsidies'?'Вести в приложении · в черновик':'В черновик';
  editorFields(editing,!id||newProposal);
  $('tools-editor').showModal();
 }
+function copyAsNew(source){
+ const draft=M.clone(source);
+ draft.id='tool-'+crypto.randomUUID();
+ draft.enabled=true;
+ delete draft.source;
+ delete draft.params.appManaged;
+ delete draft.params.subsidyOrigin;
+ return draft;
+}
+function duplicateRecord(id){
+ const source=data.records.find(record=>record.id===id);
+ if(!source)return;
+ const draft=copyAsNew(source);
+ draft.group='group-'+crypto.randomUUID();
+ draft.name='Копия · '+source.name;
+ openEditor(null,null,null,draft,true);
+ $('tools-editor-title').textContent='Копия инструмента';
+ $('tools-form').querySelector('button[type=submit]').textContent='В черновик';
+}
 function numeric(value,label){var s=value.trim().replace(/\s/g,'').replace(',','.');if(!/^(?:\d+)(?:\.\d+)?$/.test(s))throw Error(label+': введите число.');return Number(s);}
 $('tools-form').onsubmit=async function(e){e.preventDefault();if(busy)return;busy=true;var submit=e.currentTarget.querySelector('button[type=submit]');submit.disabled=true;$('tools-close').disabled=$('tools-cancel').disabled=true;try{var form=e.currentTarget,r=M.clone(editing),p=M.clone(r.params);['name','project','kind','category','description','combination','mode'].forEach(function(k){r[k]=form.elements[k].value;});
- M.fields[r.kind].forEach(function(f){var input=form.elements['p:'+f.key],v=input.value.trim();if(f.type==='boolean'){if(!input.checked&&M.get(p,f.key)==null)return;v=input.checked;}else if(v===''){if(f.key.includes('.')){var keys=f.key.split('.');if(p[keys[0]])delete p[keys[0]][keys[1]];}else delete p[f.key];return;}else if(['integer','money','percent'].includes(f.type)){v=numeric(v,f.label);if(f.type==='percent')v/=100;}else if(['steps','percentList'].includes(f.type)){v=v.split(f.type==='steps'?/[,;]+/:/;/).map(function(s){return numeric(s,f.label)/(f.type==='percentList'?100:1);});}M.set(p,f.key,v);});
+ if(!M.fields[r.kind])throw Error('Выберите раздел и механику расчёта.');
+ M.fields[r.kind].forEach(function(f){var input=form.elements['p:'+f.key],v=input.value.trim();if(f.type==='boolean'){if(!input.checked&&M.get(p,f.key)==null)return;v=input.checked;}else if(v===''){if(f.key.includes('.')){var keys=f.key.split('.');if(p[keys[0]])delete p[keys[0]][keys[1]];}else delete p[f.key];return;}else if(['integer','money','percent'].includes(f.type)){v=numeric(v,f.label);if(f.type==='percent'){const previous=M.get(editing.params,f.key);v=previous!=null&&v===+(previous*100).toFixed(6)?previous:v/100;}}else if(['steps','percentList'].includes(f.type)){v=v.split(f.type==='steps'?/[,;]+/:/;/).map(function(s){return numeric(s,f.label)/(f.type==='percentList'?100:1);});}M.set(p,f.key,v);});
  if(p.pay&&!Object.keys(p.pay).length)delete p.pay;
  if(r.kind==='installment'){var stages=Array.from($('tools-milestones').children).map(function(div){var o={share:numeric(div.querySelector('[data-stage=share]').value,'Доля этапа')/100},date=div.querySelector('[data-stage=date]').value,months=div.querySelector('[data-stage=months]').value;if(date)o.date=date;if(months)o.months=numeric(months,'Месяцев');return o;});if(stages.length)p.milestones=stages;else delete p.milestones;delete p.noExtra;delete p.extraSequential;}
  if(form.elements.validUntil){if(form.elements.validUntil.value)p.validUntil=form.elements.validUntil.value;else delete p.validUntil;}
+ if(form.elements.visibility){
+  if(form.elements.visibility.value==='private')p.ownerOnly=true;
+  else delete p.ownerOnly;
+ }
  r.params=p;
+ if(editing.source==='subsidies'||(r.kind==='mortgage'&&(p.type==='Семейная ипотека'||p.variant==='субсидированная ставка')))r=takeOwnership(r);
  var original=baseline.records.find(function(item){return item.id===r.id;});
- if(!proposalEdit&&(!original||['name','description','combination'].some(function(k){return r[k]!==original[k];}))){
+ if(!proposalEdit&&(editing.source==='subsidies'||!original||['name','description','combination'].some(function(k){return r[k]!==original[k];}))){
    $('tools-form-error').textContent='Проверяю условия и параметры расчёта…';
    var preview=await api('/api/events/tools-changed',{revision:revision,changes:[r],preview:true});r=preview.changes[0];
  }
@@ -263,16 +291,22 @@ function stageRecord(r){
  if(JSON.stringify(r)===JSON.stringify(original))changes.delete(r.id);else changes.set(r.id,r);
  render();
 }
-$('tools-rows').onclick=function(e){var b=e.target.closest('button');if(!b||busy)return;if(b.dataset.toggle&&local){
+$('tools-rows').onclick=function(e){var b=e.target.closest('button');if(!b||busy)return;if(b.dataset.copy&&local){duplicateRecord(b.dataset.copy);return;}if(b.dataset.toggle&&local){
  var record=data.records.find(r=>r.id===b.dataset.toggle);
- if(record&&record.source!=='subsidies'){try{stageRecord({...record,enabled:!record.enabled});alert('');}catch(err){alert(err.message);}}
+ if(record){
+  try{
+   const draft=record.source==='subsidies'?takeOwnership(record):M.clone(record);
+   draft.enabled=!record.enabled;
+   stageRecord(draft);alert('');
+  }catch(err){alert(err.message);}
+ }
  return;
 }if(b.dataset.newProject&&local){openEditor(null,b.dataset.group,b.dataset.newProject);return;}if(b.dataset.edit&&local)editRecord(b.dataset.edit);if(b.dataset.category){collapsed[b.dataset.category]=!collapsed[b.dataset.category];render();}};
 $('tools-reset').onclick=function(){if(confirm('Отменить несохранённые изменения?')){data=M.clone(baseline);changes.clear();alert('');render();}};
 async function api(path,body){var res=await fetch(path,{method:body?'POST':'GET',headers:body?{'Content-Type':'application/json','X-CSRF-Token':csrf}:{},body:body?JSON.stringify(body):undefined,cache:'no-store'}),j=await res.json();if(!res.ok)throw Error(j.error||'Не удалось выполнить запрос.');return j;}
 function accepted(d){M.validate(d);data=M.clone(d);baseline=M.clone(d);revision=d.revision;changes.clear();status();render();}
-$('tools-reload').onclick=async function(){if(changes.size&&!confirm('Перечитать Google и отменить несохранённые изменения?'))return;try{busy=true;render();accepted(await api('/api/tools'));alert('');}catch(e){alert(e.message);}finally{busy=false;render();}};
-async function save(publishOnly){if(busy)return;busy=true;render();alert('');try{var res=await api(publishOnly?'/api/publish':'/api/events/tools-changed',publishOnly?{}:{revision:revision,changes:Array.from(changes.values())});accepted(res.data);pendingPublish=!res.published;alert(res.published?'Сохранено в Google. Публичный сайт обновится после сборки GitHub Pages, обычно за 1–2 минуты.':'В Google сохранено. Публикация не завершена. '+res.error);}catch(e){alert(e.message);}finally{busy=false;render();}}
+$('tools-reload').onclick=async function(){if(changes.size&&!confirm('Обновить каталог и отменить несохранённые изменения?'))return;try{busy=true;render();accepted(await api('/api/tools'));alert('');}catch(e){alert(e.message);}finally{busy=false;render();}};
+async function save(publishOnly){if(busy)return;busy=true;render();alert('');try{var res=await api(publishOnly?'/api/publish':'/api/events/tools-changed',publishOnly?{}:{revision:revision,changes:Array.from(changes.values())});accepted(res.data);pendingPublish=!res.published;alert(res.published?'Сохранено. Публичный сайт обновится после сборки GitHub Pages, обычно за 1–2 минуты.':'Изменения сохранены. Публикация не завершена. '+res.error);}catch(e){alert(e.message);}finally{busy=false;render();}}
 $('tools-save').onclick=function(){save(false);};$('tools-publish').onclick=function(){save(true);};
 window.addEventListener('beforeunload',function(e){if(changes.size){e.preventDefault();e.returnValue='';}});
 function pdfChunks(g){var records=Object.values(g.cells).flat(),max=Math.max(1,...records.map(function(r){return Math.ceil(r.description.length/550);})),out=[];for(var i=0;i<max;i++){var copy={name:g.name+(i?' · продолжение':''),category:g.category,cells:{}};Object.keys(g.cells).forEach(function(p){copy.cells[p]=g.cells[p].filter(function(r){return i===0||r.description.length>i*550;}).map(function(r){var c=M.clone(r);c.description=r.description.slice(i*550,(i+1)*550);if(i){c.kind='info';c.combination='';}return c;});});out.push(copy);}return out;}
@@ -316,10 +350,10 @@ if(local){
  applied:function(res){
    var pending=Array.from(changes.values());accepted(res.data);
    pending.forEach(function(r){var i=data.records.findIndex(function(x){return x.id===r.id;});if(i<0)data.records.push(r);else data.records[i]=r;changes.set(r.id,r);});
-   pendingPublish=!res.published;render();alert(res.published?'Выбранные предложения сохранены. Сайт обновится после сборки.':'В Google сохранено. Публикация не завершена. '+res.error);
+   pendingPublish=!res.published;render();alert(res.published?'Выбранные предложения сохранены. Сайт обновится после сборки.':'Изменения сохранены. Публикация не завершена. '+res.error);
  },pending:function(){return Array.from(changes.keys());}});
  $('tools-editor').addEventListener('close',function(){proposalEdit=null;});
- var session=window.SM_TOOLS_SESSION;csrf=session.csrf;$('tools-source').href=session.source;$('tools-source').hidden=false;$('tools-add').hidden=false;$('tools-owner').hidden=true;$('tools-inactive-label').hidden=false;}
+ var session=window.SM_TOOLS_SESSION;csrf=session.csrf;$('tools-add').hidden=false;$('tools-owner').hidden=true;$('tools-inactive-label').hidden=false;}
 accepted(window.SM_TOOLS_DATA);
 if(local && params.has('edit')){
  const id=params.get('edit');

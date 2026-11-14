@@ -9,7 +9,7 @@ import zipfile
 from pathlib import Path
 from xml.etree import ElementTree
 
-from subsidy_catalog import managed
+from subsidy_catalog import bank_row, manual_record
 from tools_ai import STRING, api_key, fields_by_kind, interpret, obj, structured
 from tools_source import validate
 
@@ -29,8 +29,8 @@ source_ids — номера фрагментов document, подтвержда�
 явное «скидка не применяется» = «скидка 0%». Дай вопрос,
 если отсутствует проект или непонятно, что принято. Одна запись на проект. Если указаны обе очереди ДА,
 создай две записи. Допустимые проекты da1, da2, dnk2. target — точный id существующей строки,
-если изменяется она, иначе пустая строка. Не создавай дубли. Для субсидированной ипотеки предложи
-изменить банковский справочник в questions, не создавай запись. Варианты kind: installment, tranche,
+если изменяется она, иначе пустая строка. Не создавай дубли. Ручную ипотеку можно создавать и менять. Если нужно изменить импортированную
+ставку (imported=true), укажи её target. Владелец сначала примет её карточку в приложении. Варианты kind: installment, tranche,
 mortgage, chpv, discount (только основная скидка за полную оплату), info (акции, доп. инструменты,
 бронирование). category: installment, mortgage, chpv, discount, extra, booking. Явный отказ от старого
 инструмента или неподдерживаемая механика — в questions, не создавай похожую новую запись.
@@ -50,8 +50,8 @@ def proposals(data, text):
     if not isinstance(text, str) or not 1 <= len(text.strip()) <= 100000:
         raise ValueError('Введите условия или загрузите текст до 100 000 знаков.')
     existing = {r['id']:r for r in data['records']}
-    index = [{k:r[k] for k in ('id','name','project','kind','description','combination')}
-             for r in existing.values() if not managed(r)]
+    index = [dict({k:r[k] for k in ('id','name','project','kind','description','combination')},
+                  imported=bank_row(r)) for r in existing.values()]
     # Делим только по границе строки или предложения с пробелом, сохраняя дроби и даты.
     fragments = [s.strip() for s in re.split(r'\n+|(?<=[.!?])[^\S\n]+', text) if s.strip()]
     numbered = [{'id': i, 'text': s} for i, s in enumerate(fragments, 1)]
@@ -62,8 +62,10 @@ def proposals(data, text):
     for item in plan['items']:
         try:
             old = existing.get(item['target'])
-            if item['target'] and (old is None or old['id'] in targets or managed(old)):
+            if item['target'] and (old is None or old['id'] in targets):
                 raise ValueError('Нужно уточнить изменяемую программу.')
+            if old and bank_row(old):
+                raise ValueError('Сначала примите банковскую карточку под управление приложения.')
             ids = item['source_ids']
             if not ids or any(type(i) is not int or not 1 <= i <= len(fragments) for i in ids):
                 raise ValueError('Не указаны исходные фрагменты принятого решения.')
@@ -83,8 +85,7 @@ def proposals(data, text):
                 record['combination'] = item['combination']
             cash = [r for r in existing.values() if r['kind']=='discount' and r['project']==project and r['enabled']]
             record = interpret(old, record, cash)
-            if managed(record):
-                raise ValueError('Измените эту ставку в справочнике субсидий проекта.')
+            record = manual_record(old, record)
             candidate = dict(existing)
             candidate[record['id']] = record
             validate({'version':1,'records':list(candidate.values())})
