@@ -1,7 +1,7 @@
 (async function(){
 'use strict';
 var M=SMToolsModel,U=SMUi,esc=U.esc,$=function(id){return document.getElementById(id);},local=location.hostname==='127.0.0.1'&&location.port==='8795';
-var data,baseline,revision,csrf,project='all',category='all',expanded={},collapsed={chpv:true,discount:true,extra:true},changes=new Map(),editing=null,busy=false,pendingPublish=false;
+var data,baseline,revision,csrf,project='all',category='all',collapsed={mortgage:true},changes=new Map(),editing=null,busy=false,pendingPublish=false;
 var names={da1:'ДА1',da2:'ДА2',dnk2:'ДНК-2'},kindNames={mortgage:'Ипотечная программа',installment:'Рассрочка',tranche:'Траншевая ипотека',chpv:'Дофинансирование ПВ',discount:'Скидка за полную оплату',info:'Информационный инструмент'};
 function icon(n){return '<img src="assets/icons/'+n+'.svg" alt="">';}
 function alert(message){$('tools-error').textContent=message||'';$('tools-error').hidden=!message;}
@@ -17,27 +17,115 @@ function filtered(forPartners){
      &&(!query||[r.name,r.description,r.combination,M.categories[r.category],...M.summary(r)].join(' ').toLowerCase().includes(query));
  })});
 }
-function cell(r,pdf){var text=M.summary(r),info=r.kind==='info',html='<div class="tools-cell'+(!r.enabled?' tools-disabled':'')+'">';
- if(!pdf&&r.params.ownerOnly)html+='<p class="tools-tag tools-private">Только владельцу</p>';
- if(r.source==='subsidies')html+='<p class="tools-muted">Автоматически из справочника субсидий '+(r.project==='dnk2'?'ДНК':'ДА')+'</p>';
- if(r.kind==='mortgage')text=[M.pct(r.params.rate)+' · ПВ от '+M.pct(r.params.minPv),r.params.limit?'До '+M.rub(r.params.limit):'До '+r.params.term+' лет'];
- if(r.source==='subsidies'){
-  var terms=r.params;
-  text=[terms.bank+' · '+M.pct(terms.rate)+' годовых', 'Кредит до '+terms.term+' лет · ПВ от '+M.pct(terms.minPv),terms.limit?'Лимит кредита '+M.rub(terms.limit):'Лимит в источнике не указан'];
-  if(local&&!pdf)text.push('Комиссия банку '+M.pct(terms.subsidy));
+function reportCell(r){
+ const p=r.params;
+ const lines=M.summary(r);
+ if(r.kind==='installment'){
+  if(p.pay)lines.push('Студия / 1к: '+M.rub(p.pay[1])+' · 2к: '+M.rub(p.pay[2])+' · 3к: '+M.rub(p.pay[3]));
+  if(p.steps)lines.push('Платежи каждые '+p.steps.join(' / ')+' мес.');
+  if(p.maxDisc!=null)lines.push('Потолок скидки '+M.pct(p.maxDisc));
+  if(p.pvChoices)lines.push('Варианты ПВ: '+p.pvChoices.map(M.pct).join(' / '));
+  if(p.discAt70!=null)lines.push('При ПВ от 70% скидка '+M.pct(p.discAt70));
+  (p.milestones||[]).forEach(m=>lines.push(M.pct(m.share)+' — '+(m.date||'через '+m.months+' мес.')));
  }
- if(r.kind==='installment'&&r.params.discFromPv)text=text.map(t=>t.endsWith(' на сумму ПВ')?'Скидка '+t:t);
- if(r.kind==='installment'&&r.params.discAt70)text.push('При ПВ от 70% скидка '+M.pct(r.params.discAt70));
- if(pdf&&r.kind==='installment'){var p=r.params;if(p.pay)text.push('Студия / 1к: '+M.rub(p.pay[1])+' · 2к: '+M.rub(p.pay[2])+' · 3к: '+M.rub(p.pay[3]));if(p.steps)text.push('Платежи каждые '+p.steps.join(' / ')+' мес.');if(p.maxDisc)text.push('Потолок скидки '+M.pct(p.maxDisc));if(p.pvChoices)text.push('Варианты ПВ: '+p.pvChoices.map(M.pct).join(' / '));(p.milestones||[]).forEach(function(m){text.push(M.pct(m.share)+' — '+(m.date?m.date:'через '+m.months+' мес.'));});}
- text.forEach(function(t,i){if(!pdf&&local&&r.source!=='subsidies'&&r.kind==='mortgage'&&i===0)html+='<p><button class="tools-quick" data-quick="'+r.id+'">'+esc(t)+'</button></p>';else if(info&&!pdf&&t.length>320){html+='<p>'+esc(t.slice(0,300))+'…</p><details><summary>Все условия</summary><p>'+esc(t)+'</p></details>';}else html+='<p>'+esc(t)+'</p>';});
- if(r.kind!=='info'&&r.description){if(pdf)html+='<p class="tools-combination">'+esc(r.description)+'</p>';else html+='<details><summary>Примечания</summary><p>'+esc(r.description)+'</p></details>';}
- if(!r.enabled)html+='<span class="tools-tag">В архиве</span>';
- if(local&&!pdf&&r.source!=='subsidies'){
-   html+='<div class="tools-record-actions"><button data-edit="'+r.id+'">Редактировать</button><button data-toggle="'+r.id+'">'+(r.enabled?'В архив':'Восстановить')+'</button></div>';
+ if(r.kind!=='info'&&r.description)lines.push(r.description);
+ return lines;
+}
+function reportRow(g){
+ const cells=projects().map(key=>{
+  const records=g.cells[key]||[];
+  const terms=records.map(r=>'<div class="tools-cell">'+(r.name!==g.name?'<strong>'+esc(r.name)+'</strong>':'')+
+   reportCell(r).map(line=>'<p>'+esc(line)+'</p>').join('')+'</div>').join('');
+  const combination=records.map(r=>'<div class="tools-cell"><p>'+esc(r.combination||M.modes[r.mode])+'</p>'+
+   (r.combination&&r.combination!==M.modes[r.mode]?'<span class="tools-tag">'+esc(M.modes[r.mode])+'</span>':'')+'</div>').join('');
+  return '<td>'+(terms||'—')+'</td><td>'+(combination||'—')+'</td>';
+ });
+ return '<tr><th scope="row" class="tools-name">'+esc(g.name)+'</th>'+cells.join('')+'</tr>';
+}
+
+function compactHeader(){
+ return '<tr><th scope="col">Инструмент</th>'+projects().map(p=>'<th scope="col">'+names[p]+'</th>').join('')+'</tr>';
+}
+
+function brief(r){
+ const p=r.params;
+ switch(r.kind){
+  case 'mortgage': return M.pct(p.rate)+' годовых';
+  case 'tranche': return p.estimate?'Платёж от '+M.rub(p.referencePayment)+'/мес.':p.rate?M.pct(p.rate)+' годовых':'ПВ от '+M.pct(p.minPv);
+  case 'chpv': return M.pct(p.rate)+' · до '+M.rub(p.limit);
+  case 'discount': return 'До '+M.pct(p.percent);
+  case 'installment': {
+   const terms=[p.pvChoices?'ПВ '+p.pvChoices.map(M.pct).join(' / '):'ПВ от '+M.pct(p.minPv)];
+   if(p.discAt70!=null)terms.push('скидка '+M.pct(p.disc||0)+'–'+M.pct(p.discAt70));
+   else if(p.discFromPv)terms.push('скидка '+M.pct(p.discFromPv)+' на ПВ');
+   else if(p.disc)terms.push('скидка '+M.pct(p.disc));
+   else if(p.pay)terms.push('от '+M.rub(Math.min(...Object.values(p.pay)))+'/мес.');
+   return terms.join(' · ');
+  }
+  default: {
+   const line=r.description.trim().split(/\r?\n/)[0];
+   return line.length>78 ? line.slice(0,77).replace(/\s+\S*$/,'')+'…' : line||'Условия не указаны';
+  }
  }
- return html+'</div>';}
-function row(g,pdf){return '<tr><th scope="row" class="tools-name">'+esc(g.name)+'</th>'+projects().map(function(p){var rr=g.cells[p]||[];return '<td class="'+(rr.some(function(r){return changes.has(r.id);})&&!pdf?'tools-dirty':'')+'">'+(rr.length?rr.map(function(r){return (r.name!==g.name?'<div class="tools-program-name" title="'+esc(r.name)+'">'+esc(r.kind==='tranche'?(r.params.bank||'Расчёт по ориентиру'):r.name)+'</div>':'')+cell(r,pdf);}).join(''):local&&!pdf&&$('tools-inactive').value==='active'&&g.id&&!Object.values(g.cells).flat().some(function(r){return r.source==='subsidies';})?'<button class="tools-add-cell" data-new-project="'+p+'" data-group="'+g.id+'">Добавить условия</button>':'<span class="tools-muted">—</span>')+'</td><td class="tools-combination" data-label="Сочетание">'+(rr.length?rr.map(function(r){return '<div class="tools-cell"><p title="'+esc(r.combination)+'">'+esc(r.kind==='mortgage'?'По условиям банка':r.combination)+'</p>'+(local&&!pdf&&r.source!=='subsidies'?'<select class="tools-mode-select" data-mode="'+r.id+'" aria-label="Сочетание · '+esc(r.name)+' · '+names[r.project]+'">'+Object.entries(M.modes).map(function(pair){return '<option value="'+pair[0]+'"'+(r.mode===pair[0]?' selected':'')+'>'+esc(pair[1])+'</option>';}).join('')+'</select>':r.combination===M.modes[r.mode]?'':'<span class="tools-tag">'+esc(M.modes[r.mode])+'</span>')+'</div>';}).join(''):'<span class="tools-muted">—</span>')+'</td>';}).join('')+'</tr>';}
-function render(){if(!data)return;$('tools-head').innerHTML=header();$('tools-table').dataset.single=String(project!=='all');var gs=filtered(),query=$('tools-search').value.trim(),n=1+projects().length*2,html='';
+}
+
+function editAction(r){
+ const label='Редактировать';
+ const aria=esc(label+' · '+r.name+' · '+names[r.project]);
+ if(local)return '<button type="button" class="tool-record-edit" aria-label="'+aria+'" data-edit="'+r.id+'">'+icon('pencil')+label+'</button>';
+ const url=new URL('http://127.0.0.1:8795/tools.html');
+ url.searchParams.set('project',r.project);
+ url.searchParams.set('section',r.category);
+ url.searchParams.set('edit',r.id);
+ return '<a class="tool-record-edit" aria-label="'+aria+'" href="'+esc(url.href)+'" target="_blank" rel="noopener" title="Открыть на Маке владельца">'+icon('pencil')+label+'</a>';
+}
+
+function compactCell(r){
+ const lines=reportCell(r);
+ const p=r.params;
+ if(r.mode&&r.combination.trim()!==M.modes[r.mode])lines.push('Правило сочетания: '+M.modes[r.mode]);
+ if(r.source==='subsidies')lines.push('Из справочника субсидий '+(r.project==='dnk2'?'ДНК':'ДА'));
+ if(local&&r.kind==='mortgage')lines.push('Комиссия банку '+M.pct(p.subsidy));
+ if(r.combination.trim()&&r.combination.trim()!=='-')lines.push('Сочетание: '+r.combination.trim());
+ const archive=local&&r.source!=='subsidies'?'<button type="button" class="tools-add-cell" data-toggle="'+r.id+'">'+(r.enabled?'В архив':'Восстановить')+'</button>':'';
+ return '<article class="tool-entry" data-record="'+r.id+'">'+(p.ownerOnly?'<span class="tools-tag tools-private">Только владельцу</span>':'')+
+   '<p class="tool-brief">'+esc(brief(r))+'</p><div class="tool-entry-actions"><details><summary>Подробнее</summary><div class="tool-full">'+
+   [...new Set(lines)].filter(Boolean).map(line=>'<p>'+esc(line)+'</p>').join('')+archive+'</div></details>'+editAction(r)+'</div></article>';
+}
+
+function compactRow(group){
+ const cells=projects().map(projectKey=>{
+  const records=group.cells[projectKey]||[];
+  let contents=records.map(r=>(r.name!==group.name?'<strong>'+esc(r.name)+'</strong>':'')+compactCell(r)).join('');
+  if(!records.length && local && $('tools-inactive').value==='active' && !Object.values(group.cells).flat().some(r=>r.source==='subsidies')){
+   contents='<button type="button" class="tools-add-cell" data-new-project="'+projectKey+'" data-group="'+group.id+'">Добавить условия</button>';
+  }
+  return '<td data-project-label="'+names[projectKey]+'" class="'+(records.some(r=>changes.has(r.id))?'tools-dirty':'')+'">'+(contents||'—')+'</td>';
+ });
+ return '<tr><th class="tools-name" scope="row">'+esc(group.name)+'</th>'+cells.join('')+'</tr>';
+}
+
+async function editRecord(id){
+ const record=data.records.find(r=>r.id===id);
+ if(!record){alert('Инструмент больше не найден. Выберите его в каталоге.');return;}
+ if(!record.enabled)$('tools-inactive').value='archive';
+ if(record.source!=='subsidies'){openEditor(id);return;}
+ const dialog=$('tools-bank-dialog'),message=$('tools-bank-status'),link=$('tools-bank-link');
+ $('tools-bank-title').textContent=record.name+' · '+names[record.project];
+ message.textContent='Ищу строку в справочнике субсидий…';link.hidden=true;
+ dialog.showModal();
+ const lookup=++bankLookup;
+ try{
+  const result=await api('/api/subsidy-source?id='+encodeURIComponent(id));
+  if(lookup!==bankLookup||!dialog.open)return;
+  message.textContent=result.exact?'Ставку и комиссию этой программы можно изменить в Google.':'Строка программы изменилась. Найдите её по банку и условиям в справочнике проекта.';
+  link.textContent=result.exact?'Редактировать строку в Google':'Открыть справочник в Google';
+  link.href=result.url;link.hidden=false;
+ }catch(e){if(lookup===bankLookup)message.textContent=e.message;}
+}
+let bankLookup=0;
+$('tools-bank-close').onclick=()=>$('tools-bank-dialog').close();
+function render(){if(!data)return;$('tools-head').innerHTML=compactHeader();$('tools-table').dataset.single=String(project!=='all');var gs=filtered(),query=$('tools-search').value.trim(),n=1+projects().length,html='';
  var archive=local&&$('tools-inactive').value==='archive';
  var overview=!query&&category==='all'&&!archive;
  Object.entries(M.categories).forEach(function([cat,label]){
@@ -47,15 +135,7 @@ function render(){if(!data)return;$('tools-head').innerHTML=header();$('tools-ta
    var heading=overview?'<button data-category="'+cat+'" aria-expanded="'+!shut+'">'+icon(shut?'chevron-right':'chevron-down')+title+'</button>':'<div class="tools-section-label">'+title+'</div>';
    html+='<tr class="tools-section"><td colspan="'+n+'">'+heading+'</td></tr>';
    if(shut)return;
-   var limit=overview&&!expanded[cat]?(cat==='booking'?1:2):list.length;
-   var preview=list.slice(0,limit);
-   if(cat==='mortgage'&&limit<list.length){
-     var tranche=list.find(g=>Object.values(g.cells).flat().some(r=>r.kind==='tranche'));
-     if(tranche&&!preview.includes(tranche))preview[1]=tranche;
-   }
-   preview.forEach(g=>{html+=row(g,false);});
-   if(list.length>limit)html+='<tr class="tools-more"><td colspan="'+n+'"><button data-more="'+cat+'">Показать ещё '+(list.length-limit)+'</button></td></tr>';
-   else if(expanded[cat]&&overview)html+='<tr class="tools-more"><td colspan="'+n+'"><button data-less="'+cat+'">Свернуть список</button></td></tr>';
+   html+=list.map(compactRow).join('');
  });
  var empty=archive?'В архиве нет записей по выбранным условиям.':'По выбранным условиям инструментов нет.';
  $('tools-rows').innerHTML=html||'<tr><td colspan="'+n+'" class="tools-empty">'+empty+'</td></tr>';
@@ -90,13 +170,31 @@ function editorFields(r,isNew){
    +field('Название','name',r.name,'text',true)
    +field('Механика расчёта','kind',r.kind,'select',true,kinds.length?kinds.map(k=>[k,kindNames[k]]):[['','Сначала выберите раздел']]);
  html+=field('Условия инструмента','description',r.description,'textarea',true)+field('Сочетание с акциями','combination',r.combination,'textarea',true)+field('Правило сочетания','mode',r.mode,'select',true,Object.entries(M.modes));
+ const hasParams=(M.fields[r.kind]||[]).length>0 || r.params.validUntil;
+ if(hasParams)html+='<details class="tools-param-panel"><summary>Параметры расчёта</summary><div class="tools-param-grid">';
  (M.fields[r.kind]||[]).forEach(function(f){var v=M.get(r.params,f.key),type=f.type;if(type==='percent'&&v!=null)v=+(v*100).toFixed(6);if(type==='steps')v=(v||[]).join(', ');if(type==='percentList')v=(v||[]).map(function(n){return +(n*100).toFixed(4);}).join('; ');var opts=type==='select'?f.options.map(function(o,i){return [o,f.labels?f.labels[i]:o||'Не применяется'];}):null;if(r.kind==='tranche'&&f.key==='tranches')opts=[['','По согласованию'],...opts];html+=field(f.label,'p:'+f.key,v,type==='boolean'?'checkbox':type==='date'?'date':'text',false,opts);});
  if(r.params.validUntil)html+=field('Дата окончания действия в источнике','validUntil',r.params.validUntil,'date',true);
  if(r.kind==='installment'){html+='<div class="tools-field wide">Промежуточные этапы (% от стоимости)<div id="tools-milestones" class="tools-milestones"></div><button type="button" id="tools-add-stage" class="t-btn">Добавить этап</button><small>Для этапа укажите дату или количество месяцев после сделки. Остаток рассчитывается автоматически.</small></div>';}
+ if(hasParams)html+='</div></details>';
  $('tools-editor-fields').innerHTML=html;var form=$('tools-form');form.elements.kind.disabled=!isNew||kinds.length<2;
  form.elements.project.disabled=!isNew;form.elements.category.disabled=!isNew&&r.kind!=='info';
  if(!isNew&&!form.elements.category.disabled)form.elements.category.options[0].disabled=true;
  form.elements.name.required=form.elements.project.required=form.elements.category.required=true;
+ if(!isNew){
+  // Проект указан в заголовке. Редактируемые условия идут сразу за названием.
+  ['project','category','kind'].forEach(key=>{
+   const input=form.elements[key];
+   if(input.disabled)input.closest('label').hidden=true;
+  });
+  const mainFields={mortgage:['rate','minPv'],installment:['minPv',r.params.discFromPv?'discFromPv':'disc'],
+   tranche:['minPv',r.params.estimate?'referencePayment':'rate'],chpv:['rate','limit'],discount:['percent']};
+  const description=form.elements.description.closest('label');
+  for(const key of mainFields[r.kind]||[]){
+   const input=form.elements['p:'+key];
+   if(input)description.before(input.closest('label'));
+  }
+ }
+
  if(r.kind==='installment')(r.params.milestones||[]).forEach(addStage);
  function switchFields(event){
    ['name','project','description','combination','mode'].forEach(function(k){r[k]=form.elements[k].value;});
@@ -165,13 +263,11 @@ function stageRecord(r){
  if(JSON.stringify(r)===JSON.stringify(original))changes.delete(r.id);else changes.set(r.id,r);
  render();
 }
-function quickEdit(button){var r=data.records.find(function(x){return x.id===button.dataset.quick;}),form=document.createElement('form');form.className='tools-quick-form';form.innerHTML='<input aria-label="Ставка, % · '+esc(names[r.project])+'" inputmode="decimal" value="'+esc(+(r.params.rate*100).toFixed(6))+'"><button class="t-icon" aria-label="Применить ставку">'+icon('check-lg')+'</button><button type="button" class="t-icon" aria-label="Отменить ставку">'+icon('x-lg')+'</button>';button.replaceWith(form);form.querySelector('input').focus();form.querySelector('button[type=button]').onclick=render;form.onsubmit=function(e){e.preventDefault();try{var next=M.clone(r);next.params.rate=numeric(form.querySelector('input').value,'Ставка')/100;stageRecord(next);alert('');}catch(err){alert(err.message);}};}
-$('tools-rows').onchange=function(e){if(!local||!e.target.dataset.mode)return;try{var r=M.clone(data.records.find(function(x){return x.id===e.target.dataset.mode;}));r.mode=e.target.value;stageRecord(r);alert('');}catch(err){alert(err.message);render();}};
 $('tools-rows').onclick=function(e){var b=e.target.closest('button');if(!b||busy)return;if(b.dataset.toggle&&local){
  var record=data.records.find(r=>r.id===b.dataset.toggle);
  if(record&&record.source!=='subsidies'){try{stageRecord({...record,enabled:!record.enabled});alert('');}catch(err){alert(err.message);}}
  return;
-}if(b.dataset.newProject&&local){openEditor(null,b.dataset.group,b.dataset.newProject);return;}if(b.dataset.quick&&local){quickEdit(b);return;}if(b.dataset.edit&&local)openEditor(b.dataset.edit);if(b.dataset.category){collapsed[b.dataset.category]=!collapsed[b.dataset.category];render();}if(b.dataset.more){expanded[b.dataset.more]=true;render();}if(b.dataset.less){expanded[b.dataset.less]=false;render();}};
+}if(b.dataset.newProject&&local){openEditor(null,b.dataset.group,b.dataset.newProject);return;}if(b.dataset.edit&&local)editRecord(b.dataset.edit);if(b.dataset.category){collapsed[b.dataset.category]=!collapsed[b.dataset.category];render();}};
 $('tools-reset').onclick=function(){if(confirm('Отменить несохранённые изменения?')){data=M.clone(baseline);changes.clear();alert('');render();}};
 async function api(path,body){var res=await fetch(path,{method:body?'POST':'GET',headers:body?{'Content-Type':'application/json','X-CSRF-Token':csrf}:{},body:body?JSON.stringify(body):undefined,cache:'no-store'}),j=await res.json();if(!res.ok)throw Error(j.error||'Не удалось выполнить запрос.');return j;}
 function accepted(d){M.validate(d);data=M.clone(d);baseline=M.clone(d);revision=d.revision;changes.clear();status();render();}
@@ -183,7 +279,7 @@ function pdfChunks(g){var records=Object.values(g.cells).flat(),max=Math.max(1,.
 function pdfPages(png){var pages=[],page,tbody,host=document.createElement('div');host.style.cssText='position:absolute;left:-20000px;top:0;width:1123px';document.body.appendChild(host);var section='',count=0;
  function next(){page=U.page(U.reportHead('Инструменты',projects().map(function(p){return names[p];}).join(' · ')+' · '+new Date(data.full_checked_at||data.checked_at).toLocaleDateString('ru-RU'),png)+'<table class="tools-table"><thead>'+header()+'</thead><tbody></tbody></table><p class="tools-legal">Предварительные условия. Применимость и сочетание акций подтверждаются перед сделкой.</p>','landscape');page.classList.add('tools-pdf');page.style.width='1123px';page.style.minHeight='0';host.appendChild(page);pages.push(page);tbody=page.querySelector('tbody');count=0;}
  function addCategory(cat){tbody.insertAdjacentHTML('beforeend','<tr class="tools-section"><td colspan="'+(1+projects().length*2)+'">'+esc(M.categories[cat])+'</td></tr>');}
- var groups=filtered(true);next();try{Object.keys(M.categories).forEach(function(cat){var list=groups.filter(function(g){return g.category===cat;});if(!list.length)return;list.flatMap(pdfChunks).forEach(function(g){if(section!==cat){section=cat;addCategory(cat);}var node=document.createElement('tbody');node.innerHTML=row(g,true);var tr=node.firstChild;tbody.appendChild(tr);if(page.scrollHeight>750&&count){tr.remove();if(tbody.lastChild&&tbody.lastChild.classList.contains('tools-section'))tbody.lastChild.remove();next();addCategory(cat);tbody.appendChild(tr);}count++;});});pages.forEach(function(p,i){p.querySelector('.tools-legal').textContent+=' · '+(i+1)+' / '+pages.length;p.style.minHeight='794px';p.remove();});return {pages:pages,file:'Инструменты '+projects().map(function(p){return names[p];}).join(' ')+' '+new Date().toLocaleDateString('ru-RU')};}finally{host.remove();}}
+ var groups=filtered(true);next();try{Object.keys(M.categories).forEach(function(cat){var list=groups.filter(function(g){return g.category===cat;});if(!list.length)return;list.flatMap(pdfChunks).forEach(function(g){if(section!==cat){section=cat;addCategory(cat);}var node=document.createElement('tbody');node.innerHTML=reportRow(g);var tr=node.firstChild;tbody.appendChild(tr);if(page.scrollHeight>750&&count){tr.remove();if(tbody.lastChild&&tbody.lastChild.classList.contains('tools-section'))tbody.lastChild.remove();next();addCategory(cat);tbody.appendChild(tr);}count++;});});pages.forEach(function(p,i){p.querySelector('.tools-legal').textContent+=' · '+(i+1)+' / '+pages.length;p.style.minHeight='794px';p.remove();});return {pages:pages,file:'Инструменты '+projects().map(function(p){return names[p];}).join(' ')+' '+new Date().toLocaleDateString('ru-RU')};}finally{host.remove();}}
 $('tools-pdf').onclick=async function(){var b=$('tools-pdf');busy=true;render();alert('');var old=b.innerHTML;b.textContent='Готовлю PDF…';try{var r=await U.makePdf(pdfPages,'landscape');r.pdf.save(r.file);}catch(e){alert('Не удалось подготовить PDF. Проверьте соединение и повторите.');}finally{busy=false;b.innerHTML=old;render();}};
 window.addEventListener('beforeprint',function(){
  var host=$('tools-print');
@@ -196,8 +292,8 @@ window.addEventListener('beforeprint',function(){
  var body=table.createTBody();
  Object.entries(M.categories).forEach(function([key,label]){
    var items=groups.filter(g=>g.category===key);if(!items.length)return;
-   var head=body.insertRow().insertCell();head.colSpan=1+projects().length*2;head.textContent=label;
-   items.forEach(g=>body.insertAdjacentHTML('beforeend',row(g,true)));
+   var head=body.insertRow().insertCell();head.colSpan=1+projects().length;head.textContent=label;
+   items.forEach(g=>body.insertAdjacentHTML('beforeend',reportRow(g)));
  });
  host.appendChild(table);
 });
@@ -225,6 +321,12 @@ if(local){
  $('tools-editor').addEventListener('close',function(){proposalEdit=null;});
  var session=window.SM_TOOLS_SESSION;csrf=session.csrf;$('tools-source').href=session.source;$('tools-source').hidden=false;$('tools-add').hidden=false;$('tools-owner').hidden=true;$('tools-inactive-label').hidden=false;}
 accepted(window.SM_TOOLS_DATA);
+if(local && params.has('edit')){
+ const id=params.get('edit');
+ params.delete('edit');
+ history.replaceState(null,'',location.pathname+'?'+params.toString());
+ editRecord(id);
+}
 if(local && (location.hash==='#new'||location.hash==='#ai')){
  var action=location.hash==='#new'?'tools-add':'tools-ai';
  history.replaceState(null,'',location.pathname+location.search);

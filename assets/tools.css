@@ -65,3 +65,31 @@
   #tools-print .tools-table{min-width:0;font-size:9pt}
   #tools-print .tools-table tr>th.tools-name{position:static;box-shadow:none}
 }
+
+#tools-table{min-width:0}
+#tools-table thead th{text-align:left}
+#tools-table thead th:first-child{width:26%}
+.tool-entry{padding:1px 0;color:#303849}
+.tool-entry+.tool-entry{border-top:1px solid #e2e6ef;margin-top:7px;padding-top:7px}
+.tool-brief{margin:0;line-height:1.45;font-weight:500}
+.tool-entry-actions{position:relative;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:start;column-gap:8px}
+.tool-entry-actions details{grid-column:1/-1;grid-row:1;min-width:0}
+.tool-entry-actions summary{width:max-content;max-width:100%;cursor:pointer;color:#52647f;font:inherit;font-size:12px;padding:5px 0}
+.tool-record-edit{grid-column:2;grid-row:1;position:relative;display:inline-flex;align-items:center;gap:4px;align-self:start;border:0;background:none;color:#31559c;font:inherit;font-size:12px;text-decoration:none;cursor:pointer;padding:5px 0}
+.tool-record-edit img{width:12px;height:12px}
+.tool-record-edit:hover,.tool-entry-actions summary:hover{text-decoration:underline}
+.tool-full{padding:6px 0 2px}
+.tool-full p{white-space:pre-line;overflow-wrap:anywhere;margin:0 0 5px}
+.tools-bank-body{padding:0 20px 20px}
+@media screen and (max-width:850px){
+ #tools-table,#tools-table thead,#tools-table tbody,#tools-table tr,#tools-table th,#tools-table td{display:block;width:100%;min-width:0}
+ #tools-table thead{display:none}
+ #tools-table tr>th.tools-name{position:static;padding:12px 14px 4px;box-shadow:none;border:0}
+ #tools-table td[data-project-label]{border-right:0;padding:6px 14px}
+ #tools-table[data-single=false] td[data-project-label]::before{content:attr(data-project-label);display:block;font-size:11px;color:#687387}
+ #tools-table .tool-record-edit,#tools-table .tool-entry-actions summary{padding:8px 0}
+}
+.tools-param-panel{grid-column:1/-1;border-top:1px solid #e3e7ef;padding-top:10px}
+.tools-param-panel>summary,.tools-alert>summary{cursor:pointer}
+.tools-param-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:14px}
+@media(max-width:650px){.tools-param-grid{grid-template-columns:minmax(0,1fr)}}

@@ -13,9 +13,11 @@
     return {checkedAt:checkedAt,stale:stale,fallback:!!reason,message:message};
   }
   window.SMToolsMortgageNotices=function(getData){
-    var status=document.getElementById('tools-status'),notice=document.createElement('div');
+    var status=document.getElementById('tools-status'),notice=document.createElement('details');
     notice.className='tools-alert';
-    notice.setAttribute('role','status');
+    const summary=document.createElement('summary'), body=document.createElement('p');
+    summary.textContent='Часть ставок показана по последней проверке';
+    notice.append(summary,body);
     document.getElementById('tools-error').before(notice);
     function update(){
       var data=getData(),projects=window.SMToolsModel.projects;
@@ -23,7 +25,7 @@
         return projects[key]+'. '+mortgageStatus(data,key).message;
       });
       notice.hidden=!warnings.length;
-      notice.textContent=warnings.join(' ');
+      body.textContent=warnings.join(' ');
     }
     update();
     // После сохранения и перечитывания редактор обновляет текст статуса каталога.

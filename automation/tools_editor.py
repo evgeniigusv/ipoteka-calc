@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
 """Личный редактор: только loopback, Google OAuth вне репозитория, CSRF и проверка версии."""
-import json, secrets, threading, hmac
+import json, secrets, threading, hmac, re
 import owner_catalog
 from owner_catalog import read
 from zipfile import BadZipFile
 from xml.etree.ElementTree import ParseError
 from tools_proposals import document, proposals, transcribe
 from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
-from urllib.parse import urlsplit
+from urllib.parse import parse_qs, urlsplit
 from tools_source import ROOT, config, write_changes, publish, revision, validate
-from subsidy_catalog import managed, with_subsidies
+from subsidy_catalog import PUBLISHED, managed, with_subsidies
+from subsidy_source import source_link
 from tools_google_connect import start as connect_google
 from tools_ai import interpret
 PORT=8795; ORIGIN=f'http://127.0.0.1:{PORT}'; SESSION=secrets.token_urlsafe(32); CSRF=secrets.token_urlsafe(32); LOCK=threading.Lock()
@@ -91,6 +92,30 @@ document.querySelector('#go').onclick=async function(){this.disabled=true;try{co
         if not self.host_ok() or not (self.same_site() or entry): return self.respond(403,{'error':'Редактор доступен только на этом Mac.'})
         if path=='/api/session':
             c=config(); return self.respond(200,{'csrf':CSRF,'source':'https://docs.google.com/spreadsheets/d/'+c['spreadsheet_id']+'/edit#gid='+str(c['gid'])},True)
+        if path == '/api/subsidy-source':
+            origin = self.headers.get('Origin')
+            if ((origin is not None and origin != ORIGIN)
+                    or self.headers.get('Sec-Fetch-Site') not in (None, 'same-origin')
+                    or (origin is None and self.headers.get('Sec-Fetch-Site') != 'same-origin')):
+                return self.respond(403, {'error': 'Откройте ссылку из личного редактора.'})
+            if not self.authorized():
+                return self.respond(401, {'error': 'Откройте личный редактор заново.'})
+            ids = parse_qs(urlsplit(self.path).query, keep_blank_values=True).get('id', [])
+            if len(ids) != 1 or not re.fullmatch(r'[a-zA-Z0-9_-]{1,100}', ids[0]):
+                return self.respond(400, {'error': 'Укажите один ID программы.'})
+            try:
+                records = json.loads(PUBLISHED.read_text())['records']
+                matches = [r for r in records if r['id'] == ids[0]]
+                if not matches:
+                    # В редакторе уже могут быть программы, ещё не попавшие в снимок.
+                    records = with_subsidies(read_catalog())['records']
+                    matches = [r for r in records if r['id'] == ids[0]]
+                result = source_link(matches[0]) if len(matches) == 1 else None
+            except Exception:
+                return self.respond(503, {'error': 'Не удалось прочитать справочник субсидий.'})
+            if result is None:
+                return self.respond(404, {'error': 'Программа справочника субсидий не найдена.'})
+            return self.respond(200, result)
         if path=='/api/tools':
             if not self.authorized(): return self.respond(401,{'error':'Откройте личный редактор заново.'})
             try: return self.respond(200,with_subsidies(read_catalog()))

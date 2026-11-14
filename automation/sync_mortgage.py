@@ -117,6 +117,15 @@ def number(value, percent=False):
     return result
 
 
+def mortgage_type(value):
+    return {'базовая': 'Базовая ипотека', 'базовая ипотека': 'Базовая ипотека',
+            'семейная ипотека': 'Семейная ипотека'}.get(value.casefold())
+
+
+def kids_condition(value):
+    return value.replace('ребенок', 'ребёнок').replace('ребенка', 'ребёнка')
+
+
 def parse_rows(rows, project):
     programs, seen = [], set()
     for rownum, raw in enumerate(rows[1:], 2):
@@ -127,7 +136,7 @@ def parse_rows(rows, project):
             bank, kind, condition = [str(v).strip() for v in row[:3]]
             if not bank or len(bank) > 60 or re.search(r'[<>\n\r]|https?://', bank):
                 raise ValueError('Не указан банк или некорректное название')
-            kind = {'базовая': 'Базовая ипотека', 'базовая ипотека': 'Базовая ипотека', 'семейная ипотека': 'Семейная ипотека'}.get(kind.casefold())
+            kind = mortgage_type(kind)
             if not kind:
                 raise ValueError('Неизвестный тип ипотеки; нужна настройка калькулятора')
             term, rate = number(row[6]), number(row[4], True)
@@ -142,7 +151,7 @@ def parse_rows(rows, project):
                 raise ValueError('Комиссия некорректна или не совпадает с расчётной колонкой')
             item = dict(projects=PROJECTS[project], type=kind, bank=bank, term=int(term), rate=rate, subsidy=fee, minPv=MIN_PV[project])
             if kind == 'Семейная ипотека':
-                kids = condition.replace('ребенок', 'ребёнок').replace('ребенка', 'ребёнка')
+                kids = kids_condition(condition)
                 if kids not in ['1 ребёнок', '2 ребёнка', '3 ребёнка', '4 ребёнка', '5 и более детей']:
                     raise ValueError('Неизвестное условие по детям')
                 limit = number(row[10])
