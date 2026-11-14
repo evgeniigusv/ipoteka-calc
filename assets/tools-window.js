@@ -84,7 +84,7 @@
       const url = new URL('/tools.html', owner);
       if (next.project !== 'all') url.searchParams.set('project', next.project);
       if (next.section !== 'all') url.searchParams.set('section', next.section);
-      if (next.id) url.searchParams.set('edit', next.id);
+      if (next.id) url.searchParams.set(next.kind === 'add-project' ? 'template' : 'edit', next.id);
       if (next.kind === 'new' || next.kind === 'ai') url.hash = next.kind;
       $('owner-direct').href = url.href;
       dialog.showModal();

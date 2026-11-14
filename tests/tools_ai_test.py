@@ -16,6 +16,19 @@ ROW = next(r for r in DATA['records'] if r['kind']=='installment')
 
 
 class ConditionsTest(unittest.TestCase):
+    def test_add_existing_tranche_to_another_project(self):
+        source = next(r for r in DATA['records'] if r['kind']=='tranche' and r['params'].get('first')==.1)
+        draft = dict(copy.deepcopy(source), id='test-tranche-da1', project='da1', category='tranche')
+        draft['params']['first'] = .12
+        with patch.object(ai, 'generate', return_value={'question':'', 'edits':[]}) as generate:
+            current = dict(DATA, revision='test-add-project')
+            self.assertEqual(tools_editor.prepare(current, [draft]), [draft])
+            generate.assert_not_called()
+            draft['description'] += ' Новые условия для первой очереди.'
+            tools_editor.prepare(current, [draft])
+            generate.assert_called_once()
+        self.assertEqual(source['params']['first'], .1)
+
     def test_text_discount_and_manual_conflict(self):
         draft = copy.deepcopy(ROW)
         draft['description'] += ' Скидка на сумму ПВ 16%.'

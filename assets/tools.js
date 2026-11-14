@@ -97,11 +97,13 @@ function compactCell(r){
 }
 
 function compactRow(group){
+ const template=Object.values(group.cells).flat()[0];
  const cells=projects().map(projectKey=>{
   const records=group.cells[projectKey]||[];
   let contents=records.map(r=>(r.name!==group.name?'<strong>'+esc(r.name)+'</strong>':'')+compactCell(r)).join('');
-  if(!records.length && local && $('tools-inactive').value==='active' && !Object.values(group.cells).flat().some(r=>r.source==='subsidies')){
-   contents='<button type="button" class="tools-add-cell" data-new-project="'+projectKey+'" data-group="'+group.id+'">Добавить условия</button>';
+  if(!records.length && $('tools-inactive').value==='active' && !activeInProject(template,projectKey)){
+   const label='Добавить условия · '+group.name+' · '+names[projectKey];
+   contents='<button type="button" class="tools-add-cell" aria-label="'+esc(label)+'" data-new-project="'+projectKey+'" data-template="'+esc(template.id)+'">+ Добавить</button>';
   }
   return '<td data-project-label="'+names[projectKey]+'" class="'+(records.some(r=>changes.has(r.id))?'tools-dirty':'')+'">'+(contents||'—')+'</td>';
  });
@@ -258,23 +260,38 @@ function editorFields(r,isNew){
 function defaults(kind){return kind==='mortgage'?{type:'Базовая ипотека',term:30,minPv:.201,subsidy:0}:kind==='installment'?{scheme:'deferred',minPv:.2,months:12,disc:0}:kind==='tranche'?{tranches:2,minPv:.201,firstRub:100000,secondMonths:12}:kind==='chpv'?{minDown:.201,cost:.25,overRate:.14,years:15}:kind==='discount'?{scope:'cash',percent:0}:{};}
 function addStage(m){var div=document.createElement('div');div.className='tools-milestone';div.innerHTML='<input data-stage="share" inputmode="decimal" aria-label="Доля этапа, %" placeholder="Доля, %" value="'+esc(m.share?+(m.share*100).toFixed(4):'')+'"><input data-stage="date" type="date" aria-label="Дата этапа" value="'+esc(m.date?(m.date.length===7?m.date+'-01':m.date):'')+'"><input data-stage="months" type="number" min="1" max="60" aria-label="Месяцев после сделки" placeholder="Или месяцев" value="'+esc(m.months||'')+'"><button type="button" class="t-icon" aria-label="Убрать этап">'+icon('x-lg')+'</button>';div.querySelector('button').onclick=function(){div.remove();};$('tools-milestones').appendChild(div);}
 var proposalEdit=null;
-function openEditor(id,group,targetProject,draft,newProposal){
+function activeInProject(template,projectKey){
+ return data.records.find(r=>r.enabled&&r.group===template.group&&M.section(r)===M.section(template)&&r.project===projectKey);
+}
+function addProjectConditions(templateId,targetProject){
+ if(!Object.hasOwn(names,targetProject))return;
+ const template=data.records.find(r=>r.id===templateId&&r.enabled);
+ if(!template){alert('Образец больше не действует. Обновите каталог.');return;}
+ const existing=activeInProject(template,targetProject);
+ if(existing){editRecord(existing.id);return;}
+ const draft=copyAsNew(template);
+ draft.project=targetProject;
+ draft.category=M.section(template);
+ openEditor(null,draft,false,true);
+}
+function openEditor(id,draft,newProposal,projectConditions){
  if(draft||id){
    editing=M.clone(draft||data.records.find(r=>r.id===id));
- }else if(group){
-   var template=data.records.find(r=>r.group===group&&r.enabled);
-   editing=Object.assign(copyAsNew(template),{project:targetProject});
  }else{
    var kind=(kindsByCategory[category]||[])[0];
    editing={id:'tool-'+crypto.randomUUID(),group:'group-'+crypto.randomUUID(),name:'',
      project:project==='all'?'':project,category:category==='all'?'':category,kind:kind,params:defaults(kind),
      description:'',combination:'',mode:'none',enabled:true};
  }
- $('tools-editor-title').textContent=id?editing.name:'Новый инструмент';
+ $('tools-editor-title').textContent=projectConditions?'Добавить условия · '+editing.name:id?editing.name:'Новый инструмент';
  $('tools-editor-project').textContent=[names[editing.project]||'Черновик инструмента',editing.params.ownerOnly?'Только владельцу':''].filter(Boolean).join(' · ');
  $('tools-form-error').textContent='';
- $('tools-form').querySelector('button[type=submit]').textContent=draft?'Обновить предложение':editing.source==='subsidies'?'Вести в приложении · в черновик':'В черновик';
+ $('tools-form').querySelector('button[type=submit]').textContent=proposalEdit?'Обновить предложение':editing.source==='subsidies'?'Вести в приложении · в черновик':'В черновик';
  editorFields(editing,!id||newProposal);
+ if(projectConditions){
+  const form=$('tools-form');
+  for(const field of ['project','category','kind'])form.elements[field].disabled=true;
+ }
  $('tools-editor').showModal();
 }
 function copyAsNew(source){
@@ -292,7 +309,7 @@ function duplicateRecord(id){
  const draft=copyAsNew(source);
  draft.group='group-'+crypto.randomUUID();
  draft.name='Копия · '+source.name;
- openEditor(null,null,null,draft,true);
+ openEditor(null,draft,true);
  $('tools-editor-title').textContent='Копия инструмента';
  $('tools-form').querySelector('button[type=submit]').textContent='В черновик';
 }
@@ -359,7 +376,11 @@ $('tools-rows').onclick=function(e){var b=e.target.closest('button');if(!b||busy
   }catch(err){alert(err.message);}
  }
  return;
-}if(b.dataset.newProject&&local){openEditor(null,b.dataset.group,b.dataset.newProject);return;}if(b.dataset.edit){if(local)editRecord(b.dataset.edit);else ownerAction('edit',b.dataset.edit);}if(b.dataset.category){collapsed[b.dataset.category]=!collapsed[b.dataset.category];render();}};
+}if(b.dataset.newProject){
+ if(local)addProjectConditions(b.dataset.template,b.dataset.newProject);
+ else ownerAction('add-project',b.dataset.template,b.dataset.newProject);
+ return;
+}if(b.dataset.edit){if(local)editRecord(b.dataset.edit);else ownerAction('edit',b.dataset.edit);}if(b.dataset.category){collapsed[b.dataset.category]=!collapsed[b.dataset.category];render();}};
 $('tools-reset').onclick=function(){if(confirm('Отменить несохранённые изменения?')){data=M.clone(baseline);changes.clear();alert('');render();}};
 async function api(path,body){var res=await fetch(path,{method:body?'POST':'GET',headers:body?{'Content-Type':'application/json','X-CSRF-Token':csrf,'X-Editor-Session':csrf}:{'X-Editor-Session':csrf},body:body?JSON.stringify(body):undefined,cache:'no-store'}),j=await res.json();if(!res.ok)throw Error(j.error||'Не удалось выполнить запрос.');return j;}
 function accepted(d){M.validate(d);data=M.clone(d);baseline=M.clone(d);revision=d.revision;changes.clear();status();render();}
@@ -394,10 +415,10 @@ Object.entries(M.categories).forEach(function([key,label]){$('tools-category').a
 var params=new URLSearchParams(location.search);
 if(Object.hasOwn(names,params.get('project')))selectProject(params.get('project'));
 if(Object.hasOwn(M.categories,params.get('section')))category=$('tools-category').value=params.get('section');
-function ownerAction(kind,id){
+function ownerAction(kind,id,targetProject){
  const record=id&&data?.records.find(r=>r.id===id);
- const titles={manage:'Управление инструментами',new:'Добавить инструмент',ai:'Добавить с ИИ',edit:record?.name||'Редактировать инструмент'};
- SMOwnerWindow.open({kind,id,project:record?.project||project,section:record?M.section(record):category},titles[kind]);
+ const titles={'add-project':'Добавить условия · '+names[targetProject],manage:'Управление инструментами',new:'Добавить инструмент',ai:'Добавить с ИИ',edit:record?.name||'Редактировать инструмент'};
+ SMOwnerWindow.open({kind,id,project:targetProject||record?.project||project,section:record?M.section(record):category},titles[kind]);
 }
 $('tools-owner-link').onclick=()=>ownerAction('manage');
 $('tools-owner-new').onclick=()=>ownerAction('new');
@@ -412,7 +433,7 @@ if(local){
    }
    return api(path,body);
  },csrf:function(){return csrf;},model:M,names:names,kinds:kindNames,
- revision:function(){return revision;},edit:function(record,isNew,done){proposalEdit=done;openEditor(record.id,null,null,record,isNew);},
+ revision:function(){return revision;},edit:function(record,isNew,done){proposalEdit=done;openEditor(record.id,record,isNew);},
  applied:function(res){
    var pending=Array.from(changes.values());accepted(res.data);
    pending.forEach(function(r){var i=data.records.findIndex(function(x){return x.id===r.id;});if(i<0)data.records.push(r);else data.records[i]=r;changes.set(r.id,r);});
@@ -427,12 +448,13 @@ if(showLinkedType)expandedMortgages.add(linkedType);
 accepted(window.SM_TOOLS_DATA);
 if(showLinkedType)requestAnimationFrame(()=>$('mortgage-type-'+linkedType)?.scrollIntoView({block:'start'}));
 SMOwnerWindow.ready(function(action){
- if(!action||!['manage','new','edit','ai'].includes(action.kind))return;
+ if(!action||!['manage','new','edit','ai','add-project'].includes(action.kind))return;
  selectProject(Object.hasOwn(names,action.project)?action.project:'all');
  category=$('tools-category').value=Object.hasOwn(M.categories,action.section)?action.section:'all';
  $('tools-search').value='';
  $('tools-inactive').value='active';
  render();
+ if(action.kind==='add-project')addProjectConditions(action.id,action.project);
  if(action.kind==='edit')editRecord(action.id);
  if(action.kind==='new')openEditor();
  if(action.kind==='ai')$('tools-ai').click();
@@ -443,6 +465,12 @@ if(SMOwnerWindow.embedded){
  };
  $('tools-editor').addEventListener('close',returnIfFinished);
  $('ai-dialog').addEventListener('close',returnIfFinished);
+}
+if(local && params.has('template')){
+ const template=params.get('template');
+ params.delete('template');
+ history.replaceState(null,'',location.pathname+'?'+params.toString());
+ addProjectConditions(template,project);
 }
 if(local && params.has('edit')){
  const id=params.get('edit');

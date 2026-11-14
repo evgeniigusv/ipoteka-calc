@@ -12,7 +12,7 @@ from tools_source import ROOT, config, write_changes, publish, revision, validat
 from subsidy_catalog import PUBLISHED, bank_row, manual_record, with_subsidies
 from subsidy_source import source_link
 from tools_google_connect import start as connect_google
-from tools_ai import interpret
+from tools_ai import TEXT_FIELDS, interpret
 PORT=8795; ORIGIN=f'http://127.0.0.1:{PORT}'; SESSION=secrets.token_urlsafe(32); CSRF=secrets.token_urlsafe(32); LOCK=threading.Lock()
 # Подготовленные формы живут только до изменения версии источника или перезапуска.
 PREPARED = set()
@@ -59,7 +59,14 @@ def prepare(current, changes):
         context = [r for r in proposed.values() if r['kind']=='discount' and r['enabled'] and r['project']==draft['project']]
         key = (current['revision'], revision(draft), revision(context))
         previous = previous_rows.get(draft['id'])
-        result = draft if key in PREPARED else interpret(previous, draft, context)
+        # При переносе в соседнюю колонку текст уже разобран у программы-образца.
+        reference = previous
+        if reference is None:
+            reference = next((r for r in previous_rows.values()
+                              if r['enabled'] and r['group'] == draft['group'] and r['kind'] == draft['kind']
+                              and r['project'] != draft['project']
+                              and all(r[k] == draft[k] for k in TEXT_FIELDS)), None)
+        result = draft if key in PREPARED else interpret(reference, draft, context)
         result = manual_record(previous, result, imported.values())
         proposed[draft['id']] = prepared[draft['id']] = result
     candidate = dict(current, records=list(proposed.values()))
