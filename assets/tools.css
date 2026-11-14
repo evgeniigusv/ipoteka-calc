@@ -22,3 +22,46 @@
 .tools-owner{display:flex;align-items:center;flex-wrap:wrap;gap:8px}.tools-owner>span{font-size:12px;color:#565d71}
 @media(max-width:650px){.tools-owner{flex:1 1 100%}.tools-owner>span{flex-basis:100%}}
 @media print{.tools-owner{display:none}}
+
+/* Выбор области каталога и действия с выбранными записями. */
+.tools-filter{display:grid;gap:6px;min-width:0;color:#505a70;font-weight:600;font-size:12px}
+.tools-filter select,.tools-context select{font:inherit;font-weight:400;color:#303849;background:#fff;border:1px solid #cdd4e0;border-radius:7px;padding:9px;max-width:100%}
+.tools-filter select,.tools-search,.tools-pills button{min-height:42px;font-size:14px}
+.tools-search-field{flex:1;max-width:420px}.tools-search{font-weight:400}
+.tools-toolbar-actions{margin:16px 0;align-items:center}.tools-owner{margin-left:auto}
+.tools-section-label{display:flex;align-items:center;padding:9px 15px;gap:10px;font-weight:600}
+.tools-record-actions{display:flex;flex-wrap:wrap;gap:2px 10px;margin-top:8px}
+.tools-record-actions button{color:#31559c;background:transparent;border:0;padding:5px 0;text-align:left;font-size:12px}
+.tools-record-actions button:hover{text-decoration:underline}
+.tools-cell.tools-disabled{opacity:1}.tools-disabled>p{color:#687387}
+.tools-private{color:#754a18;background:#fff0d9}
+.tools button:disabled{cursor:default}
+#tools-print{display:none}
+.tools-savebar{z-index:2}.tools-savebar>span{max-width:46em}
+@media screen and (max-width:650px){
+  .tools-toolbar{display:grid;grid-template-columns:minmax(0,1fr);gap:10px}
+  .tools-filter{gap:3px}.tools-search-field,.tools-search{width:100%;max-width:none}
+  .tools-pills{gap:5px}.tools-pills button{padding:6px 8px}
+  .tools-owner{margin:0}.tools-owner>span{flex-basis:auto}
+  .tools-toolbar-actions{gap:6px}.tools-toolbar-actions .t-btn{white-space:normal}
+  .tools-context label{margin-left:0}
+  .tools-savebar{padding:8px 14px max(8px,env(safe-area-inset-bottom));gap:5px}
+  .tools-savebar .t-btn{padding:6px 9px}
+  .tools-body:has(#tools-table[data-single=true]) .tools-scroll-hint{display:none}
+  #tools-table[data-single=true],#tools-table[data-single=true] :is(tbody,tr,td,th){display:block;width:100%;min-width:0}
+  #tools-table[data-single=true] thead{display:none}
+  #tools-table[data-single=true] tr>th.tools-name{position:static;border:0;box-shadow:none;padding:13px 12px 0;font-size:15px}
+  #tools-table[data-single=true] td{border-right:0}
+  #tools-table[data-single=true] tr>th+td{border-bottom:0}
+  #tools-table[data-single=true] .tools-cell{min-height:0}
+  #tools-table[data-single=true] .tools-combination[data-label]::before{content:attr(data-label);display:block;color:#505a70;font-weight:600}
+  #tools-table[data-single=true] .tools-record-actions button{min-height:40px}
+  #tools-table[data-single=true] .tools-program-name{white-space:normal}
+  .tools-editor-foot{padding-bottom:max(14px,env(safe-area-inset-bottom))}
+}
+@media print{
+  body.tools> :not(#tools-print){display:none!important}
+  #tools-print{display:block;color:#222;background:white}
+  #tools-print .tools-table{min-width:0;font-size:9pt}
+  #tools-print .tools-table tr>th.tools-name{position:static;box-shadow:none}
+}

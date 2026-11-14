@@ -1,7 +1,7 @@
 import copy
-import csv
+import zipfile
+import xml.etree.ElementTree as ET
 import io
-import json
 import importlib.util
 import unittest
 from pathlib import Path
@@ -18,22 +18,64 @@ def family(**changes):
 def parse(row):return m.parse_rows([m.HEADERS,row],'dnk')
 
 class SyncTest(unittest.TestCase):
-    def source_responses(self, raw=None, bank='Тест Банк'):
-        row=raw or family()
-        output=io.StringIO();writer=csv.writer(output);writer.writerows([m.HEADERS,row])
-        values=family();values[0]=bank
-        # 7.001% отображается как 7.00%, но для расчёта нужна исходная точность.
-        for i,v in {4:.07001,5:.1516,6:15,7:.1516,10:6000000}.items():values[i]=v
-        result={'status':'ok','table':{'cols':[{'label':h} for h in m.HEADERS],'rows':[{'c':[{'v':v} for v in values]}]}}
-        return [output.getvalue(),'google.visualization.Query.setResponse('+json.dumps(result)+');']
-    def test_source_uses_unrounded_value(self):
-        with patch.object(m,'download',side_effect=self.source_responses()):
-            rows=m.read_source('test',{'gid':1,'name':'Справочник'})
-        self.assertEqual(m.parse_rows(rows,'da')[0]['rate'],.07001)
-    def test_wrong_sheet_or_error_cell_cannot_replace_conditions(self):
-        for responses in [self.source_responses(bank='Другой банк'),self.source_responses(raw=family(**{'5':'#REF!'}))]:
-            with patch.object(m,'download',side_effect=responses),self.assertRaises(ValueError):
-                m.read_source('test',{'gid':1,'name':'Справочник'})
+    def export(self, names=('Справочник',), error=None, last_row=3):
+        book = ET.Element('workbook')
+        sheets = ET.SubElement(book, 'sheets')
+        rel_ns = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships'
+        for name in names:
+            ET.SubElement(sheets, 'sheet', {'name': name, '{'+rel_ns+'}id': 'rId5'})
+        rels = ET.Element('Relationships')
+        ET.SubElement(rels, 'Relationship', Id='rId5', Target='worksheets/test.xml', Type=rel_ns+'/worksheet')
+        shared = ET.Element('sst')
+        sheet = ET.Element('worksheet')
+        data = ET.SubElement(sheet, 'sheetData')
+        values = family()
+        for col, value in {4: .07001, 5: .1516, 6: 15, 7: .1516, 10: 6000000}.items():
+            values[col] = value
+        for index, cells in [(1, m.HEADERS), (last_row, values)]:
+            row = ET.SubElement(data, 'row', r=str(index), hidden=str(int(index > 1)))
+            for col, value in enumerate(cells):
+                ref = chr(65+col)+str(index)
+                cell = ET.SubElement(row, 'c', r=ref)
+                if error and ref == error[0]:
+                    cell.set('t', error[1])
+                    value = error[2]
+                elif isinstance(value, str):
+                    cell.set('t', 's')
+                    ET.SubElement(ET.SubElement(shared, 'si'), 't').text = value
+                    value = len(shared)-1
+                ET.SubElement(cell, 'v').text = str(value)
+        stream = io.BytesIO()
+        with zipfile.ZipFile(stream, 'w') as archive:
+            for path, xml in [('workbook.xml', book), ('_rels/workbook.xml.rels', rels),
+                              ('sharedStrings.xml', shared), ('worksheets/test.xml', sheet)]:
+                archive.writestr('xl/'+path, ET.tostring(xml, encoding='utf-8'))
+        return stream.getvalue()
+
+    def test_hidden_rows_precision_and_source_binding(self):
+        with patch.object(m, 'download', return_value=self.export()) as fetch:
+            rows = m.read_source('test', {'gid': 1, 'name': 'Справочник'})
+        fetch.assert_called_once_with('https://docs.google.com/spreadsheets/d/test/export?format=xlsx&gid=1', binary=True)
+        self.assertEqual(rows[1], [])
+        self.assertEqual(m.parse_rows(rows, 'da')[0]['rate'], .07001)
+
+    def test_wrong_or_ambiguous_sheet_rejected(self):
+        for names in [('Другой лист',), ('Справочник', 'Другой лист')]:
+            with self.subTest(names=names), patch.object(m, 'download', return_value=self.export(names)):
+                with self.assertRaisesRegex(ValueError, 'Имя вкладки'):
+                    m.read_source('test', {'gid': 1, 'name': 'Справочник'})
+
+    def test_errors_on_hidden_rows_rejected(self):
+        for ref, kind, value in [('G3', 'str', '#VALUE!'), ('J3', 'e', '#REF!'), ('F3', 'str', '0.1516')]:
+            with self.subTest(ref=ref), patch.object(m, 'download', return_value=self.export(error=(ref, kind, value))):
+                with self.assertRaisesRegex(ValueError, ref):
+                    m.read_source('test', {'gid': 1, 'name': 'Справочник'})
+
+    def test_out_of_range_program_rejected(self):
+        with patch.object(m, 'download', return_value=self.export(last_row=m.MAX_ROWS+1)):
+            with self.assertRaisesRegex(ValueError, 'диапазон'):
+                m.read_source('test', {'gid': 1, 'name': 'Справочник'})
+
     def test_rates_and_commissions_have_independent_units(self):
         p=parse(family())[0]
         self.assertEqual((p['rate'],p['subsidy'],p['term'],p['limit'],p['minPv']),(.07,.1516,15,6000000,.2))

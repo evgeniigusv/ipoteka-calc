@@ -166,17 +166,21 @@
   U.pills(el.type, D.types.map(function (t) { return { value: t, label: t.replace(/[\s-]ипотека$/i, '') }; }), state.type, 'v');
   el.price.value = F.int(CONFIG.defaultPrice);
   el.disc.value = String(+(catalogDiscount() * 100).toFixed(2)).replace('.', ',');
-  var rateStatus=window.SM_MORTGAGE_STATUS||{fallback:true};
-  el.updated.textContent=rateStatus.fallback
-    ? 'Не удалось загрузить обновления. Показана резервная копия ставок от '+window.SM_DATA.updated+'. Перезагрузите страницу перед расчётом.'
-    : 'Ставки и комиссии проверены '+new Date(rateStatus.checkedAt).toLocaleString('ru-RU',{timeZone:'Asia/Yekaterinburg',dateStyle:'short',timeStyle:'short'})+' (Екатеринбург). Обновление каждые 3 часа.'+(rateStatus.stale?' Проверка задерживается — подтвердите актуальность условий.':'');
-  if(rateStatus.fallback || rateStatus.stale)el.updated.classList.add('sm-why');
+  function updateRateStatus(){
+    var status=window.SM_MORTGAGE_STATUS||{fallback:true};
+    var rate=status.byProject ? status.byProject[state.project] : status;
+    el.updated.textContent=rate.message || (rate.fallback
+      ? 'Не удалось загрузить обновления. Показана резервная копия ставок от '+window.SM_DATA.updated+'. Перезагрузите страницу перед расчётом.'
+      : 'Ставки и комиссии проверены '+new Date(rate.checkedAt).toLocaleString('ru-RU',{timeZone:'Asia/Yekaterinburg',dateStyle:'short',timeStyle:'short'})+' (Екатеринбург). Обновление каждые 3 часа.'+(rate.stale?' Проверка задерживается — подтвердите актуальность условий.':''));
+    el.updated.classList.toggle('sm-why',rate.fallback || rate.stale);
+  }
+  updateRateStatus();
   setupKids();
 
   var pickPill = function (box, key) {
     U.onPill(box, 'v', function (v, btn) {
       state[key] = v; state.pick = null;
-      if (key === 'project') { flats.setProject(v); el.disc.value=String(+(catalogDiscount()*100).toFixed(2)).replace('.',','); $('sm-pv-hint').textContent=(v==='ДНК — 2 очередь'?'От 20%':'От 20,1%')+' цены по прайсу. Недостаточный взнос увеличивается до минимального.'; }
+      if (key === 'project') { updateRateStatus(); flats.setProject(v); el.disc.value=String(+(catalogDiscount()*100).toFixed(2)).replace('.',','); $('sm-pv-hint').textContent=(v==='ДНК — 2 очередь'?'От 20%':'От 20,1%')+' цены по прайсу. Недостаточный взнос увеличивается до минимального.'; }
       Array.prototype.forEach.call(box.children, function (b) { b.setAttribute('aria-pressed', String(b === btn)); });
       setupKids();
       render();

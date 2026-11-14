@@ -22,8 +22,8 @@ def curl(url, method='GET', body=None, headers=None):
     if not status.startswith('2'): raise RuntimeError('Источник вернул HTTP '+status+'. Проверьте подключение и права.')
     return data
 
-def google(method,path,body=None):
-    c=config(); auth=json.loads(Path(c['credentials']).expanduser().read_text())
+def google(method,path,body=None, *, source=None):
+    c=source or config(); auth=json.loads(Path(c['credentials']).expanduser().read_text())
     raw=curl('https://oauth2.googleapis.com/token','POST',urlencode({k:auth[k] for k in ['client_id','client_secret','refresh_token']} | {'grant_type':'refresh_token'}),{'Content-Type':'application/x-www-form-urlencoded'})
     token=json.loads(raw).get('access_token')
     if not token: raise RuntimeError('Переподключите Google на этом Mac.')
@@ -32,7 +32,7 @@ def google(method,path,body=None):
 def row(r):
     return [json.dumps(r[k],ensure_ascii=False,separators=(',',':')) if k=='params' else ('TRUE' if r[k] else 'FALSE') if k=='enabled' else r[k] for k in KEYS]
 
-def parse(rows):
+def parse(rows, *, private=False):
     if not rows or rows[0]!=COLUMNS: raise ValueError('Изменена структура справочника. Снимок не опубликован.')
     records=[]
     for i,cells in enumerate(rows[1:]):
@@ -44,7 +44,12 @@ def parse(rows):
         if str(r['enabled']).upper() not in ['TRUE','FALSE']: raise ValueError('Активен: нужно TRUE или FALSE.')
         r['enabled']=str(r['enabled']).upper()=='TRUE'; records.append(r)
     data={'version':1,'checked_at':datetime.now(timezone.utc).isoformat(),'records':records}
-    validate(data); data['revision']=revision(records); return data
+    if private:
+        validate_private(records)
+    else:
+        validate(data)
+    data['revision']=revision(records)
+    return data
 
 def validate(data):
     p=subprocess.run(['node','-e',"const fs=require('fs');require('./assets/tools-model.js').validate(JSON.parse(fs.readFileSync(0,'utf8')));"],cwd=ROOT,input=json.dumps(data,ensure_ascii=False),text=True,capture_output=True)
@@ -56,33 +61,81 @@ def validate(data):
 def revision(records):
     return hashlib.sha256(json.dumps(records,ensure_ascii=False,sort_keys=True,separators=(',',':')).encode()).hexdigest()
 
-def read(authenticated=False):
-    c=config()
+def authenticated_rows(c):
+    tab = "'" + c['sheet_name'].replace("'", "''") + "'!A1:K601"
+    path = '/values/' + quote(tab, safe='') + '?valueRenderOption=UNFORMATTED_VALUE'
+    return google('GET', path, source=c).get('values', [])
+
+
+def read(authenticated=False, *, source=None):
+    c=source or config()
     if authenticated:
-        rg=quote("'"+c['sheet_name'].replace("'","''")+"'!A1:K601",safe='')
-        rows=google('GET','/values/'+rg+'?valueRenderOption=UNFORMATTED_VALUE').get('values',[])
+        rows=authenticated_rows(c)
     else:
         raw=curl('https://docs.google.com/spreadsheets/d/'+c['spreadsheet_id']+'/export?'+urlencode({'format':'csv','gid':c['gid']}))
         rows=list(csv.reader(io.StringIO(raw)))
         while rows and not any(rows[-1]): rows.pop()
     return parse(rows)
 
-def write_changes(current,changes):
+def validate_private(records):
+    if any(r['params'].get('ownerOnly') is not True for r in records):
+        raise ValueError('В личном справочнике допустимы только записи владельца.')
+    if len({r['id'] for r in records}) != len(records):
+        raise ValueError('Повтор ID в личном справочнике.')
+    script = "const m=require('./assets/tools-model.js'); JSON.parse(require('fs').readFileSync(0,'utf8')).forEach(m.validateRecord)"
+    result = subprocess.run(['node','-e',script], cwd=ROOT, input=json.dumps(records),
+                            text=True, capture_output=True)
+    if result.returncode:
+        raise ValueError('Проверьте поля личного инструмента.')
+
+
+def private_source(conf):
+    return dict(config(), **conf)
+
+
+def read_private(conf):
+    return parse(authenticated_rows(private_source(conf)), private=True)
+
+
+def write_private(current, changes, conf):
+    source = private_source(conf)
+    _write_rows(current, changes, source, private=True)
+    return read_private(conf)
+
+
+def write_changes(current, changes, *, source=None):
+    _write_rows(current, changes, source)
+    return read(True, source=source) if source else read(True)
+
+
+def _write_rows(current, changes, source, private=False):
     byid={r['id']:i+2 for i,r in enumerate(current['records'])}; records={r['id']:r for r in current['records']}
     if not isinstance(changes,list) or not changes or len(changes)>100: raise ValueError('От 1 до 100 изменений за сохранение.')
-    seen=set(); nextrow=len(byid)+2; updates=[]; title="'"+config()['sheet_name'].replace("'","''")+"'"
+    seen=set(); nextrow=len(byid)+2; updates=[]; title="'"+(source or config())['sheet_name'].replace("'","''")+"'"
     for r in changes:
         if r['id'] in seen: raise ValueError('Повтор ID в изменениях.')
         seen.add(r['id']); n=byid.get(r['id'])
         if n is None: n=nextrow; nextrow+=1
         records[r['id']]=r; updates.append({'range':f'{title}!A{n}:K{n}','values':[row(r)]})
-    validate({'version':1,'records':list(records.values())})
-    google('POST','/values:batchUpdate',{'valueInputOption':'RAW','data':updates})
-    return read(True)
+    if private:
+        validate_private(list(records.values()))
+    else:
+        if any(r['params'].get('ownerOnly') for r in changes):
+            raise ValueError('Личные инструменты сохраняются в отдельном закрытом справочнике.')
+        validate({'version':1,'records':list(records.values())})
+    body = {'valueInputOption':'RAW','data':updates}
+    google('POST','/values:batchUpdate',body,source=source)
+
+def public_snapshot(data):
+    clean = {key: data[key] for key in ('version', 'checked_at', 'full_checked_at', 'mortgageWarnings', 'mortgageCheckedAt') if key in data}
+    clean['records'] = [r for r in data['records'] if not r['params'].get('ownerOnly')]
+    validate(clean)
+    return clean
+
 
 def publish(data):
-    validate(data)
-    clean={k:data[k] for k in ['version','checked_at','records']}; payload=json.dumps(clean,ensure_ascii=False,indent=2)+'\n'
+    clean = public_snapshot(data)
+    payload = json.dumps(clean, ensure_ascii=False, indent=2) + '\n'
     endpoint='repos/'+config().get('repo','evgeniigusv/ipoteka-calc')+'/contents/assets/tools.json'
     def gh(args,stdin=None):
         p=subprocess.run(['gh','api',*args],input=stdin,text=True,capture_output=True,timeout=60)

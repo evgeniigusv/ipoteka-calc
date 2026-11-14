@@ -99,7 +99,8 @@ class BatchTest(unittest.TestCase):
         self.addCleanup(mock.stop)
         return mock.start()
 
-    def apply_in_memory(self, method, path, body):
+    def apply_in_memory(self, method, path, body, **kwargs):
+        self.assertIsNone(kwargs.get('source'))
         self.assertEqual((method, path), ('POST', '/values:batchUpdate'))
         rows = [source.row(r) for r in self.data['records']]
         for update in body['data']:

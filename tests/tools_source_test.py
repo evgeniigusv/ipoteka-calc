@@ -12,6 +12,16 @@ class SourceTests(unittest.TestCase):
   with self.assertRaises(ValueError): source.parse([source.COLUMNS,rows[1],[],rows[2]])
   bad=copy.deepcopy(rows);bad[1][9]='{"rate":100}'
   with self.assertRaises(ValueError): source.parse(bad)
+ def test_public_snapshot_excludes_owner_only_records(self):
+  data = copy.deepcopy(DATA)
+  private = dict(next(r for r in data['records'] if r['kind'] == 'info'))
+  private.update(id='owner-only-test', params={'ownerOnly': True}, name='Внутренние условия')
+  data['records'].append(private)
+  snapshot = source.public_snapshot(data)
+  self.assertNotIn(private, snapshot['records'])
+  self.assertEqual(snapshot['records'], DATA['records'])
+  self.assertIn(private, data['records'])
+
  def test_cyrillic_request_encoding(self):
   result=type('Result',(),{'returncode':0,'stdout':'{}\n200'})()
   with patch.object(source.subprocess,'run',return_value=result) as run:

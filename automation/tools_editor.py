@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 """Личный редактор: только loopback, Google OAuth вне репозитория, CSRF и проверка версии."""
 import json, secrets, threading, hmac
+import owner_catalog
+from owner_catalog import read
 from zipfile import BadZipFile
 from xml.etree.ElementTree import ParseError
 from tools_proposals import document, proposals, transcribe
 from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 from urllib.parse import urlsplit
-from tools_source import ROOT, config, read, write_changes, publish, revision, validate
+from tools_source import ROOT, config, write_changes, publish, revision, validate
 from subsidy_catalog import managed, with_subsidies
 from tools_google_connect import start as connect_google
 from tools_ai import interpret
@@ -32,6 +34,7 @@ def prepare(current, changes):
             raise ValueError('Повтор ID в изменениях.')
         seen.add(draft['id'])
         previous = records.get(draft['id'])
+        owner_catalog.check_scope(previous, draft)
         if managed(draft) or (previous and managed(previous)) or draft.get('source') or draft['id'].startswith('sub-'):
             raise ValueError('Субсидированную ипотеку редактируют в справочнике субсидий проекта.')
         if previous and (previous['kind'], previous['project']) != (draft['kind'], draft['project']):
@@ -141,6 +144,7 @@ document.querySelector('#go').onclick=async function(){this.disabled=true;try{co
                     raise ValueError('Неверная строка предложения.')
                 if draft['id'] in records and (draft['project'], draft['kind']) != (previous['project'], previous['kind']):
                     raise ValueError('Проект и механика существующего инструмента должны совпадать.')
+                owner_catalog.check_scope(records.get(draft['id']), draft)
                 cash = [r for r in records.values() if r['kind']=='discount' and r['enabled']
                         and r['project']==draft['project']]
                 same_kind = previous['kind'] == draft['kind']
@@ -164,24 +168,34 @@ document.querySelector('#go').onclick=async function(){this.disabled=true;try{co
                             raise ValueError('Подготовьте предложение повторно.')
                         changes.append(record)
                     existing = {r['id']:r for r in current['records']}
-                    if current['revision'] != req['revision']:
+                    for record in changes:
+                        owner_catalog.check_scope(existing.get(record['id']), record)
+                    if isinstance(current, owner_catalog.Catalog):
+                        current = owner_catalog.save(current, req['revision'], changes, lambda _, rows: rows, 'accept')
+                    elif current['revision'] != req['revision']:
                         if not all(existing.get(r['id']) == r for r in changes):
                             return self.respond(409, {'error':'Условия в Google изменились. Подготовьте предложения повторно.'})
                     else:
                         current = write_changes(current, changes)
                 if self.path in ('/api/tools', EVENT):
-                    if req.get('revision')!=current['revision']: return self.respond(409,{'error':'Справочник изменён в Google. Перечитайте его перед сохранением.'})
-                    changes = prepare(current, req.get('changes'))
-                    if preview:
-                        return self.respond(200, {'changes': changes})
-                    if read(True)['revision'] != current['revision']:
-                        return self.respond(409, {'error':'Во время разбора условия в Google изменились. Перечитайте справочник.'})
-                    current=write_changes(current,changes)
+                    if isinstance(current, owner_catalog.Catalog) and not preview:
+                        current = owner_catalog.save(current, req.get('revision'), req.get('changes'), prepare, 'edit')
+                    else:
+                        if req.get('revision')!=current['revision']: return self.respond(409,{'error':'Справочник изменён в Google. Перечитайте его перед сохранением.'})
+                        changes = prepare(current, req.get('changes'))
+                        if preview:
+                            return self.respond(200, {'changes': changes})
+                        if read(True)['revision'] != current['revision']:
+                            return self.respond(409, {'error':'Во время разбора условия в Google изменились. Перечитайте справочник.'})
+                        current=write_changes(current,changes)
                 current=with_subsidies(current)
-                try: sha=publish(current)
+                public = dict(current, records=[r for r in current['records'] if not owner_catalog.private(r)])
+                public.pop('revision', None)
+                try: sha=publish(public)
                 except Exception as e: return self.respond(200,{'saved':True,'published':False,'data':current,'error':str(e)})
                 return self.respond(200,{'saved':True,'published':True,'data':current,'commit':sha})
         except FileNotFoundError: return self.respond(503,{'error':'Переподключите Google для сохранения. Черновик остался в редакторе.'})
+        except owner_catalog.Conflict as e: return self.respond(409,{'error':str(e)})
         except ValueError as e: return self.respond(400,{'error':str(e)})
         except Exception as e: return self.respond(503,{'error':str(e)})
 if __name__=='__main__':

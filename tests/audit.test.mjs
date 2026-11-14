@@ -30,10 +30,10 @@ for(const project of D.projects)for(const price of [100000,6000000,10000000,3000
  }
 }
 const da=C.installments(D,{project:'ДА — 2 очередь',base:10000000,rooms:1,extra:0},now)[0];
-assert.equal(da.end.getFullYear(),2028);assert.equal(da.end.getMonth(),10);assert.equal(da.end.getDate(),6);assert.equal(da.saved,da.rows[0].amount*.13);
+assert.equal(da.end.getFullYear(),2028);assert.equal(da.end.getMonth(),10);assert.equal(da.end.getDate(),7);assert.equal(da.saved,1000000);
 assert.ok(C.installments(D,{project:'ДА — 1 очередь',base:10000000,rooms:1},new Date(2027,3,1))[0].error);
 for(const [v,expected] of [['10 000 000,00 ₽',10000000],['7 123 456.50',7123457],['-500000',null],['1e6',null],['',null]])assert.equal(SMUi.parseMoney(v),expected);
 const tr={price:10000000,down:.2,rate:.192,years:30,first:.2,second:.2,date1:'2026-11-06',date2:'2027-11-06',date3:'2029-05-01'};
 assert.throws(()=>SMTranshCalc.calculate({...tr,date2:'2027-02-30'}),/даты/);
 assert.throws(()=>SMTranshCalc.calculate({...tr,price:Infinity}),/стоимость/);
-console.log('Аудит: 53 ипотечные программы, амортизация, 13 рассрочек, баланс всех графиков, даты, акция и денежный ввод — проверены');
+console.log('Аудит: 53 ипотечные программы, амортизация, 9 рассрочек, баланс всех графиков, даты, акция и денежный ввод — проверены');

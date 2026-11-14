@@ -27,7 +27,7 @@ test('данные читаются: 3 очереди, 2 типа ипотеки
   assert.deepEqual(D.types, [FAMILY, BASE]);
   assert.equal(D.defaultDiscount, 0.13);
   assert.equal(D.programs.length, 53);
-  assert.equal(D.installments.length, 13);
+  assert.equal(D.installments.length, 9);
   D.programs.forEach(p => { assert.equal(p.minPv, p.projects[0]==='ДНК — 2 очередь' ? .2 : .201); assert.ok(p.r1 > 0 && p.sub >= 0 && p.maxTerm >= 10 && p.name); });
   assert.deepEqual(C.kidsOptions(D, DA1, FAMILY), ['1 ребёнок', '2 ребёнка', '3 ребёнка', '4 ребёнка', '5 и более детей']);
   assert.deepEqual(C.kidsOptions(D, DA1, BASE), []);
@@ -147,36 +147,36 @@ test('льготный период: платёж пересчитывается
   near(bal, 0, 1);
 });
 
-test('рассрочка от 30%, ДА-2: скидка от суммы взноса, равные платежи на два года от сделки', () => {
-  const cards = C.installments(D, { project: DA2, base: 10000000, rooms: 1, extra: 0 }, today);
-  assert.equal(cards.length, 4);
-  const c = cards[0];
-  near(c.disc, 0.039, 1e-9);
-  assert.equal(c.total, 9610000);
-  assert.equal(c.rows[0].amount, 3000000);
-  assert.equal(c.termMonths, 24);
-  near(c.payment, Math.floor((9610000 - 3000000) / 24), 0.01);
-  const half = C.installments(D, { project: DA2, base: 10000000, rooms: 1, extra: 0, pv: { [c.id]: 0.5 }, step: { [c.id]: 3 } }, today)[0];
-  near(half.disc, 0.065, 1e-9);
-  near(half.payment, Math.floor((half.total - half.rows[0].amount) / 8), 0.01);
-  const big = C.installments(D, { project: DA2, base: 10000000, rooms: 1, extra: 0, pv: { [c.id]: 0.7 } }, today)[0];
-  near(big.disc, 0.091, 1e-9);
-  assert.equal(big.total, 9090000);
-  const extra = C.installments(D, { project: DA2, base: 10000000, rooms: 1, extra: 0.01 }, today)[0];
-  assert.equal(extra.total, 9510000);
+test('ДА-2 от 30% сохраняет скидку от всей цены при изменении взноса', () => {
+  const input = { project: DA2, base: 10000000, rooms: 1, extra: 0 };
+  const date = new Date(2026, 10, 14);
+  const [equal] = C.installments(D, input, date);
+  for (const share of [.3, .5, .7]) {
+    const [card] = C.installments(D, { ...input, pv: { [equal.id]: share }, step: { [equal.id]: 3 } }, date);
+    assert.equal(card.disc, .1);
+    assert.equal(card.total, 9000000);
+    assert.equal(card.rows[0].amount, input.base * share);
+    assert.equal(C.fmt.dmy(card.end), '07.11.2028');
+    assert.equal(card.payment, Math.floor((card.total - card.rows[0].amount) / 8));
+  }
+  const [extra] = C.installments(D, { ...input, extra: .01 }, date);
+  assert.equal(extra.total, 8900000);
 });
 
-test('рассрочка с ежемесячным платежом: ДА-1 до 01.03.2027 — 4 платежа, скидка 6%; ДА-2 — 20 платежей без скидки', () => {
-  const c = C.installments(D, { project: DA1, base: 10000000, rooms: 2, extra: 0 }, today)[1];
-  assert.equal(c.total, 9400000);
-  assert.equal(c.rows[0].amount, 940000);
-  assert.equal(c.rows[1].amount, 75000 * 4);
-  assert.equal(c.rows[2].amount, 9400000 - 940000 - 300000);
-  assert.equal(c.rows.reduce((s, r) => s + r.amount, 0), c.total);
-  const c2 = C.installments(D, { project: DA2, base: 10000000, rooms: 3, extra: 0 }, today)[1];
-  assert.equal(c2.total, 10000000);
-  assert.equal(c2.rows[1].amount, 100000 * 20);
-  assert.equal(c2.rows.reduce((s, r) => s + r.amount, 0), c2.total);
+test('ежемесячная рассрочка ДА учитывает скидку очереди и платёж по комнатности', () => {
+  const date = new Date(2026, 10, 14);
+  for (const [project, total, end, count] of [
+    [DA1, 9000000, '01.03.2027', 3],
+    [DA2, 9700000, '01.09.2028', 21]
+  ]) {
+    for (const [rooms, payment] of [[1, 30000], [2, 60000], [3, 90000]]) {
+      const [, card] = C.installments(D, { project, base: 10000000, rooms }, date);
+      assert.equal(card.total, total);
+      assert.equal(C.fmt.dmy(card.end), end);
+      assert.equal(card.payment, payment);
+      assert.deepEqual(card.rows.map(r => r.amount), [total / 10, payment * count, total - total / 10 - payment * count]);
+    }
+  }
 });
 
 console.log(`\nвсе проверки пройдены: ${n}`);

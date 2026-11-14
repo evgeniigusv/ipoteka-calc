@@ -8,7 +8,7 @@
   var fields={
     mortgage:[field('bank','Банк','text'),field('type','Программа','select',{options:['Семейная ипотека','Базовая ипотека']}),field('kids','Дети','select',{options:['','1 ребёнок','2 ребёнка','3 ребёнка','4 ребёнка','5 и более детей']}),field('term','Кредит, лет','integer',{min:1,max:30}),field('rate','Ставка, %','percent'),field('subsidy','Комиссия банку, %','percent'),field('minPv','Минимальный взнос, %','percent'),field('limit','Лимит кредита, ₽','money'),field('variant','Вариант программы','text')],
     installment:[field('scheme','Схема платежей','select',{options:['equal','monthly','deferred','scheduled'],labels:['Равные платежи','Ежемесячный платёж и остаток','Взнос и остаток','По этапам']}),field('minPv','Первый взнос, %','percent'),field('end','Погашение до','date'),field('months','Или месяцев от сделки','integer',{min:1,max:60}),field('steps','Периодичность, месяцев','steps'),field('pay.1','Студия / 1к, ₽ в месяц','money'),field('pay.2','2к, ₽ в месяц','money'),field('pay.3','3к, ₽ в месяц','money'),field('disc','Скидка, %','percent'),field('discFromPv','Скидка на сумму ПВ, %','percent'),field('maxDisc','Потолок скидки, %','percent'),field('pvFromBase','Взнос от прайса','boolean'),field('launchDiscount','Стартовая скидка, %','percent'),field('launchUntil','Стартовая скидка до','date'),field('pvChoices','Варианты взноса, %','percentList'),field('discAt70','Скидка при ПВ от 70%, %','percent')],
-    tranche:[field('bank','Банк','text'),field('tranches','Количество траншей','select',{options:['2','3']}),field('minPv','Первый взнос, %','percent'),field('rate','Ставка, %','percent'),field('estimate','Расчёт по ориентиру','boolean'),field('referencePayment','Ориентир в месяц, ₽','money'),field('referenceYears','Ориентир: кредит, лет','integer',{min:1,max:30}),field('firstRub','Первый транш, ₽ (для двух)','money'),field('first','Первый транш, % (для трёх)','percent'),field('second','Второй транш, % (для трёх)','percent'),field('minFirst','Минимум первого транша, ₽','money'),field('date2','Дата второго транша','date'),field('secondMonths','Или месяцев до второго','integer',{min:1,max:60}),field('date3','Дата последнего транша','date'),field('discount','Скидка, %','percent'),field('launchDiscount','Стартовая скидка, %','percent'),field('launchUntil','Стартовая скидка до','date')],
+    tranche:[field('bank','Банк','text'),field('tranches','Количество траншей','select',{options:['2','3']}),field('minPv','Первый взнос, %','percent'),field('rate','Ставка, %','percent'),field('estimate','Расчёт по ориентиру','boolean'),field('referencePrincipal','Сумма для ориентира, ₽','money'),field('referencePayment','Ориентир в месяц, ₽','money'),field('referenceYears','Ориентир: кредит, лет','integer',{min:1,max:30}),field('firstRub','Первый транш, ₽ (для двух)','money'),field('first','Первый транш, % цены','percent'),field('second','Второй транш, % (для трёх)','percent'),field('minFirst','Минимум первого транша, ₽','money'),field('date2','Дата второго транша','date'),field('secondMonths','Или месяцев до второго','integer',{min:1,max:60}),field('date3','Дата последнего транша','date'),field('lastMonthsBeforeCommissioning','Месяцев до ввода для последнего транша','integer',{min:1,max:60}),field('flexibleTranches','Суммы и число траншей по согласованию','boolean'),field('maxDate','Крайний срок последнего транша','date'),field('discount','Скидка, %','percent'),field('launchDiscount','Стартовая скидка, %','percent'),field('launchUntil','Стартовая скидка до','date')],
     chpv:[field('limit','Лимит кредита, ₽','money'),field('years','Кредит, лет','integer',{min:1,max:30}),field('rate','Ставка, %','percent'),field('minDown','Минимальный взнос, %','percent'),field('cost','Стоимость финансирования, %','percent'),field('overRate','Ставка сверхлимита, %','percent')],
     discount:[field('percent','Скидка, %','percent'),field('launchDiscount','Стартовая скидка, %','percent'),field('launchUntil','Стартовая скидка до','date')],info:[]
   };
@@ -27,8 +27,9 @@
     required(r.name.trim()&&r.name.length<=200,'Введите название до 200 знаков.');
     required(modes[r.mode]&&typeof r.enabled==='boolean','Проверьте сочетание и доступность программы.');
     required(r.params&&typeof r.params==='object'&&!Array.isArray(r.params),'Не заданы параметры.');
-    var p=r.params,allowed=fields[r.kind].map(function(f){return f.key.split('.')[0];}).concat(['note','validUntil','milestones','noExtra','extraSequential','scope','date3Approx']);
+    var p=r.params,allowed=fields[r.kind].map(function(f){return f.key.split('.')[0];}).concat(['note','validUntil','milestones','noExtra','extraSequential','scope','date3Approx','ownerOnly']);
     Object.keys(p).forEach(function(k){required(allowed.includes(k),'Неизвестное поле: '+k);});
+    if('ownerOnly' in p)required(typeof p.ownerOnly==='boolean','Поле ownerOnly должно быть логическим.');
     fields[r.kind].forEach(function(f){var v=get(p,f.key);if(v==null||v==='')return;
       if(f.type==='percent')required(number(v,0,.99),f.label+': от 0 до 99%.');
       if(f.type==='money')required(number(v,0,1000000000)&&Number.isInteger(v),f.label+': целая положительная сумма.');
@@ -55,11 +56,24 @@
       if(p.milestones){required(Array.isArray(p.milestones)&&p.milestones.length<=12,'Не более 12 этапов.');p.milestones.forEach(function(m){required(m&&number(m.share,0,.99)&&m.share>0&&(!!m.date!==!!m.months),'Этап: доля и дата либо месяц.');if(m.date)required(validDate(m.date,true),'Проверьте дату этапа.');if(m.months)required(Number.isInteger(m.months)&&number(m.months,1,60),'Проверьте месяц этапа.');});required(p.minPv+p.milestones.reduce(function(a,m){return a+m.share;},0)<1.000001,'Взнос и этапы превышают 100%.');}
     }
     if(r.kind==='tranche'){
-      required([2,3].includes(+p.tranches)&&p.minPv>=.2,'Для траншей нужны 2 или 3 этапа и ПВ от 20%.');
-      if(p.estimate)required(p.firstRub>0&&p.referencePayment>0&&p.referenceYears>0,'Заполните ориентир платежа.');else required(p.rate>0,'Укажите ставку.');
-      required(!!p.date2!==!!p.secondMonths,'Второй транш: дата или число месяцев.');
-      if(+p.tranches===2)required(p.firstRub>0,'Укажите первый транш в рублях.');
-      else required(p.first>0&&p.second>0&&p.minPv+p.first+p.second<1&&validDate(p.date3),'Проверьте доли и дату третьего транша.');
+      var two=+p.tranches===2, before=p.lastMonthsBeforeCommissioning;
+      required((two||+p.tranches===3||(p.flexibleTranches&&p.tranches==null))&&p.minPv>=.2,'Укажите схему траншей и ПВ от 20%.');
+      if(p.estimate)required((p.referencePrincipal||p.firstRub)>0&&p.referencePayment>0&&p.referenceYears>0,'Заполните ориентир платежа.');
+      if(p.rate!=null||(!p.estimate&&!p.flexibleTranches&&!(two&&p.firstRub)))required(p.rate>0,'Ставка должна быть положительной.');
+      if(p.flexibleTranches){
+        required(p.maxDate&&(!p.tranches||two)&&!before&&!p.date2&&!p.secondMonths&&!p.date3&&!p.second&&!p.first,'Для произвольных выдач укажите крайний срок последнего транша.');
+      }else{
+        required(!p.maxDate,'Крайний срок относится к произвольным выдачам.');
+        if(two){
+          required((p.firstRub>0)!==(p.first>0),'Для первого транша укажите сумму или долю цены.');
+          required(!p.second&&!p.date3&&(!p.first||p.minPv+p.first<1),'Второй транш должен быть положительным остатком.');
+          required([p.date2,p.secondMonths,before].filter(Boolean).length===1,'Укажите один срок второго транша.');
+        }else{
+          required(!p.firstRub&&p.first>0&&p.second>0&&p.minPv+p.first+p.second<1,'Проверьте доли трёх траншей.');
+          required(!!p.date2!==!!p.secondMonths,'Второй транш: дата или число месяцев.');
+          required(!!p.date3!==!!before,'Укажите дату третьего транша или срок до ввода.');
+        }
+      }
     }
     if(r.kind==='chpv')required(p.limit>0&&p.years&&p.rate>0&&p.minDown>0&&number(p.cost,0,.99)&&p.overRate>0,'Заполните все параметры ЧПВ.');
     if(r.kind==='discount')required(number(p.percent,0,.99)&&p.scope==='cash','Скидка должна относиться к полной оплате.');
@@ -70,12 +84,12 @@
   }
   function validate(data){
     required(data&&data.version===1&&Array.isArray(data.records)&&data.records.length>0&&data.records.length<=600,'Неверный формат справочника.');
-    var ids=new Set(),cash=new Set();data.records.forEach(function(r){validateRecord(r);required(!ids.has(r.id),'Повтор ID программы.');ids.add(r.id);if(r.enabled&&r.kind==='discount'){required(!cash.has(r.project),'Для проекта допустима одна основная скидка за полную оплату.');cash.add(r.project);}});
-    Object.keys(projects).forEach(function(project){required(data.records.some(function(r){return r.project===project&&r.kind==='installment'&&r.enabled;}),'Нет рассрочек одного из проектов.');required(data.records.some(function(r){return r.project===project&&r.kind==='mortgage'&&r.enabled;}),'Нет ипотеки одного из проектов.');});
+    var ids=new Set(),cash=new Set();data.records.forEach(function(r){validateRecord(r);required(!ids.has(r.id),'Повтор ID программы.');ids.add(r.id);if(r.enabled&&!r.params.ownerOnly&&r.kind==='discount'){required(!cash.has(r.project),'Для проекта допустима одна основная скидка за полную оплату.');cash.add(r.project);}});
+    Object.keys(projects).forEach(function(project){required(data.records.some(function(r){return r.project===project&&r.kind==='installment'&&r.enabled&&!r.params.ownerOnly;}),'Нет рассрочек одного из проектов.');required(data.records.some(function(r){return r.project===project&&r.kind==='mortgage'&&r.enabled&&!r.params.ownerOnly;}),'Нет ипотеки одного из проектов.');});
     return data;
   }
   function calcData(data){validate(data);var out={mortgage:[],installments:[],tranche:[],chpv:[],cashDiscounts:{}};
-    data.records.filter(function(r){return r.enabled;}).forEach(function(r){var p=clone(r.params);p.projects=[projects[r.project]];p.name=r.name;p.note=[p.note,r.description].filter(Boolean).join(' ');p.catalogId=r.id;
+    data.records.filter(function(r){return r.enabled&&!r.params.ownerOnly;}).forEach(function(r){var p=clone(r.params);p.projects=[projects[r.project]];p.name=r.name;p.note=[p.note,r.description].filter(Boolean).join(' ');p.catalogId=r.id;
       if(r.kind==='mortgage')out.mortgage.push(p);
       if(r.kind==='installment'){p.extraSequential=r.mode==='sequential';p.noExtra=r.mode==='none'||r.mode==='individual';out.installments.push(p);}
       if(r.kind==='tranche')out.tranche.push(p);
@@ -96,7 +110,15 @@
       if(p.discFromPv)a.push(pct(p.discFromPv)+' на сумму ПВ');else if(p.disc)a.push('Скидка '+pct(p.disc));
       if(p.launchDiscount)a.push('+'+pct(p.launchDiscount)+' до '+dmy(p.launchUntil));
     }
-    if(r.kind==='tranche')a=[p.bank||'Траншевая ипотека','ПВ от '+pct(p.minPv),+p.tranches===2?rub(p.firstRub)+' + остаток':pct(p.first)+' → '+pct(p.second)+' → остаток',p.estimate?'Ориентир '+rub(p.referencePayment)+'/мес.':pct(p.rate)+' годовых'];
+    if(r.kind==='tranche'){
+      var first=p.firstRub?rub(p.firstRub):pct(p.first);
+      var shares=p.flexibleTranches?'Суммы траншей по согласованию':[first].concat(+p.tranches===3?[pct(p.second)]:[],['остаток']).join(' → ');
+      a=[p.bank||'Траншевая ипотека','ПВ от '+pct(p.minPv),shares,p.estimate?'Ориентир '+rub(p.referencePayment)+'/мес.':p.rate?pct(p.rate)+' годовых':'Ставка уточняется'];
+      if(p.discount)a.push('Скидка '+pct(p.discount));
+      if(p.secondMonths)a.push('Второй транш через '+p.secondMonths+' мес.');
+      if(p.lastMonthsBeforeCommissioning)a.push('Последний транш за '+p.lastMonthsBeforeCommissioning+' мес. до ввода');
+      if(p.maxDate)a.push('Все транши до '+dmy(p.maxDate)+' включительно');
+    }
     if(r.kind==='chpv')a=[pct(p.rate)+' · до '+rub(p.limit),'ПВ от '+pct(p.minDown),'Стоимость финансирования '+pct(p.cost)];
     if(r.kind==='discount')a=['Скидка до '+pct(p.percent),p.launchDiscount?'+'+pct(p.launchDiscount)+' до '+dmy(p.launchUntil):''];
     if(r.kind==='info')a=[r.description];

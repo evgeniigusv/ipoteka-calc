@@ -13,23 +13,62 @@
     for(var i=0;i<70;i++){var mid=(low+high)/2;if(root.SMCalc.pmt(mid/12,n,principal)>payment)high=mid;else low=mid;}
     return (low+high)/2;
   }
+  function addMonths(date, months){
+    if(!validDate(date))return '';
+    var d=new Date(date+'T00:00:00'), day=d.getDate();
+    d.setDate(1);
+    d.setMonth(d.getMonth()+months);
+    d.setDate(Math.min(day,new Date(d.getFullYear(),d.getMonth()+1,0).getDate()));
+    return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  }
+
   function calculate(x){
-    if (!(Number.isFinite(x.price) && x.price > 0) || !(Number.isFinite(x.rate) && x.rate > 0 && x.rate <= 1) || !(Number.isInteger(x.years) && x.years >= 1 && x.years <= 30)) throw new Error('Укажите стоимость, ставку и срок от 1 до 30 лет.');
-    if (!(x.down >= 0.20 && x.down < 1)) throw new Error('Первоначальный взнос должен быть от 20% и меньше 100%.');
-    var two = x.tranches === 2;
-    if (two ? !(x.firstRub > 0) : !(x.first > 0 && x.second > 0)) throw new Error('Укажите сумму первого транша и условия программы.');
-    if (!validDate(x.date1) || !validDate(x.date2) || !(x.date1 < x.date2) || (!two && (!validDate(x.date3) || !(x.date2 < x.date3)))) throw new Error(two ? 'Укажите дату сделки и дату второго транша по порядку.' : 'Укажите три даты по порядку: сделка, второй и последний транш.');
-    var start = new Date(x.date1 + 'T00:00:00'), end = new Date(start); end.setFullYear(end.getFullYear() + x.years);
-    if (new Date((two ? x.date2 : x.date3) + 'T00:00:00') >= end) throw new Error('Последний транш должен быть выдан до окончания срока ипотеки.');
-    var pv = Math.round(x.price*x.down), total = x.price-pv;
-    var first = two ? Math.round(x.firstRub) : Math.max(Math.round(x.price*x.first), x.minFirst || 0);
-    var second = two ? total-first : Math.round(x.price*x.second);
-    var third = total-first-second;
-    if (two ? second <= 0 : third <= 0) throw new Error(two ? 'Первый транш должен быть меньше суммы кредита.' : 'Первый взнос и первые транши должны оставлять положительный остаток для третьего транша.');
-    var n=Math.round(x.years*12), rate=x.rate/12;
-    var stages=two ? [{date:x.date1,amount:first,issued:first},{date:x.date2,amount:second,issued:total}] : [{date:x.date1,amount:first,issued:first},{date:x.date2,amount:second,issued:first+second},{date:x.date3,amount:third,issued:total}];
-    stages.forEach(function(s){s.payment=root.SMCalc.pmt(rate,n,s.issued);});
+    if(!(Number.isFinite(x.price)&&x.price>0&&Number.isInteger(x.years)&&x.years>=1&&x.years<=30))throw new Error('Укажите стоимость и срок от 1 до 30 лет.');
+    if(!(Number.isFinite(x.rate)&&x.rate>0&&x.rate<=1))throw new Error('Введите подтверждённую ставку банка.');
+    if(!(x.down>=.2&&x.down<1))throw new Error('Первоначальный взнос должен быть от 20% и меньше 100%.');
+    if(!validDate(x.date1))throw new Error('Укажите дату сделки.');
+
+    var pv=Math.round(x.price*x.down), total=x.price-pv;
+    var two=+x.tranches===2, amounts, dates;
+    if(x.flexibleTranches){
+      if(!validDate(x.maxDate))throw new Error('Укажите крайний срок выдачи.');
+      var draws=x.draws||[];
+      amounts=[x.firstRub].concat(draws.map(function(draw){return draw.amount;}));
+      dates=[x.firstDate].concat(draws.map(function(draw){return draw.date;}),[x.date2]);
+    }else{
+      if(!(two&&x.firstRub>0)&&!(x.first>0))throw new Error('Укажите долю первого транша.');
+      var first=two&&x.firstRub>0?x.firstRub:Math.max(Math.round(x.price*x.first),x.minFirst||0);
+      amounts=two?[first]:[first,Math.round(x.price*x.second)];
+      dates=two?[x.date1,x.date2]:[x.date1,x.date2,x.date3];
+    }
+
+    var last=dates.length-1;
+    if(x.lastMonthsBeforeCommissioning){
+      if(x.commissioningDate&&!validDate(x.commissioningDate))throw new Error('Проверьте дату ввода.');
+      dates[last]=x.commissioningDate?addMonths(x.commissioningDate,-x.lastMonthsBeforeCommissioning):'';
+    }
+    var end=addMonths(x.date1,12*x.years);
+    dates.forEach(function(date,i){
+      if(!date&&i===last&&(x.lastMonthsBeforeCommissioning||x.flexibleTranches||x.lastMonth))return;
+      if(!validDate(date)||date<x.date1||(i>0&&date<=dates[i-1]))throw new Error(two?'Укажите дату сделки и даты выдач по порядку.':'Укажите даты траншей по порядку.');
+      if(date>=end)throw new Error('Последний транш должен быть выдан до окончания срока ипотеки.');
+      if(x.flexibleTranches&&(date>x.maxDate||(i<last&&date===x.maxDate)))throw new Error('Все транши нужно выдать до крайнего срока включительно.');
+    });
+    if(!dates[last]&&x.lastMonth){
+      var monthStart=x.lastMonth+'-01';
+      var lastDay=new Date(Number(x.lastMonth.slice(0,4)),Number(x.lastMonth.slice(5)),0).getDate();
+      if(!validDate(monthStart)||dates[last-1]>=x.lastMonth+'-'+lastDay||monthStart>=end)throw new Error('Проверьте даты траншей и срок ипотеки.');
+    }
+    if(!amounts.every(function(amount){return Number.isSafeInteger(amount)&&amount>0;}))throw new Error('Укажите положительные суммы траншей до выдачи остатка.');
+    var rest=total-amounts.reduce(function(sum,amount){return sum+amount;},0);
+    if(rest<=0)throw new Error(two&&!x.flexibleTranches?'Первый транш должен быть меньше суммы кредита.':'После выдач должен оставаться положительный остаток для последнего транша.');
+    amounts.push(rest);
+    var issued=0;
+    var stages=amounts.map(function(amount,i){
+      issued+=amount;
+      return {date:dates[i]||null,amount:amount,issued:issued,payment:root.SMCalc.pmt(x.rate/12,x.years*12,issued)};
+    });
     return {price:x.price,down:pv,total:total,stages:stages};
   }
-  root.SMTranshCalc={calculate:calculate,rateFromPayment:rateFromPayment};
+  root.SMTranshCalc={calculate:calculate,rateFromPayment:rateFromPayment,addMonths:addMonths};
 })(window);

@@ -55,7 +55,8 @@
     var html='';
     if(c.pvOptions)html+=choice(c.pvFromBase?'Первый взнос от прайса':'Первый взнос', 'pv', c.pvOptions.map(function(o){return {value:o.share,label:F.pct1(o.share)+' · скидка '+F.pct1(o.disc)};}),c.share);
     if(c.steps)html+=choice('Периодичность платежей','step',c.steps.map(function(s){return {value:s.step,label:s.name};}),c.step);
-    if(c.pvOptions && c.pvFromBase)html+='<p class="sm-hint">Скидка применяется к сумме взноса; в вариантах указан её размер от прайса.'+(c.maxDisc!=null?' Потолок скидки программы — '+F.pct1(c.maxDisc)+'.':'')+'</p>';
+    var program=D.installments.find(function(p){return p.id===c.id;});
+    if(c.pvOptions && c.pvFromBase && program.discFromPv>0)html+='<p class="sm-hint">Скидка применяется к сумме взноса; в вариантах указан её размер от прайса.'+(c.maxDisc!=null?' Потолок скидки программы — '+F.pct1(c.maxDisc)+'.':'')+'</p>';
     return html?'<div class="sm-program-options"><div class="sm-options-name">'+esc(c.name)+'</div>'+html+'</div>':'';
   }
   function detailHtml(c) {
@@ -87,7 +88,7 @@
   function render() {
     var status=window.SM_INSTALLMENTS_STATUS||{fallback:true};
     $('sm-updated').textContent=status.catalog?'Справочник: проверено '+new Date(status.checkedAt).toLocaleString('ru-RU',{timeZone:'Asia/Yekaterinburg',dateStyle:'short',timeStyle:'short'})+' · Екатеринбург. Обновление по понедельникам в 06:00.'+(status.stale?' Проверка задерживается; подтвердите условия.':''):state.project==='ДНК — 2 очередь'?'ДНК: сверено вручную '+window.SM_DATA.updated+'.':
-      status.fallback?'ДА: резервная копия от '+window.SM_DATA.updated+'. Обновлённые условия загрузить не удалось.':
+      status.fallback?'ДА: резервная копия от '+(window.SM_DATA.daInstallmentsUpdated||window.SM_DATA.updated)+'. Обновлённые условия загрузить не удалось.':
       'ДА: проверено '+new Date(status.checkedAt).toLocaleString('ru-RU',{timeZone:'Asia/Yekaterinburg',dateStyle:'short',timeStyle:'short'})+
       ' (Екатеринбург). Обновление по понедельникам в 06:00.'+(status.stale?' Проверка задерживается; подтвердите условия.':'');
     var inp=readInputs(),date=dealDate();
