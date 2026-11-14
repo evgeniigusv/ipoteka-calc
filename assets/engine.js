@@ -52,7 +52,7 @@
       // Лимит кредита — из строки, а для семейной ипотеки — по числу детей
       var limit = or(p.limit, p.kids && raw.limitsByKids ? or(raw.limitsByKids[p.kids], Infinity) : Infinity);
       return {
-        id: i + 1, projects: p.projects || raw.mortgageProjects || [], type: p.type, bank: p.bank,
+        id: i + 1, projects: p.projects || raw.mortgageProjects || [], type: p.type,
         name: p.name || p.bank + (p.variant ? ', ' + p.variant : ''),
         r1: p.rate, r2: or(p.rateAfter, p.rate), grace: p.graceYears || 0,
         minTerm: p.minTerm || 1, maxTerm: p.term || 30,
@@ -148,7 +148,7 @@
       : inp.term != null && inp.term < term ? 'Срок увеличен до минимального по программе' : '';
 
     return {
-      id: p.id, name: p.name, type: p.type, kids: p.kids, bank: p.bank, r1: p.r1, r2: g ? p.r2 : p.r1, graceMonths: g, term: term,
+      id: p.id, name: p.name, r1: p.r1, r2: g ? p.r2 : p.r1, graceMonths: g, term: term,
       minPv: m, maxPv: p.maxPv, limit: lim, sub: s, subsidy: subsidy, surplus: surplus,
       price: price, disc: B > 0 ? 1 - price / B : 0, minPvRub: minPvRub, pv: pv, pvShare: pvShare, loan: loan,
       pay1: pay1, pay2: pay2, total: total, over: Math.max(total - loan, 0),
@@ -163,8 +163,7 @@
   function mortgage(D, inp, opts) {
     if (!(Number.isFinite(inp.base) && inp.base > 0 && Number.isFinite(inp.disc) && inp.disc >= 0 && inp.disc < 1)) return {rows:[],best:null,picked:false};
     var rows = D.programs.filter(function (p) {
-      return forProject(p, inp.project) && (inp.type === '' || p.type === inp.type)
-        && (!p.kids || inp.kids === '' || p.kids === inp.kids);
+      return forProject(p, inp.project) && p.type === inp.type && (!p.kids || p.kids === inp.kids);
     }).map(function (p) { return calcProgram(p, inp, opts); });
 
     // Подходящие — по возрастанию платежа, неподходящие — в конце

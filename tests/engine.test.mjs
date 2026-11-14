@@ -38,17 +38,6 @@ test('данные читаются: 3 очереди, 2 типа ипотеки
   D.programs.filter(p => p.type === BASE).forEach(p => assert.equal(p.limit, Infinity));
 });
 
-test('обзор всех типов использует те же строки, что и отдельные фильтры проекта', () => {
-  for (const project of D.projects) {
-    const calc = (type, kids) => C.mortgage(D, {...SHEET, project, type, kids}).rows;
-    const ids = rows => rows.map(r => r.id).sort((a,b) => a-b);
-    const family = C.kidsOptions(D, project, FAMILY).flatMap(kids => calc(FAMILY, kids));
-    assert.deepEqual(ids(calc(FAMILY, '')), ids(family));
-    assert.deepEqual(ids(calc('', '')), ids([...calc(BASE, ''), ...family]));
-    assert.ok(calc('', '').every(r => r.bank && r.type));
-  }
-});
-
 test('базовая ипотека: комиссия, цена и профит — как в «Калькуляторе субсидирования»', () => {
   const rows = C.mortgage(D, { ...SHEET, type: BASE }).rows;
   assert.equal(rows.length, 10);

@@ -11,20 +11,12 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;700&family=Unbounded:wght@500;600&display=swap">
 <link rel="stylesheet" href="assets/style.css?v=20261106-layout">
-<style>
-.sm-mortgage-results { display: grid; align-content: start; gap: 16px; min-width: 0; }
-.sm-rate-summary { list-style: none; margin: 0 0 14px; padding: 0; }
-.sm-rate-summary li { display: grid; grid-template-columns: 1fr auto; align-items: baseline; gap: 8px 16px; padding: 9px 0; border-bottom: 1px solid var(--line); }
-.sm-rate-summary small { display: block; color: var(--muted); }
-.sm-rate-summary button { font-size: inherit; }
-@media print { #sm-rate-overview { display: none; } #sm-ipoteka .sm-tablecard[hidden]:has(tbody tr) { display: block !important; } }
-</style>
 </head>
 <body>
 
 <main class="sm" id="sm-ipoteka">
   <header class="sm-head"><h1>Ипотечный калькулятор</h1><a class="sm-logo" href="https://da-dom.life/" target="_blank" rel="noopener"><img src="assets/logo-svoboda-dark.svg" width="106" height="56" alt="Свобода мысли"></a></header>
-  <nav class="sm-navigation" aria-label="Калькуляторы"><a class="sm-nav" href="./" aria-current="page">Ипотека</a><a class="sm-nav" href="rassrochka.html">Рассрочка</a><a class="sm-nav" href="transh.html">Траншевая ипотека</a><a class="sm-nav" href="chpv.html">ЧПВ</a><a class="sm-nav" href="tools.html">Инструменты</a></nav>
+  <nav class="sm-navigation" aria-label="Калькуляторы"><a class="sm-nav" href="./" aria-current="page">Ипотека</a><a class="sm-nav" href="rassrochka.html">Рассрочка</a><a class="sm-nav" href="chpv.html">ЧПВ</a><a class="sm-nav" href="transh.html">Траншевая ипотека</a><a class="sm-nav" href="tools.html">Инструменты</a></nav>
   <p class="sm-lede">Выберите очередь и условия покупки. Калькулятор посчитает платёж по каждой программе и покажет ту, где он наименьший.</p>
 
   <div class="sm-grid">
@@ -67,22 +59,15 @@
       </div>
     </section>
 
-    <div class="sm-mortgage-results">
-      <section class="sm-card" id="sm-rate-overview">
-        <div class="sm-tablehead"><h2>Ставки по программам</h2><span class="sm-tip" id="sm-overview-project"></span></div>
-        <ul class="sm-rate-summary" id="sm-summary"></ul>
-        <button type="button" id="sm-rates-toggle" class="sm-link" aria-expanded="false" aria-controls="sm-all-rates" hidden>Показать все ставки</button>
-      </section>
-      <section class="sm-card" aria-live="polite" tabindex="-1" id="sm-calculation">
-        <h2>Расчёт по программе</h2>
-        <div id="sm-detail"></div>
-      </section>
-    </div>
+    <section class="sm-card" aria-live="polite">
+      <h2>Расчёт по программе</h2>
+      <div id="sm-detail"></div>
+    </section>
   </div>
 
-  <section class="sm-card sm-tablecard" id="sm-all-rates" hidden>
+  <section class="sm-card sm-tablecard">
     <div class="sm-tablehead">
-      <h2 id="sm-table-title" tabindex="-1">Все программы</h2>
+      <h2 id="sm-table-title">Все программы</h2>
       <span class="sm-tip" id="sm-tip"></span>
     </div>
     <div class="sm-scroll">
@@ -107,9 +92,9 @@
 <script src="assets/mortgage-loader.js?v=20261106-auto"></script>
 <script src="assets/tools-model.js?v=tools-modal-20261114"></script>
 <script src="assets/tools-loader.js?v=tools-modal-20261114"></script>
-<script src="assets/engine.js?v=20261114-overview"></script>
+<script src="assets/engine.js?v=20261106-tools"></script>
 <script src="assets/common.js?v=20261106-tools"></script>
 <script src="assets/flats.js?v=20261106-switch"></script>
-<script src="assets/ipoteka.js?v=20261114-it-conditions"></script>
+<script src="assets/ipoteka.js?v=20261114-status"></script>
 </body>
 </html>
