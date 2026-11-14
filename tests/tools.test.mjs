@@ -28,3 +28,30 @@ const wrong=M.clone(sample);wrong.params.end='2027-02-30';assert.throws(()=>M.va
 wrong.params={scheme:'scheduled',minPv:.6,months:12,milestones:[{share:.5,months:3}]};assert.throws(()=>M.validateRecord(wrong));
 const mode=M.clone(data);const inst=mode.records.find(r=>r.kind==='installment');inst.mode='none';assert.equal(M.calcData(mode).installments[0].noExtra,true);inst.mode='sequential';assert.equal(M.calcData(mode).installments[0].extraSequential,true);
 console.log('Справочник: все прежние рассрочки совпадают; новая программа, ставки, сочетания и ошибочные параметры проверены.');
+
+const live=JSON.parse(fs.readFileSync(new URL('../assets/tools.json',import.meta.url)));
+const sections=Object.keys(M.categories);
+assert.deepEqual(sections.slice(0,4),['mortgage','installment','tranche','chpv']);
+for(const snapshot of [live,data]){
+ const tranches=snapshot.records.filter(r=>r.kind==='tranche');
+ assert.ok(tranches.length);
+ const groups=M.groups(snapshot);
+ assert.deepEqual(groups.filter(g=>g.category==='tranche').flatMap(g=>Object.values(g.cells).flat()).map(r=>r.id).sort(),
+                  tranches.map(r=>r.id).sort());
+ for(const row of tranches){
+  M.validateRecord({...row,category:'tranche'});
+  assert.throws(()=>M.validateRecord({...row,category:'extra'}));
+ }
+}
+assert.deepEqual(Object.keys(M.mortgageTypes),['base','family1','family2','family3','family4','family5','it']);
+const types=live.records.filter(r=>r.kind==='mortgage').map(r=>M.mortgageType(r.params));
+assert.ok(types.every(Boolean));
+assert.equal(M.mortgageType({type:'Семейная ипотека'}),null);
+assert.equal(M.mortgageType({type:'Семейная ипотека',kids:'5 и более детей'}),'family5');
+assert.equal(M.mortgageType({type:'IT-ипотека'}),'it');
+const info={kind:'info',name:'Субсидированная IT-ипотека',params:{},description:
+ 'Банки: Сбер\nПВ - от 20%\nСтавка:\n* 3,5% на весь срок - Металлинвест\n* 4% на весь срок - Совком\n\nСкидка 1%'};
+assert.equal(M.mortgageBucket(info),'it');
+assert.deepEqual(M.mortgageOffers(info),[{rate:.035,bank:'Металлинвест'},{rate:.04,bank:'Совком'}]);
+assert.deepEqual(M.mortgageOffers({...info,description:'Банки: уточняется\nСтавка - 6%\nСкидка 1%'}),[]);
+assert.equal(M.mortgageBucket({...info,name:'Комбо ипотека'}),'other');

@@ -87,11 +87,22 @@ class Handler(SimpleHTTPRequestHandler):
     def __init__(self,*a,**kw): super().__init__(*a,directory=str(ROOT),**kw)
     def log_message(self,fmt,*args): pass
     def end_headers(self):
-        self.send_header('X-Frame-Options','DENY'); self.send_header('X-Content-Type-Options','nosniff'); self.send_header('Referrer-Policy','no-referrer')
+        if urlsplit(self.path).path == '/tools.html' and self.host_ok():
+            self.send_header('Content-Security-Policy', "frame-ancestors 'self' https://evgeniigusv.github.io")
+        else:
+            self.send_header('X-Frame-Options','DENY')
+        self.send_header('X-Content-Type-Options','nosniff'); self.send_header('Referrer-Policy','no-referrer')
         super().end_headers()
     def host_ok(self): return self.headers.get('Host')==f'127.0.0.1:{PORT}'
     def same_site(self): return self.headers.get('Sec-Fetch-Site','none') in ['same-origin','none']
-    def authorized(self): return self.host_ok() and self.same_site() and ('sm_owner='+SESSION) in self.headers.get('Cookie','').split('; ')
+    def authorized(self):
+        if not self.host_ok() or not self.same_site():
+            return False
+        cookie = ('sm_owner='+SESSION) in self.headers.get('Cookie','').split('; ')
+        # Встроенный редактор обращается к своему origin, даже если браузер отключил сторонние cookies.
+        embedded = (self.headers.get('Sec-Fetch-Site') == 'same-origin'
+                    and self.headers.get('X-Editor-Session') == CSRF)
+        return cookie or embedded
     def respond(self,status,obj,cookie=False):
         raw=json.dumps(obj,ensure_ascii=False).encode(); self.send_response(status); self.send_header('Content-Type','application/json; charset=utf-8'); self.send_header('Cache-Control','no-store'); self.send_header('Content-Length',str(len(raw)))
         if cookie: self.send_header('Set-Cookie','sm_owner='+SESSION+'; HttpOnly; SameSite=Strict; Path=/')
@@ -104,8 +115,8 @@ class Handler(SimpleHTTPRequestHandler):
 document.querySelector('#go').onclick=async function(){this.disabled=true;try{const s=await(await fetch('/api/session')).json();const r=await(await fetch('/api/google-connect',{method:'POST',headers:{'X-CSRF-Token':s.csrf,'Content-Type':'application/json'},body:'{}'})).json();if(r.url)location.assign(r.url);else document.querySelector('#msg').textContent=r.connected?'Аккаунт подключён. Можно вернуться в редактор.':r.error;}catch(e){document.querySelector('#msg').textContent='Не удалось подключиться.';}finally{this.disabled=false;}};
 </script></html>'''
             self.wfile.write(page.encode());return
-        # Публичный каталог может открыть страницу редактора в отдельной вкладке.
-        entry = path == '/tools.html' and self.headers.get('Sec-Fetch-Mode') == 'navigate' and self.headers.get('Sec-Fetch-Dest') == 'document'
+        # Только входная HTML-страница открывается из публичного каталога.
+        entry = path == '/tools.html' and self.headers.get('Sec-Fetch-Mode') == 'navigate' and self.headers.get('Sec-Fetch-Dest') in ('document', 'iframe')
         if not self.host_ok() or not (self.same_site() or entry): return self.respond(403,{'error':'Редактор доступен только на этом Mac.'})
         if path=='/api/session':
             c=config(); return self.respond(200,{'csrf':CSRF,'source':'https://docs.google.com/spreadsheets/d/'+c['spreadsheet_id']+'/edit#gid='+str(c['gid'])},True)

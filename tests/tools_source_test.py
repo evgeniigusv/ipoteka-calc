@@ -47,6 +47,21 @@ class HttpTests(unittest.TestCase):
   for headers in [{'Host':'attacker.example'},{'Origin':'https://example.org'},{'X-CSRF-Token':'bad'},{'Cookie':'bad'},{'Sec-Fetch-Site':'cross-site'}]:self.assertEqual(self.request(body={},headers=headers)[0],403)
   self.assertEqual(self.request('/.git/config')[0],404)
   self.assertEqual(self.request('/automation/tools_source.py')[0],404)
+ def test_editor_frame_without_third_party_cookie(self):
+  headers={'Cookie':'','Sec-Fetch-Site':'same-origin','X-Editor-Session':editor.CSRF}
+  with patch.object(editor,'read_catalog',return_value=DATA):
+   self.assertEqual(self.request(headers=headers)[0],200)
+   for change in ({'Sec-Fetch-Site':'cross-site'},{'X-Editor-Session':'invalid'}):
+    self.assertNotEqual(self.request(headers=dict(headers,**change))[0],200)
+  conn=http.client.HTTPConnection('127.0.0.1',self.port)
+  try:
+   conn.request('GET','/tools.html',headers={'Host':'127.0.0.1:8795','Sec-Fetch-Mode':'navigate',
+                'Sec-Fetch-Site':'cross-site','Sec-Fetch-Dest':'iframe'})
+   result=conn.getresponse()
+   self.assertEqual(result.status,200)
+   self.assertEqual(result.getheader('Content-Security-Policy'),"frame-ancestors 'self' https://evgeniigusv.github.io")
+   result.read()
+  finally:conn.close()
  def test_conflict_no_write(self):
   with patch.object(editor,'read',return_value=DATA),patch.object(editor,'write_changes') as write:
    self.assertEqual(self.request(body={'revision':'old','changes':[]})[0],409);write.assert_not_called()

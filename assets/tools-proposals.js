@@ -61,7 +61,7 @@
       finally {busy=false;$('ai-items').inert=false;controls();}
     }
     async function upload(path,file,headers) {
-      const response=await fetch(path,{method:'POST',headers:{'X-CSRF-Token':options.csrf(),...headers},body:file});
+      const response=await fetch(path,{method:'POST',headers:{'X-CSRF-Token':options.csrf(),'X-Editor-Session':options.csrf(),...headers},body:file});
       const result=await response.json();if(!response.ok)throw Error(result.error);return result.text;
     }
     function append(text){input.value=[input.value.trim(),text].filter(Boolean).join('\n\n');invalidate();}

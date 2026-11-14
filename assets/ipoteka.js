@@ -21,7 +21,7 @@
     detail: $('sm-detail'), title: $('sm-table-title'), tip: $('sm-tip'), thead: $('sm-thead'), tbody: $('sm-tbody'),
     updated: $('sm-rate-status')
   };
-  var state = { project: D.projects[0], type: D.types[0], pick: null };
+  var state = { project: D.projects[0], type: '', pick: null };
   function catalogDiscount(){var p=(window.SM_DATA.cashDiscounts||{})[state.project];if(!p)return D.defaultDiscount;var today=new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Yekaterinburg'});return p.percent+(p.launchUntil&&today<=p.launchUntil?(p.launchDiscount||0):0);}
   var last = null; // последний расчёт — из него собирается PDF
 
@@ -34,11 +34,10 @@
     };
   }
 
-  function hasKids() { return !el.kidsField.hidden; }
   function setupKids() {
     var opts = C.kidsOptions(D, state.project, state.type), cur = el.kids.value;
     el.kidsField.hidden = !opts.length;
-    el.kids.innerHTML = opts.map(function (k) { return '<option' + (k === cur ? ' selected' : '') + '>' + esc(k) + '</option>'; }).join('');
+    el.kids.innerHTML = '<option value="">Все</option>' + opts.map(function (k) { return '<option' + (k === cur ? ' selected' : '') + '>' + esc(k) + '</option>'; }).join('');
   }
 
   /* ---------- Расчёт выбранной программы ---------- */
@@ -65,8 +64,8 @@
     }
     var flat = flats.selectedNumber();
     return '<div class="sm-hero">' +
-        '<div class="sm-hero-name">' + esc(inp.type + ', ' + r.name) + '</div>' +
-        '<div class="sm-hero-flat">' + esc(inp.project) + (hasKids() ? ' · ' + esc(inp.kids) : '') + (flat ? ' · кв. ' + esc(flat) : '') + '</div>' +
+        '<div class="sm-hero-name">' + esc(r.type + ', ' + r.name) + '</div>' +
+        '<div class="sm-hero-flat">' + esc(inp.project) + (r.kids ? ' · ' + esc(r.kids) : '') + (flat ? ' · кв. ' + esc(flat) : '') + '</div>' +
         '<div class="sm-pay">' +
           '<div><div class="sm-k">' + (grace ? 'Платёж первые ' + F.period(r.graceMonths) : 'Ежемесячный платёж') + '</div><div class="sm-v">' + F.rub(r.pay1) + '</div></div>' +
           (grace ? '<div><div class="sm-k">Платёж после</div><div class="sm-v sm-v2">' + F.rub(r.pay2) + '</div></div>' : '') +
@@ -80,7 +79,7 @@
   /* ---------- Таблица программ ---------- */
   var sub = function (t, cls) { return '<span class="sm-sub' + (cls ? ' ' + cls : '') + '">' + t + '</span>'; };
   var COLS = [
-    ['Программа', function (r) { return esc(r.name) + (r.ok ? '' : sub(esc(r.note || r.status), 'sm-why')); }],
+    ['Программа', function (r) { return esc(r.name) + sub(esc([r.type, r.kids].filter(Boolean).join(' · '))) + (r.ok ? '' : sub(esc(r.note || r.status), 'sm-why')); }],
     ['Ставка', function (r) { return F.pct(r.r1) + (r.graceMonths ? sub('через ' + F.period(r.graceMonths) + ' — ' + F.pct(r.r2)) : ''); }],
     ['Срок', function (r) { return F.years(r.term); }],
     ['Цена в договоре', function (r) { return F.rub(r.price) + sub('скидка ' + F.pct1(r.disc)); }, true],
@@ -99,21 +98,100 @@
   }
   function headHtml() { return '<tr>' + COLS.map(function (c) { return '<th' + cls(c) + '>' + c[0] + '</th>'; }).join('') + '</tr>'; }
 
+  var allRates = $('sm-all-rates'), toggle = $('sm-rates-toggle'), summary = $('sm-summary');
+  function setExpanded(open) {
+    allRates.hidden = !open;
+    toggle.setAttribute('aria-expanded', String(open));
+    toggle.textContent = open ? 'Свернуть список ставок' : 'Показать все ставки';
+  }
+
+  function itConditions(label) {
+    var model = window.SMToolsModel;
+    var project = Object.keys(model.projects).find(key => model.projects[key] === state.project);
+    var cards = (window.SM_TOOLS_DATA?.records || []).filter(record =>
+      record.project === project && record.kind === 'info' && model.section(record) === 'mortgage'
+      && record.enabled && !record.params.ownerOnly && model.mortgageBucket(record) === 'it');
+    if (!cards.length) return '';
+    var today = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Yekaterinburg' }).format(new Date());
+    var offers = cards.filter(record => !record.params.validUntil || record.params.validUntil >= today)
+      .flatMap(model.mortgageOffers);
+    var query = new URLSearchParams({ section: 'mortgage', project: project, mortgageType: 'it' });
+    var link = '<a class="sm-link" href="tools.html?' + esc(query.toString()) + '">';
+    if (!offers.length) return '<li><span>' + label + '</span>' + link + 'См. условия</a></li>';
+    var rate = Math.min(...offers.map(offer => offer.rate));
+    var banks = [...new Set(offers.filter(offer => offer.rate === rate).map(offer => offer.bank))];
+    return '<li><span>' + label + '<small>' + esc(banks.join(', ')) + ' · ' + link +
+      'Условия</a></small></span><strong>от ' + F.pct(rate) + '</strong></li>';
+  }
+
+  function renderOverview(rows) {
+    var model = window.SMToolsModel, groups = new Map();
+    Object.entries(model.mortgageTypes).forEach(function ([key, label]) {
+      groups.set(key, { label: label, rows: [] });
+    });
+    rows.forEach(function (row) {
+      var key = model.mortgageType(row) || row.type;
+      if (!groups.has(key)) groups.set(key, { label: row.type, rows: [] });
+      groups.get(key).rows.push(row);
+    });
+    var items = [];
+    groups.forEach(function (group, key) {
+      var label = esc(group.label);
+      if (!group.rows.length && key === 'it' && (!state.type || state.type === group.label)) {
+        var conditions = itConditions(label);
+        if (conditions) {
+          items.push(conditions);
+          return;
+        }
+      }
+      if (state.type && !group.rows.length) return;
+      var eligible = group.rows.filter(function (row) { return row.ok; });
+      if (!eligible.length) {
+        var reason = group.rows.length ? 'Нет подходящих ставок' : 'Нет программ для расчёта';
+        items.push('<li><span>' + label + '<small>' + reason + '</small></span><span>—</span></li>');
+        return;
+      }
+      var minimum = Math.min(...eligible.map(function (row) { return row.r1; }));
+      var banks = new Map();
+      eligible.forEach(function (row) {
+        if (row.r1 === minimum && !banks.has(row.bank)) banks.set(row.bank, row);
+      });
+      var links = Array.from(banks.values(), function (row) {
+        return '<button type="button" class="sm-link" data-id="' + row.id + '" aria-label="'
+          + esc('Расчёт: ' + group.label + ', ' + row.bank + ', ' + F.pct(row.r1) + ', ' + F.years(row.term))
+          + '">' + esc(row.bank) + '</button>';
+      });
+      items.push('<li><span>' + label + '<small>' + links.join(' · ') +
+        '</small></span><strong>от ' + F.pct(minimum) + '</strong></li>');
+    });
+    summary.innerHTML = items.join('') || '<li>Нет программ для расчёта</li>';
+    toggle.hidden = !rows.length;
+    if (!rows.length) setExpanded(false);
+  }
+
+  function clearResults(message) {
+    el.detail.innerHTML = '<p class="sm-empty">' + esc(message) + '</p>';
+    el.thead.innerHTML = el.tbody.innerHTML = el.tip.innerHTML = '';
+    summary.innerHTML = '<li>' + esc(message) + '</li>';
+    toggle.hidden = true;
+    setExpanded(false);
+    last = null;
+  }
+
   function render() {
     var inp = readInputs();
-    if (flats.isPif()) { el.detail.innerHTML = '<p class="sm-empty">Для квартиры ПИФ условия покупки нужно уточнить. Расчёт отключён.</p>'; el.thead.innerHTML = el.tbody.innerHTML = el.tip.innerHTML = ''; last = null; return; }
-    el.title.textContent = inp.type + (hasKids() ? ', ' + inp.kids : '') + ': все программы';
-    if (!inp.base) {
-      el.detail.innerHTML = '<p class="sm-empty">Укажите стоимость квартиры.</p>';
-      el.thead.innerHTML = el.tbody.innerHTML = el.tip.innerHTML = '';
-      last = null;
-      return;
+    $('sm-overview-project').textContent = inp.project;
+    if (flats.isPif()) return clearResults('Для квартиры ПИФ условия покупки нужно уточнить. Расчёт отключён.');
+    if (!inp.base) return clearResults('Укажите стоимость квартиры.');
+    if (!el.disc.value.trim()) return clearResults('Укажите скидку при полной оплате. Если скидки нет, введите 0.');
+    if (inp.disc >= 1 || (el.term.value && !(Number.isInteger(Number(el.term.value)) && inp.term >= 1 && inp.term <= 30))) {
+      return clearResults('Скидка должна быть меньше 100%, срок — целое число от 1 до 30 лет.');
     }
-    if(!el.disc.value.trim()){el.detail.innerHTML='<p class="sm-empty">Укажите скидку при полной оплате. Если скидки нет, введите 0.</p>';el.thead.innerHTML=el.tbody.innerHTML=el.tip.innerHTML='';last=null;return;}
-    if(inp.disc>=1 || (el.term.value && !(Number.isInteger(Number(el.term.value))&&Number(el.term.value)>=1&&Number(el.term.value)<=30))){el.detail.innerHTML='<p class="sm-empty">Скидка должна быть меньше 100%, срок — целое число от 1 до 30 лет.</p>';el.thead.innerHTML=el.tbody.innerHTML=el.tip.innerHTML='';last=null;return;}
+    el.title.textContent = [inp.type || 'Ипотека', inp.kids].filter(Boolean).join(', ') + ' · все ставки';
     var res = C.mortgage(D, inp, { loanFromBase: CONFIG.loanFromBase });
     if (state.pick != null && !res.picked) state.pick = null; // выбранная вручную перестала подходить — снова автоподбор
     last = { inp: inp, res: res };
+    renderOverview(res.rows);
     el.detail.innerHTML = res.best ? detailHtml(inp, res.best)
       : '<p class="sm-empty">' + (res.rows.length ? 'При таких условиях ни одна программа не подходит. Измените скидку, взнос или тип ипотеки.' : 'Условия ипотеки для этого проекта готовятся.') + '</p>';
     el.thead.innerHTML = res.rows.length ? headHtml() : '';
@@ -134,8 +212,8 @@
     if (flat) add('Номер квартиры', esc(flat));
     add('Стоимость квартиры по прайсу', F.rub(inp.base), true);
     add('Скидка', F.pct(inp.disc));
-    add('Тип ипотеки', esc(inp.type));
-    if (hasKids()) add('Количество детей', esc(inp.kids));
+    add('Тип ипотеки', esc(res.best.type));
+    if (res.best.kids) add('Количество детей', esc(res.best.kids));
     add('Первоначальный взнос', inp.pv ? F.rub(inp.pv) : 'минимальный');
     add('Срок', inp.term ? F.years(inp.term) : 'максимальный');
 
@@ -163,7 +241,8 @@
   var asItems = function (list) { return list.map(function (x) { return { value: x, label: x }; }); };
   U.pills(el.project, asItems(D.projects), state.project, 'v');
   // На кнопках — без слова «ипотека»: оно уже есть в подписи поля
-  U.pills(el.type, D.types.map(function (t) { return { value: t, label: t.replace(/[\s-]ипотека$/i, '') }; }), state.type, 'v');
+  var types = Array.from(new Set(D.types.concat(D.programs.map(function (p) { return p.type; }))));
+  U.pills(el.type, [{ value: '', label: 'Все' }].concat(types.map(function (t) { return { value: t, label: t.replace(/[\s-]ипотека$/i, '') }; })), state.type, 'v');
   el.price.value = F.int(CONFIG.defaultPrice);
   el.disc.value = String(+(catalogDiscount() * 100).toFixed(2)).replace('.', ',');
   function updateRateStatus(){
@@ -194,9 +273,22 @@
   el.term.addEventListener('input', render);
   el.kids.addEventListener('change', render);
 
+  toggle.addEventListener('click', function () {
+    setExpanded(allRates.hidden);
+    if (!allRates.hidden) el.title.focus();
+  });
+  function showProgram(id) {
+    state.pick = id;
+    render();
+    $('sm-calculation').focus();
+  }
+  summary.addEventListener('click', function (e) {
+    var button = e.target.closest('button[data-id]');
+    if (button) showProgram(Number(button.dataset.id));
+  });
   var pick = function (e) {
     var tr = e.target.closest('tr.sm-pick');
-    if (tr) { state.pick = +tr.getAttribute('data-id'); render(); }
+    if (tr) showProgram(Number(tr.dataset.id));
   };
   el.tbody.addEventListener('click', pick);
   el.tbody.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(e); } });

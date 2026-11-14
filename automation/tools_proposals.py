@@ -13,7 +13,7 @@ from subsidy_catalog import bank_row, manual_record
 from tools_ai import STRING, api_key, fields_by_kind, interpret, obj, structured
 from tools_source import validate
 
-CATEGORIES = {'installment':'installment', 'mortgage':'mortgage', 'tranche':'mortgage',
+CATEGORIES = {'installment':'installment', 'mortgage':'mortgage', 'tranche':'tranche',
               'discount':'discount', 'chpv':'chpv'}
 ITEM = obj(target=STRING, name=STRING, project=STRING, kind=STRING, category=STRING,
            terms=STRING, combination=STRING, source_ids={'type':'array','items':{'type':'integer'}})
@@ -32,7 +32,7 @@ source_ids — номера фрагментов document, подтвержда�
 если изменяется она, иначе пустая строка. Не создавай дубли. Ручную ипотеку можно создавать и менять. Если нужно изменить импортированную
 ставку (imported=true), укажи её target. Владелец сначала примет её карточку в приложении. Варианты kind: installment, tranche,
 mortgage, chpv, discount (только основная скидка за полную оплату), info (акции, доп. инструменты,
-бронирование). category: installment, mortgage, chpv, discount, extra, booking. Явный отказ от старого
+бронирование). category: installment, mortgage, tranche, chpv, discount, extra, booking. Явный отказ от старого
 инструмента или неподдерживаемая механика — в questions, не создавай похожую новую запись.
 Если сочетание не обсуждали, оставь combination пустой. Для изменения программы сохрани в terms
 все применимые прежние условия, кроме явно изменённых. Не додумывай числовые параметры.

@@ -95,3 +95,22 @@
 @media(max-width:650px){.tools-param-grid{grid-template-columns:minmax(0,1fr)}}
 
 .tool-secondary{display:flex;flex-wrap:wrap;gap:5px 14px}
+
+.tools-mortgage-type{background:#f6f8fc}
+.tools-type-toggle{display:inline-flex;align-items:center;gap:8px;padding:5px 0;background:transparent;color:inherit;border:0;text-align:left;font:inherit}
+.tools-type-toggle img{width:15px;height:15px}
+.tools-type-toggle:hover{text-decoration:underline}
+
+#owner-window{width:min(1000px,calc(100vw - 24px));max-height:92dvh}
+#owner-window:has(iframe:not([hidden])){height:min(840px,92dvh)}
+#owner-window iframe{width:100%;height:100%;display:block;border:0}
+#owner-window:has(#owner-connection:not([hidden])){max-width:520px}
+.owner-connection-body{padding:8px 24px 24px}
+.tools-embedded .tools-nav,.tools-embedded .tools-head>a{display:none}
+.tools-embedded .tools-shell{padding:12px}
+@media(max-width:650px){#owner-window:has(iframe:not([hidden])){height:96dvh;max-height:96dvh;width:calc(100vw - 8px)}}
+
+.tools-type-action{font-size:12px;font-weight:400;color:#31559c}
+
+.tools-mortgage-general>td{color:#52647f;font-size:13px}
+.tools-mortgage-general button{width:100%}

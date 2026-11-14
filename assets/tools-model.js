@@ -2,11 +2,11 @@
 (function(root){
   'use strict';
   var projects={da1:'ДА — 1 очередь',da2:'ДА — 2 очередь',dnk2:'ДНК — 2 очередь'};
-  var categories={mortgage:'Ипотека',installment:'Рассрочка',chpv:'Дофинансирование ПВ · ЧПВ',discount:'Скидки и акции',extra:'Дополнительные инструменты',booking:'Условия бронирования'};
+  var categories={mortgage:'Ипотека',installment:'Рассрочка',tranche:'Траншевая ипотека',chpv:'Дофинансирование ПВ · ЧПВ',discount:'Скидки и акции',extra:'Дополнительные инструменты',booking:'Условия бронирования'};
   var modes={sequential:'Последовательно',additive:'Суммируется',none:'Не суммируется',individual:'Индивидуально'};
   function field(key,label,type,extra){return Object.assign({key:key,label:label,type:type},extra||{});}
   var fields={
-    mortgage:[field('bank','Банк','text'),field('type','Программа','select',{options:['Семейная ипотека','Базовая ипотека']}),field('kids','Дети','select',{options:['','1 ребёнок','2 ребёнка','3 ребёнка','4 ребёнка','5 и более детей']}),field('term','Кредит, лет','integer',{min:1,max:30}),field('rate','Ставка, %','percent'),field('subsidy','Комиссия банку, %','percent'),field('minPv','Минимальный взнос, %','percent'),field('limit','Лимит кредита, ₽','money'),field('variant','Вариант программы','text')],
+    mortgage:[field('bank','Банк','text'),field('type','Программа','select',{options:['Семейная ипотека','Базовая ипотека','IT-ипотека']}),field('kids','Дети','select',{options:['','1 ребёнок','2 ребёнка','3 ребёнка','4 ребёнка','5 и более детей']}),field('term','Кредит, лет','integer',{min:1,max:30}),field('rate','Ставка, %','percent'),field('subsidy','Комиссия банку, %','percent'),field('minPv','Минимальный взнос, %','percent'),field('limit','Лимит кредита, ₽','money'),field('variant','Вариант программы','text')],
     installment:[field('scheme','Схема платежей','select',{options:['equal','monthly','deferred','scheduled'],labels:['Равные платежи','Ежемесячный платёж и остаток','Взнос и остаток','По этапам']}),field('minPv','Первый взнос, %','percent'),field('end','Погашение до','date'),field('months','Или месяцев от сделки','integer',{min:1,max:60}),field('steps','Периодичность, месяцев','steps'),field('pay.1','Студия / 1к, ₽ в месяц','money'),field('pay.2','2к, ₽ в месяц','money'),field('pay.3','3к, ₽ в месяц','money'),field('disc','Скидка, %','percent'),field('discFromPv','Скидка на сумму ПВ, %','percent'),field('maxDisc','Потолок скидки, %','percent'),field('pvFromBase','Взнос от прайса','boolean'),field('launchDiscount','Стартовая скидка, %','percent'),field('launchUntil','Стартовая скидка до','date'),field('pvChoices','Варианты взноса, %','percentList'),field('discAt70','Скидка при ПВ от 70%, %','percent')],
     tranche:[field('bank','Банк','text'),field('tranches','Количество траншей','select',{options:['2','3']}),field('minPv','Первый взнос, %','percent'),field('rate','Ставка, %','percent'),field('estimate','Расчёт по ориентиру','boolean'),field('referencePrincipal','Сумма для ориентира, ₽','money'),field('referencePayment','Ориентир в месяц, ₽','money'),field('referenceYears','Ориентир: кредит, лет','integer',{min:1,max:30}),field('firstRub','Первый транш, ₽ (для двух)','money'),field('first','Первый транш, % цены','percent'),field('second','Второй транш, % (для трёх)','percent'),field('minFirst','Минимум первого транша, ₽','money'),field('date2','Дата второго транша','date'),field('secondMonths','Или месяцев до второго','integer',{min:1,max:60}),field('date3','Дата последнего транша','date'),field('lastMonthsBeforeCommissioning','Месяцев до ввода для последнего транша','integer',{min:1,max:60}),field('flexibleTranches','Суммы и число траншей по согласованию','boolean'),field('maxDate','Крайний срок последнего транша','date'),field('discount','Скидка, %','percent'),field('launchDiscount','Стартовая скидка, %','percent'),field('launchUntil','Стартовая скидка до','date')],
     chpv:[field('limit','Лимит кредита, ₽','money'),field('years','Кредит, лет','integer',{min:1,max:30}),field('rate','Ставка, %','percent'),field('minDown','Минимальный взнос, %','percent'),field('cost','Стоимость финансирования, %','percent'),field('overRate','Ставка сверхлимита, %','percent')],
@@ -90,8 +90,8 @@
     if(r.kind==='chpv')required(p.limit>0&&p.years&&p.rate>0&&p.minDown>0&&number(p.cost,0,.99)&&p.overRate>0,'Заполните все параметры ЧПВ.');
     if(r.kind==='discount')required(number(p.percent,0,.99)&&p.scope==='cash','Скидка должна относиться к полной оплате.');
     if(p.launchDiscount)required(validDate(p.launchUntil),'Укажите дату окончания стартовой скидки.');
-    var expected={mortgage:'mortgage',tranche:'mortgage',installment:'installment',chpv:'chpv',discount:'discount'};
-    if(expected[r.kind])required(r.category===expected[r.kind],'Механика не соответствует разделу.');
+    var expected={mortgage:'mortgage',tranche:'tranche',installment:'installment',chpv:'chpv',discount:'discount'};
+    if(expected[r.kind])required(r.category===expected[r.kind]||(r.kind==='tranche'&&r.category==='mortgage'),'Механика не соответствует разделу.');
     return r;
   }
   function validate(data){
@@ -136,7 +136,45 @@
     if(r.kind==='info')a=[r.description];
     return a.filter(Boolean);
   }
-  function groups(data){var out=[],map={};data.records.forEach(function(r){var key=r.category+':'+r.group;if(!map[key]){map[key]={id:r.group,category:r.category,name:r.name,cells:{}};out.push(map[key]);}if(!map[key].cells[r.project])map[key].cells[r.project]=[];map[key].cells[r.project].push(r);});return out;}
-  var api={projects:projects,categories:categories,modes:modes,fields:fields,clone:clone,get:get,set:set,validate:validate,validateRecord:validateRecord,calcData:calcData,summary:summary,groups:groups,pct:pct,rub:rub};
+  // В старых снимках траншевая механика хранилась в разделе mortgage.
+  function section(record){return record.kind==='tranche'?'tranche':record.category;}
+
+  const mortgageTypes = {
+    base:'Базовая ипотека',
+    family1:'Семейная · 1 ребёнок', family2:'Семейная · 2 ребёнка',
+    family3:'Семейная · 3 ребёнка', family4:'Семейная · 4 ребёнка',
+    family5:'Семейная · 5 и более детей', it:'IT-ипотека'
+  };
+  const childConditions = fields.mortgage.find(f=>f.key==='kids').options;
+  function mortgageType(params){
+    if(params.type==='Базовая ипотека')return 'base';
+    if(params.type==='IT-ипотека')return 'it';
+    const children=childConditions.indexOf(params.kids);
+    return params.type==='Семейная ипотека'&&children>0?'family'+children:null;
+  }
+  function mortgageBucket(record){
+    if(record.kind==='mortgage')return mortgageType(record.params)||'other';
+    if(record.kind==='info'&&/(?:^|\s)(?:it|ит)[\s‑–-]*ипотек/iu.test(record.name))return 'it';
+    return 'other';
+  }
+  function mortgageOffers(record){
+    if(record.kind==='mortgage')return [{bank:record.params.bank,rate:record.params.rate}];
+    if(mortgageBucket(record)!=='it')return [];
+    // Только явно перечисленные предложения «3,5% на весь срок - Металлинвест»
+    // под заголовком «Ставка:». ПВ, скидки и общий список банков сюда не входят.
+    const offers=[];
+    const lines=record.description.split(/\r?\n/);
+    let inRates=false;
+    for(const line of lines){
+      if(/^\s*Ставка\s*:\s*$/iu.test(line)){inRates=true;continue;}
+      if(!inRates)continue;
+      const match=line.match(/^\s*[*•-]\s*(\d{1,2}(?:[.,]\d+)?)\s*%\s+на весь срок\s*[-–—]\s*([\p{L}][\p{L} .‑-]*)\s*$/iu);
+      if(!match){inRates=false;continue;}
+      offers.push({rate:Number(match[1].replace(',','.'))/100,bank:match[2].trim()});
+    }
+    return offers;
+  }
+  function groups(data){var out=[],map={};data.records.forEach(function(r){var key=section(r)+':'+r.group;if(!map[key]){map[key]={id:r.group,category:section(r),name:r.name,cells:{}};out.push(map[key]);}if(!map[key].cells[r.project])map[key].cells[r.project]=[];map[key].cells[r.project].push(r);});return out;}
+  var api={section:section,mortgageType:mortgageType,mortgageTypes:mortgageTypes,mortgageBucket:mortgageBucket,mortgageOffers:mortgageOffers,projects:projects,categories:categories,modes:modes,fields:fields,clone:clone,get:get,set:set,validate:validate,validateRecord:validateRecord,calcData:calcData,summary:summary,groups:groups,pct:pct,rub:rub};
   root.SMToolsModel=api;if(typeof module!=='undefined')module.exports=api;
 })(typeof window!=='undefined'?window:globalThis);
