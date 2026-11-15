@@ -36,13 +36,18 @@
     frame.title = 'Личный редактор инструментов';
     frame.allow = 'microphone; local-network-access; loopback-network';
     frame.hidden = true;
-    frame.src = owner + '/tools.html';
+    frame.src = owner + '/tools.html?theme=' + document.documentElement.dataset.theme;
     $('owner-connection').hidden = false;
     dialog.append(frame);
     report('Подключаем личный редактор на вашем Маке…', false);
     timeout = setTimeout(() => report('Нет связи с личным редактором. Откройте каталог на Маке владельца и разрешите браузеру доступ к локальной сети, если он запросит разрешение.', true), 9000);
   }
   function showFrame() {
+    const frameUrl = new URL(frame.src);
+    if (frameUrl.searchParams.get('theme') !== document.documentElement.dataset.theme) {
+      start();
+      return;
+    }
     frame.hidden = false;
     $('owner-connection').hidden = true;
     frame.contentWindow.postMessage({type:'tools:open', action}, owner);
@@ -82,6 +87,7 @@
       action = next;
       $('owner-action-title').textContent = title;
       const url = new URL('/tools.html', owner);
+      url.searchParams.set('theme', document.documentElement.dataset.theme);
       if (next.project !== 'all') url.searchParams.set('project', next.project);
       if (next.section !== 'all') url.searchParams.set('section', next.section);
       if (next.id) url.searchParams.set(next.kind === 'add-project' ? 'template' : 'edit', next.id);

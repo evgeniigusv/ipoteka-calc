@@ -1,0 +1,112 @@
+/* Переключатель принадлежит шапке сайта и не попадает в отчёты. */
+.sm-nav-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 18px;
+  margin: 22px 0;
+}
+.sm-nav-row .sm-navigation { margin: 0; }
+.sm-theme-switch { display: flex; align-items: center; gap: 2px; }
+.sm-theme-switch span { color: var(--muted); font-size: 13px; margin-right: 6px; }
+.sm-theme-switch button {
+  cursor: pointer;
+  font: 600 13px/1.2 var(--text);
+  border: 1px solid transparent;
+  border-radius: var(--r-pill);
+  padding: 8px 10px;
+  color: var(--muted);
+  background: transparent;
+}
+.sm-theme-switch button:hover { color: var(--black); text-decoration: underline; }
+.sm-theme-switch button[aria-pressed="true"] {
+  color: var(--black);
+  background: var(--white);
+  border-color: var(--field);
+}
+.tools-embedded .sm-nav-row { display: none; }
+@media (max-width: 640px) {
+  .sm-nav-row { gap: 12px; }
+  .sm-nav-row .sm-navigation { width: 100%; }
+  .sm-theme-switch button { min-height: 40px; }
+}
+@media print { .sm-nav-row { display: none !important; } }
+
+/* По мобильному макету сайта «Свобода мысли»: графит, голубой и белые поля. */
+:root[data-theme="sm"] {
+  --graphite: #2f2f2f;
+  --blue: #aac3fc;
+  --bg: #fff;
+  --black: #2f2f2f;
+  --grey: #35373a;
+  --muted: #595c60;
+  --line: #dedfe1;
+  --field: #9a9c9f;
+  --sky: #354f80;
+  --sky-soft: #ebf0fd;
+  --apricot: var(--blue);
+  --apricot-deep: #97b5f7;
+  --display: var(--text);
+  --r-lg: 8px;
+  --r-md: 8px;
+  --r-pill: 6px;
+}
+[data-theme="sm"] .sm:not(.sm-pdf) .sm-head {
+  background: var(--graphite);
+  border-radius: 8px;
+  padding: clamp(16px, 2.6vw, 32px);
+  position: relative;
+  overflow: hidden;
+}
+[data-theme="sm"] .sm:not(.sm-pdf) .sm-head::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+  right: 0;
+  bottom: 0;
+  width: min(22%, 220px);
+  height: 14px;
+  background: var(--blue);
+  clip-path: polygon(100% 0, 100% 100%, 0 100%);
+}
+[data-theme="sm"] .sm:not(.sm-pdf) .sm-head h1 { color: white; }
+[data-theme="sm"] .sm:not(.sm-pdf) .sm-head .sm-logo img { filter: brightness(0) invert(1); }
+[data-theme="sm"] :is(.sm h1, .sm h2, .tools-editor-head h2) {
+  text-transform: none;
+  letter-spacing: -.025em;
+  font-weight: 750;
+}
+[data-theme="sm"] .sm:not(.sm-pdf) h2 { font-size: clamp(18px, 2vw, 22px); }
+[data-theme="sm"] :is(.sm:not(.sm-pdf) .sm-card, .tools-body) {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+[data-theme="sm"] .sm-navigation .sm-nav { background: #eee; font-weight: 600; }
+[data-theme="sm"] :is(.sm-navigation .sm-nav[aria-current], .sm-navigation .sm-nav:hover,
+  .sm-pills button[aria-pressed="true"], .tools-pills button[aria-pressed="true"]) {
+  background: var(--blue);
+  border-color: var(--blue);
+  color: var(--black);
+}
+[data-theme="sm"] :is(.sm-hero, .sm-total) { background: var(--graphite); }
+[data-theme="sm"] :is(.sm-hero, .sm-total) .sm-v { color: var(--blue); }
+[data-theme="sm"] #tools-table .tools-section td { background: var(--graphite); }
+[data-theme="sm"] :is(.sm input, .sm select, .tools-search, .tools-filter select, .tools-context select,
+  .tools-field input, .tools-field select, .tools-field textarea, .tools-pills button, .sm-note) { border-radius: 6px; }
+[data-theme="sm"] .sm-btn2 { border: 1px solid var(--field); }
+[data-theme="sm"] .sm-note { background: var(--sky-soft); }
+[data-theme="sm"] .sm-theme-switch button[aria-pressed="true"] { background: var(--graphite); color: white; }
+@media (max-width: 640px) {
+  [data-theme="sm"] .sm:not(.sm-pdf) .sm-tablecard { border: 0; }
+  [data-theme="sm"] .sm:not(.sm-pdf) .sm-tablecard tbody tr { border: 1px solid var(--line); border-radius: 8px; }
+}
+@media screen and (max-width: 370px) {
+  .sm:not(.sm-pdf) dl { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .sm:not(.sm-pdf) :is(dt, dd) { white-space: normal; overflow-wrap: anywhere; }
+  .sm:not(.sm-pdf) .sm-head { gap: 8px; }
+  .sm:not(.sm-pdf) .sm-head h1 { min-width: 0; font-size: 21px; overflow-wrap: anywhere; }
+  .sm:not(.sm-pdf) .sm-head .sm-logo img { height: 32px; }
+  .sm:not(.sm-pdf) .sm-actions { min-width: 0; max-width: 100%; }
+  .sm:not(.sm-pdf) .sm-btn { padding: 0 12px; white-space: normal; }
+}
