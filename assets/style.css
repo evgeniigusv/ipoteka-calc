@@ -1,5 +1,20 @@
 /* Калькуляторы «Свобода мысли». Фирменный стиль — с сайта da-dom.life:
    синий #355DB3, сиреневый фон, абрикосовая главная кнопка, Unbounded в заголовках и Onest в тексте. */
+@font-face {
+  font-family: 'Onest';
+  src: url('fonts/onest/variable.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Unbounded';
+  src: url('fonts/unbounded/variable.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 200 900;
+  font-display: swap;
+}
+
 :root {
   --sky: #355DB3;
   --sky-soft: #EEF2FA;      /* подсветка выбранной строки */
@@ -24,7 +39,7 @@
 
 html, body { margin: 0; padding: 0; background: var(--bg); }
 
-.sm {
+.sm, .tools-shell {
   font-family: var(--text);
   font-weight: 500;
   font-size: 15px;
@@ -205,7 +220,7 @@ html, body { margin: 0; padding: 0; background: var(--bg); }
   .sm:not(.sm-pdf) .sm-grid, .sm:not(.sm-pdf) .sm-cards { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-width: 640px) {
-  .sm:not(.sm-pdf) { padding: 20px 16px 32px; font-size: 15px; }
+  .sm:not(.sm-pdf), .tools-shell { padding: 20px 16px 32px; font-size: 15px; }
   .sm:not(.sm-pdf) .sm-head { flex-wrap: wrap; }
   .sm:not(.sm-pdf) .sm-head h1 { flex: 1 1 180px; }
   .sm:not(.sm-pdf) .sm-head-r { display: contents; }
