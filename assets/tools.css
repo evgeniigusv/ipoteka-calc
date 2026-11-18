@@ -123,7 +123,7 @@
   :is(#tools-editor, #ai-dialog)[data-owner-entry="pointer"][open] {
     animation: tools-form-entry 160ms var(--ease);
   }
-  @keyframes tools-mode-entry { from { opacity: .65; transform: translateY(5px); } }
+  @keyframes tools-mode-entry { from { opacity: .65; transform: translateY(1px); } }
   @keyframes tools-form-entry { from { opacity: .7; transform: translateY(4px); } }
 }
 
@@ -211,7 +211,7 @@
     }
     #tools-rows details:not([open]) > .tool-full { interactivity: inert; pointer-events: none; }
     :root[data-sm-input="pointer"] #tools-rows details[data-pointer-disclosure] > summary::before {
-      transition: transform 220ms var(--ease);
+      transition: transform 260ms var(--ease);
     }
   }
 }

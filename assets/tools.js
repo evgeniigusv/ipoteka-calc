@@ -531,8 +531,8 @@ document.addEventListener('click',event=>{
 });
 
 $('tools-rows').addEventListener('transitionend',event=>{
- if(event.propertyName==='block-size' || event.propertyName==='height'){
-   if(event.pseudoElement==='::details-content')event.target.removeAttribute('data-pointer-disclosure');
+ if(event.pseudoElement==='::before' && event.propertyName==='transform' && event.target.matches('summary')){
+   event.target.parentElement.removeAttribute('data-pointer-disclosure');
  }
 });
 
