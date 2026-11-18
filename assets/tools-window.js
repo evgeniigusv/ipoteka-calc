@@ -29,7 +29,10 @@
   }
   // После сохранения каталог заново создаёт строки, включая кнопку, открывшую форму.
   editor.addEventListener('close', () => {
-    if (document.activeElement !== document.body || document.querySelector('dialog[open]') || window.SMProposals?.isTransitioning()) return;
+    if (document.querySelector('dialog[open]') || window.SMProposals?.isTransitioning()) return;
+    // В Яндекс Браузере при событии close фокус ещё может быть внутри закрытой формы.
+    const focused = document.activeElement;
+    if (focused !== document.body && !editor.contains(focused)) return;
     const edit = returnRecord && document.querySelector('[data-edit="' + CSS.escape(returnRecord) + '"]');
     (edit || $('tools-add')).focus({preventScroll:true});
   });
