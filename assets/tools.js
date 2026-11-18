@@ -124,7 +124,7 @@ function takeOwnership(record){
  return draft;
 }
 
-function mortgageOverview(groups, query, archive){
+function mortgageBuckets(groups){
  const buckets=new Map();
  for(const group of groups){
   for(const rows of Object.values(group.cells)){
@@ -135,6 +135,11 @@ function mortgageOverview(groups, query, archive){
    }
   }
  }
+ return buckets;
+}
+
+function mortgageOverview(groups, query, archive){
+ const buckets=mortgageBuckets(groups);
  const today=new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Yekaterinburg'}).format(new Date());
  let html='';
  for(const [key,label] of Object.entries(M.mortgageTypes)){
@@ -146,7 +151,7 @@ function mortgageOverview(groups, query, archive){
    const action=expanded?'Свернуть':'Подробнее';
    title='<button type="button" class="tools-type-toggle" data-mortgage-type="'+key+
      '" aria-label="'+esc(action+' · '+label)+'" aria-expanded="'+expanded+'">'+
-     icon(expanded?'chevron-down':'chevron-right')+'<span>'+esc(label)+'</span><span class="tools-type-action">'+action+'</span></button>';
+     icon('chevron-right')+'<span>'+esc(label)+'</span><span class="tools-type-action">'+action+'</span></button>';
   }
   const cells=projects().map(projectKey=>{
    const records=rows.filter(r=>r.project===projectKey);
@@ -167,11 +172,15 @@ function mortgageOverview(groups, query, archive){
  const general=buckets.get('other');
  if(general?.length){
   const title=query?generalMortgageLabel:'<button type="button" class="tools-type-toggle" data-mortgage-general aria-expanded="'+generalMortgageOpen+'">'+
-   icon(generalMortgageOpen?'chevron-down':'chevron-right')+generalMortgageLabel+'</button>';
+   icon('chevron-right')+generalMortgageLabel+'</button>';
   html+='<tr class="tools-mortgage-general"><td colspan="'+(1+projects().length)+'">'+title+'</td></tr>';
   if(query||generalMortgageOpen)html+=M.groups({records:general}).map(compactRow).join('');
  }
  return html;
+}
+
+function sectionRows(cat, list, query, archive){
+ return cat==='mortgage'?mortgageOverview(list,query,archive):list.map(compactRow).join('');
 }
 
 function render(){if(!data)return;$('tools-head').innerHTML=compactHeader();$('tools-table').dataset.single=String(project!=='all');var gs=filtered(),query=$('tools-search').value.trim(),n=1+projects().length,html='';
@@ -181,10 +190,10 @@ function render(){if(!data)return;$('tools-head').innerHTML=compactHeader();$('t
    var list=gs.filter(g=>g.category===cat);if(!list.length)return;
    var shut=!!(overview&&collapsed[cat]);
    var title=esc(label)+'<span>'+list.length+'</span>';
-   var heading=overview?'<button data-category="'+cat+'" aria-expanded="'+!shut+'">'+icon(shut?'chevron-right':'chevron-down')+title+'</button>':'<div class="tools-section-label">'+title+'</div>';
+   var heading=overview?'<button data-category="'+cat+'" aria-expanded="'+!shut+'">'+icon('chevron-right')+title+'</button>':'<div class="tools-section-label">'+title+'</div>';
    html+='<tr class="tools-section"><td colspan="'+n+'">'+heading+'</td></tr>';
    if(shut)return;
-   html+=cat==='mortgage'?mortgageOverview(list,query,archive):list.map(compactRow).join('');
+   html+=sectionRows(cat,list,query,archive);
  });
  var empty=archive?'В архиве нет записей по выбранным условиям.':'По выбранным условиям инструментов нет.';
  $('tools-rows').innerHTML=html||'<tr><td colspan="'+n+'" class="tools-empty">'+empty+'</td></tr>';
@@ -404,19 +413,78 @@ function stageRecord(r){
  if(JSON.stringify(r)===JSON.stringify(original))changes.delete(r.id);else changes.set(r.id,data.records.find(item=>item.id===r.id));
  render();
 }
-$('tools-rows').onclick=function(e){var b=e.target.closest('button');if(!b||busy)return;
- if(b.hasAttribute('data-mortgage-general')){
-  generalMortgageOpen=!generalMortgageOpen;
-  render();
-  $('tools-rows').querySelector('[data-mortgage-general]').focus();
-  return;
+const motionAllowed=window.matchMedia('(prefers-reduced-motion: no-preference)');
+function pointerMotion(event){
+ return event?.detail>0 && document.documentElement.dataset.smInput==='pointer' && motionAllowed.matches;
+}
+
+function disclosureTiming(trigger){
+ return {id:'tools-disclosure',duration:150,easing:getComputedStyle(trigger).getPropertyValue('--ease').trim()};
+}
+motionAllowed.addEventListener('change',event=>{
+ if(event.matches)return;
+ document.documentElement.classList.remove('sm-tools-switching');
+ for(const effect of document.getAnimations())if(effect.id==='tools-disclosure')effect.cancel();
+});
+
+function toggleRows(button,event){
+ const row=button.closest('tr');
+ const cat=button.dataset.category;
+ const type=button.dataset.mortgageType;
+ const open=button.getAttribute('aria-expanded')==='false';
+ button.toggleAttribute('data-pointer-disclosure',pointerMotion(event));
+ button.setAttribute('aria-expanded',String(open));
+ if(cat)collapsed[cat]=!open;
+ else if(type){
+   if(open)expandedMortgages.add(type);else expandedMortgages.delete(type);
+   const action=open?'Свернуть':'Подробнее';
+   button.querySelector('.tools-type-action').textContent=action;
+   button.setAttribute('aria-label',action+' · '+M.mortgageTypes[type]);
+ }else generalMortgageOpen=open;
+
+ if(!open){
+   const boundary=cat?'.tools-section':'.tools-section,.tools-mortgage-type,.tools-mortgage-general';
+   while(row.nextElementSibling && !row.nextElementSibling.matches(boundary))row.nextElementSibling.remove();
+   return;
  }
- if(b.dataset.mortgageType){
-  const key=b.dataset.mortgageType;
-  if(expandedMortgages.has(key))expandedMortgages.delete(key);else expandedMortgages.add(key);
-  render();
-  $('tools-rows').querySelector('[data-mortgage-type="'+key+'"]').focus();
-  return;
+ const groups=filtered().filter(g=>g.category===(cat||'mortgage'));
+ const html=cat
+   ? sectionRows(cat,groups,'',false)
+   : M.groups({records:mortgageBuckets(groups).get(type||'other')||[]}).map(compactRow).join('');
+ row.insertAdjacentHTML('afterend',html);
+ if(html && pointerMotion(event)){
+   row.nextElementSibling.animate([{opacity:.7},{opacity:1}],disclosureTiming(button));
+ }
+}
+
+// Запускаем отклик только от самого нажатия. Валидация и переключение вкладок
+// могут менять details.open программно, в том числе сразу после ввода мышью.
+document.addEventListener('click',event=>{
+ const summary=event.target.closest('details > summary');
+ if(!summary || event.defaultPrevented || !summary.closest('#tools-rows,#tools-form,#tools-settings-panel,.tools-alert'))return;
+ const details=summary.parentElement;
+ const content=details.querySelector(':scope > .tool-full');
+ const animate=pointerMotion(event);
+ const marker=animate?getComputedStyle(summary,'::before').transform:null;
+ for(const effect of summary.getAnimations({subtree:true}).concat(content?.getAnimations()||[])){
+   if(effect.id==='tools-disclosure')effect.cancel();
+ }
+ if(!animate)return;
+ const timing=disclosureTiming(summary);
+ if('pseudoElement' in KeyframeEffect.prototype){
+   summary.animate([{transform:marker},
+     {transform:details.open?'rotate(45deg)':'rotate(135deg)'}],{...timing,pseudoElement:'::before'});
+ }else summary.animate([{opacity:.7},{opacity:1}],timing);
+ if(content && !details.open)content.animate([{opacity:.7},{opacity:1}],timing);
+});
+
+$('tools-rows').onclick=function(e){
+ if(busy)return;
+ const b=e.target.closest('button');
+ if(!b)return;
+ if(b.matches('[data-category],[data-mortgage-type],[data-mortgage-general]')){
+   toggleRows(b,e);
+   return;
  }
  if(b.dataset.copy&&local){duplicateRecord(b.dataset.copy);return;}if(b.dataset.toggle&&local){
  var record=data.records.find(r=>r.id===b.dataset.toggle);
@@ -432,7 +500,7 @@ $('tools-rows').onclick=function(e){var b=e.target.closest('button');if(!b||busy
  if(local)addProjectConditions(b.dataset.template,b.dataset.newProject);
  else ownerAction('add-project',b.dataset.template,b.dataset.newProject);
  return;
-}if(b.dataset.edit){if(local)editRecord(b.dataset.edit);else ownerAction('edit',b.dataset.edit);}if(b.dataset.category){collapsed[b.dataset.category]=!collapsed[b.dataset.category];render();}};
+}if(b.dataset.edit){if(local)editRecord(b.dataset.edit);else ownerAction('edit',b.dataset.edit);}};
 $('tools-reset').onclick=function(){if(confirm('Отменить несохранённые изменения?')){data=M.clone(baseline);changes.clear();alert('');render();}};
 async function api(path,body){
  if(body&&needsRefresh)throw Error('Изменения уже сохранены, но версию каталога не удалось проверить. Нажмите «Обновить», прежде чем отправлять следующую правку.');
@@ -511,8 +579,10 @@ settingsEditor=SMToolsSettings.setup({
  canSave:()=>!busy&&!changes.size,
  onSaved:res=>{accepted(res.data);pendingPublish=!res.published;render();}
 });
-function selectView(next, addHistory=false){
+function selectView(next, addHistory=false, event){
+ const previous=view;
  view=['flats','compensation'].includes(next)?next:'catalog';
+ document.documentElement.classList.toggle('sm-tools-switching',view!==previous && pointerMotion(event));
  const title={catalog:'Инструменты',flats:'Квартиры',compensation:'Дополнительные условия'}[view];
  document.querySelector('.tools-mast h1').textContent=title;document.title=title+' — Свобода мысли';
  $('tools-catalog-panel').hidden=view!=='catalog';$('tools-settings-panel').hidden=view==='catalog';
@@ -526,7 +596,7 @@ function selectView(next, addHistory=false){
  else history.replaceState(null,'',url);
  render();
 }
-document.querySelector('.tools-view-tabs').onclick=e=>{const button=e.target.closest('[data-tools-view]');if(button){document.documentElement.classList.toggle('sm-tools-switching',e.detail>0);selectView(button.dataset.toolsView,true);}};
+document.querySelector('.tools-view-tabs').onclick=e=>{const button=e.target.closest('[data-tools-view]');if(button)selectView(button.dataset.toolsView,true,e);};
 $('tools-settings-edit').onclick=()=>ownerAction(view);
 window.addEventListener('popstate',()=>selectView(new URL(location.href).searchParams.get('view')));
 selectView(params.get('view'));

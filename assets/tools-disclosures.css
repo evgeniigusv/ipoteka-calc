@@ -1,0 +1,24 @@
+/* Один указатель для обоих состояний сохраняет положение при быстром повторном нажатии. */
+#tools-rows button[aria-expanded="true"] > img { transform: rotate(90deg); }
+
+:is(#tools-rows, #tools-form, #tools-settings-panel, .tools-alert) summary { list-style: none; }
+:is(#tools-rows, #tools-form, #tools-settings-panel, .tools-alert) summary::-webkit-details-marker { display: none; }
+:is(#tools-rows, #tools-form, #tools-settings-panel, .tools-alert) summary::before {
+  content: "";
+  display: inline-block;
+  vertical-align: .1em;
+  width: .44em;
+  height: .44em;
+  margin-inline: .13em .55em;
+  border: solid currentColor;
+  border-width: 1.5px 1.5px 0 0;
+  transform: rotate(45deg);
+}
+:is(#tools-rows, #tools-form, #tools-settings-panel) details[open] > summary::before,
+details.tools-alert[open] > summary::before { transform: rotate(135deg); }
+
+@media screen and (prefers-reduced-motion: no-preference) {
+  #tools-rows button[data-pointer-disclosure] > img {
+    transition: transform 150ms var(--ease);
+  }
+}
