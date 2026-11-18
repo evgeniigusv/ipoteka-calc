@@ -1,11 +1,9 @@
 /* Расчёты калькуляторов «Свобода мысли»: ипотека и рассрочка.
    К странице не обращается — те же функции проверяются тестами (tests/engine.test.mjs).
 
-   Ипотека считается по методике таблицы «Калькулятор ЧПВ» (лист «Калькулятор субсидирования»):
-     ПВ               = доля цены по прайсу (от 20,1%), и «прайс − ПВ» не больше лимита кредита
-     Комиссия банку   = (Цена по прайсу − ПВ) × ставка комиссии
-     Цена в договоре  = Цена со скидкой («наличка») + Комиссия банку
-     Профит           = Цена по прайсу − Цена в договоре; меньше нуля — программа не проходит */
+   Комиссия ипотеки считается от окончательного кредита (ДДУ − ПВ).
+   ДДУ = акционная цена + max(0, комиссия − лимит компенсации компании).
+   Взаимозависимость ДДУ и кредита решается аналитически, без итераций. */
 (function (root) {
   'use strict';
 
@@ -33,6 +31,7 @@
   function rub(v) { return nf0.format(Math.round(v)) + ' ₽'; }
   function pct(v) { return nf2.format(clean(v * 100)) + '%'; }
   function pct1(v) { return nf1.format(clean(v * 100)) + '%'; }
+  function pct0(v) { return nf0.format(Math.round(clean(v * 100))) + '%'; }
   function plural(n, one, few, many) {
     var m10 = n % 10, m100 = n % 100;
     return m10 === 1 && m100 !== 11 ? one : (m10 >= 2 && m10 <= 4 && (m100 < 10 || m100 >= 20) ? few : many);
@@ -45,7 +44,41 @@
   /* ================== ДАННЫЕ (assets/data.js) ================== */
   function uniq(list) { return list.filter(function (x, i) { return list.indexOf(x) === i; }); }
   function or(v, dflt) { return v == null ? dflt : v; }
-  function forProject(item, project) { return !item.projects.length || item.projects.indexOf(project) >= 0; }
+  var PROJECT_KEYS = { 'ДА — 1 очередь': 'da1', 'ДА — 2 очередь': 'da2', 'ДНК — 2 очередь': 'dnk2' };
+  function forProject(item, project) { return !item.projects || !item.projects.length || item.projects.indexOf(project) >= 0 || item.projects.indexOf(PROJECT_KEYS[project]) >= 0; }
+
+  function cashDiscount(D, project, today) {
+    var p = D.cashDiscounts[project] || D.cashDiscounts[PROJECT_KEYS[project]];
+    if (!p) return D.defaultDiscount;
+    var launch = toDate(p.launchUntil);
+    return (p.percent || 0) + (launch && startOfDay(today || new Date()) <= launch ? (p.launchDiscount || 0) : 0);
+  }
+  function compensationLimit(D, project) {
+    var limits = D.settings.subsidyCompensation || {};
+    var value=limits[PROJECT_KEYS[project] || project];
+    return Number.isFinite(value) && value>=0 ? value : null;
+  }
+  // Явный список совместимости имеет приоритет над прежними режимами noExtra.
+  function compatiblePromotions(D, p, project) {
+    return D.promotions.filter(function (a) {
+      return a.scope !== 'cash' && forProject(a, project) && (a.percent == null || (Number.isFinite(a.percent) && a.percent >= 0 && a.percent < 1)) &&
+        (Array.isArray(p.compatiblePromotions) ? p.compatiblePromotions.indexOf(a.id) >= 0 : !p.noExtra && p.combinationMode !== 'none' && p.combinationMode !== 'individual');
+    });
+  }
+  function selectedPromotions(D, p, inp) {
+    return compatiblePromotions(D, p, inp.project).filter(function (a) { return (inp.promotionIds || []).indexOf(a.id) >= 0; });
+  }
+  function combinedDiscount(discounts, sequential) {
+    return sequential ? 1 - discounts.reduce(function (price, d) { return price * (1 - d); }, 1)
+      : discounts.reduce(function (sum, d) { return sum + d; }, 0);
+  }
+  function promotionRates(promotions, project, program, selectedIds) {
+    return selectedPromotions({promotions:promotions || []},program,{project:project,promotionIds:selectedIds || []})
+      .filter(function(a){return Number.isFinite(a.percent);}).map(function(a){return a.percent;});
+  }
+  function discountedPrice(base, baseDiscount, rates, mode) {
+    return Math.round(base*(1-combinedDiscount([baseDiscount || 0].concat(rates || []),mode==='sequential')));
+  }
 
   function buildData(raw) {
     var programs = (raw.mortgage || []).map(function (p, i) {
@@ -58,25 +91,28 @@
         minTerm: p.minTerm || 1, maxTerm: p.term || 30,
         minPv: or(p.minPv, raw.minPv || 0), maxPv: or(p.maxPv, 1),
         minLoan: p.minLoan || 0, limit: limit,
-        sub: p.subsidy || 0, minPrice: or(p.minPrice, null), kids: p.kids || null
+        sub: p.subsidy || 0, minPrice: or(p.minPrice, null), kids: p.kids || null,
+        catalogId: p.catalogId, compatiblePromotions: p.compatiblePromotions, combinationMode: p.combinationMode,
+        extraSequential: p.combinationMode ? p.combinationMode === 'sequential' : !!p.extraSequential, noExtra: !!p.noExtra
       };
     });
     var inst = (raw.installments || []).map(function (p, i) {
       return {
         id: i + 1, projects: p.projects || [], name: p.name, kind: p.scheme,
         minPv: p.minPv || 0, pay: p.pay || {}, end: toDate(p.end), months: p.months || 0,
-        disc: p.disc || 0, discFromPv: p.discFromPv || 0, maxDisc: or(p.maxDisc, null),
-        steps: p.steps && p.steps.length ? p.steps : [1], note: p.note || '',
-        pvFromBase: !!p.pvFromBase, extraSequential: !!p.extraSequential, validUntil: toDate(p.validUntil),
-        milestones: p.milestones || [], pvChoices: p.pvChoices, discAt70: p.discAt70,
-        launchDiscount: p.launchDiscount || 0, launchUntil: toDate(p.launchUntil), noExtra: !!p.noExtra
+        disc: p.disc || 0, discFromPv: p.discFromPv || 0,
+        steps: p.steps && p.steps.some(function(s){return [1,2,3,6,12].indexOf(s)>=0;}) ? uniq(p.steps.filter(function(s){return [1,2,3,6,12].indexOf(s)>=0;})).sort(function(a,b){return a-b;}) : [1], note: p.note || '',
+        pvFromBase: !!p.pvFromBase, extraSequential: p.combinationMode ? p.combinationMode === 'sequential' : !!p.extraSequential, validUntil: toDate(p.validUntil),
+        milestones: p.milestones || [], noExtra: !!p.noExtra,
+        catalogId: p.catalogId, compatiblePromotions: p.compatiblePromotions, combinationMode: p.combinationMode
       };
     });
     return {
       programs: programs, installments: inst,
       projects: raw.projects || [],
       types: raw.types || uniq(programs.map(function (p) { return p.type; })),
-      defaultDiscount: raw.defaultDiscount || 0
+      defaultDiscount: raw.defaultDiscount || 0, cashDiscounts: raw.cashDiscounts || {},
+      settings: raw.settings || {}, promotions: raw.promotions || []
     };
   }
 
@@ -100,28 +136,31 @@
 
   var OK = 'Подходит';
 
-  // opts.loanFromBase — показывать кредит и платёж от «прайс − ПВ», как в таблице; иначе — от цены в договоре
+  // opts сохранён для совместимости вызовов; кредит всегда равен ДДУ − ПВ.
   function calcProgram(p, inp, opts) {
     var B = inp.base, D = inp.cash > 0 ? Math.round(inp.cash) : Math.round(B * (1 - inp.disc)), pvIn = Math.round(inp.pv || 0);
     var s = p.sub, m = p.minPv, lim = p.limit;
 
-    // Взнос считается от цены по прайсу; «прайс − взнос» не больше лимита кредита
-    var minPvRub = Math.max(Math.ceil(m * B - 1e-6), B - lim, 0);
-    var pv = Math.min(Math.max(pvIn, minPvRub), B);
-    var credit = B - pv;                           // «Сумма кредита» в таблице
-    var subsidy = credit * s;                      // «Комиссия банку, руб.»
-    var price = Math.round(D + subsidy);           // «Цена реализации»: наличка + комиссия
-    var surplus = B - price;                       // «Профит»: должен быть не меньше нуля
-    if (pv > price) pv = price;
-    var loan = opts && opts.loanFromBase ? credit : price - pv;
+    var cap = inp.companyPays === true ? D * Math.max(0, inp.compensationLimit || 0) : 0;
+    // При кредите ровно lim цена = D + max(0, s*lim − cap). Отсюда минимальный ПВ.
+    var limitDown = Number.isFinite(lim) ? D + Math.max(0, s * lim - cap) - lim : 0;
+    var minPvRub = Math.max(Math.ceil(m * B - 1e-6), Math.ceil(limitDown - 1e-6), 0);
+    var pv = Math.min(Math.max(pvIn, minPvRub), D);
+    var validSubsidy = Number.isFinite(s) && s >= 0 && s < 1;
+    var price = validSubsidy ? Math.round(D + Math.max(0, (s * (D - pv) - cap) / (1 - s))) : D;
+    var loan = Math.max(price - pv, 0);
+    var subsidy = validSubsidy ? loan * s : 0;
+    var companyCompensation = Math.min(subsidy, cap);
+    var clientSubsidy = subsidy - companyCompensation;
+    var surplus = B - price;
     var pvShare = B > 0 ? pv / B : 0;
-    var byLimit = lim < Infinity && B - lim > m * B + 0.5;
-    // Скидка, с которой программа проходит: комиссия не больше скидки (профит ≥ 0)
-    var needDisc = B > 0 ? s * credit / B : 0;
+    var byLimit = Number.isFinite(lim) && limitDown > m * B + 0.5;
 
-    var status = loan <= 0 ? 'Кредит не нужен'
+    var status = !validSubsidy ? 'Некорректная комиссия банка'
+      : !(D > 0) ? 'Некорректная стоимость квартиры'
+      : loan <= 0 ? 'Кредит не нужен'
       : (p.minPrice != null && B < p.minPrice) ? 'Не для этой квартиры'
-      : surplus < -0.5 ? 'Субсидия больше скидки'
+      : loan > lim + 0.5 ? 'Кредит больше лимита'
       : pvShare > p.maxPv + 1e-9 ? 'Взнос больше допустимого'
       : loan < p.minLoan ? 'Кредит меньше минимального'
       : OK;
@@ -137,8 +176,7 @@
     var pay2 = g ? pmt(p.r2 / 12, n - g, bal) : pay1;
     var total = g ? pay1 * g + pay2 * (n - g) : pay1 * n;
 
-    var note = status === 'Субсидия больше скидки' ? 'Доступна при скидке от ' + pct1(Math.ceil(needDisc * 1000 - 1e-6) / 1000)
-      : status === 'Взнос больше допустимого' ? 'Программа для взноса до ' + pct1(p.maxPv)
+    var note = status === 'Взнос больше допустимого' ? 'Программа для взноса до ' + pct1(p.maxPv)
       : status === 'Кредит меньше минимального' ? 'Программа для кредита от ' + rub(p.minLoan)
       : status === 'Не для этой квартиры' ? 'Программа для квартир от ' + rub(p.minPrice)
       : status !== OK ? ''
@@ -150,6 +188,9 @@
     return {
       id: p.id, name: p.name, r1: p.r1, r2: g ? p.r2 : p.r1, graceMonths: g, term: term,
       minPv: m, maxPv: p.maxPv, limit: lim, sub: s, subsidy: subsidy, surplus: surplus,
+      cashPrice: D, compensationCap: cap, companyCompensation: companyCompensation, clientSubsidy: clientSubsidy,
+      compensationWarning: inp.companyPays === true && s>0 && inp.compensationLimit == null ? 'Лимит компенсации компании не задан в инструментах. Компенсация не учтена; уточните настройки.' : '',
+      promotions: inp.appliedPromotions || [],
       price: price, disc: B > 0 ? 1 - price / B : 0, minPvRub: minPvRub, pv: pv, pvShare: pvShare, loan: loan,
       pay1: pay1, pay2: pay2, total: total, over: Math.max(total - loan, 0),
       status: status, ok: status === OK, note: note, pvRaised: pvIn > 0 && pv > pvIn + 0.5
@@ -164,7 +205,17 @@
     if (!(Number.isFinite(inp.base) && inp.base > 0 && Number.isFinite(inp.disc) && inp.disc >= 0 && inp.disc < 1)) return {rows:[],best:null,picked:false};
     var rows = D.programs.filter(function (p) {
       return forProject(p, inp.project) && p.type === inp.type && (!p.kids || p.kids === inp.kids);
-    }).map(function (p) { return calcProgram(p, inp, opts); });
+    }).map(function (p) {
+      var actions = selectedPromotions(D, p, inp), cash = inp.cash > 0 ? inp.cash : inp.base * (1 - inp.disc);
+      // Основная скидка уже включена в акционную цену; повторно её не прибавляем.
+      var cashRecord = D.cashDiscounts[inp.project] || D.cashDiscounts[PROJECT_KEYS[inp.project]];
+      actions = actions.filter(function(a){return !cashRecord || a.id !== cashRecord.catalogId;});
+      var cashWithActions = discountedPrice(inp.base, 1 - cash / inp.base, promotionRates(D.promotions, inp.project, p, inp.promotionIds), p.extraSequential?'sequential':'sum');
+      var next = Object.assign({}, inp, {cash: cashWithActions, disc: 1 - cashWithActions / inp.base,
+        compensationLimit: inp.compensationLimit == null ? compensationLimit(D, inp.project) : inp.compensationLimit,
+        appliedPromotions: actions});
+      return calcProgram(p, next, opts);
+    });
 
     // Подходящие — по возрастанию платежа, неподходящие — в конце
     rows.sort(function (a, b) { return (b.ok - a.ok) || cheaper(a, b); });
@@ -186,66 +237,85 @@
   /* ================== РАССРОЧКА ==================
      Схемы: equal — взнос и остаток равными платежами; monthly — взнос, фиксированный ежемесячный платёж
      и остаток к дате погашения; deferred — взнос и остаток одним платежом. */
-  var STEP_NAMES = { 1: 'ежемесячно', 3: 'раз в квартал', 6: 'раз в полгода', 12: 'раз в год' };
+  var STEP_NAMES = { 1: 'ежемесячно', 2: 'раз в 2 месяца', 3: 'раз в квартал', 6: 'раз в полгода', 12: 'раз в год' };
 
-  // Скидка программы при взносе share: фиксированная + доля от суммы взноса, но не больше потолка
-  function instDisc(p, share) {
-    var d = p.disc + p.discFromPv * share;
-    return p.maxDisc == null ? d : Math.min(d, p.maxDisc);
-  }
   function pvOptions(p) {
-    if(p.pvChoices) return p.pvChoices;
-    if (p.kind !== 'equal') return [p.minPv];
-    return uniq([p.minPv].concat([0.4, 0.5, 0.6, 0.7].filter(function (v) { return v > p.minPv + 1e-9; })));
+    return uniq([p.minPv].concat([.4, .5, .6, .7, .71, 1].filter(function(v){return v > p.minPv;})));
+  }
+  function milestoneDate(m, today) {
+    if (m.months && !m.date) return addMonths(today, m.months);
+    if (typeof m.date !== 'string') return null;
+    var monthOnly = /^\d{4}-\d{2}$/.test(m.date), date = toDate(monthOnly ? m.date + '-01' : m.date);
+    if (!date || !Number.isFinite(date.getTime())) return null;
+    if (monthOnly) return date.getMonth() === +m.date.slice(5,7)-1 ? new Date(date.getFullYear(), date.getMonth()+1, 0) : null;
+    return /^\d{4}-\d{2}-\d{2}$/.test(m.date) && date.getFullYear() === +m.date.slice(0,4) &&
+      date.getMonth() === +m.date.slice(5,7)-1 && date.getDate() === +m.date.slice(8,10) ? date : null;
   }
 
-  // inp: { project, base, rooms: 1|2|3, extra, pv: {id: доля}, step: {id: месяцев} }
+  // inp: { project, base, rooms, extra, downRub, pv: {id: доля}, step: {id: месяцев}, promotionIds }
   function installments(D, inp, today) {
     today = startOfDay(today || new Date());
     if (!(Number.isFinite(inp.base) && inp.base > 0)) return [];
     return D.installments.filter(function(p){return forProject(p,inp.project);}).map(function(p){
-      var opts=pvOptions(p), share=inp.pv && opts.indexOf(inp.pv[p.id])>=0 ? inp.pv[p.id] : opts[0];
-      var launch=p.launchUntil && today<=p.launchUntil ? p.launchDiscount : 0;
-      function discount(v){return (p.discAt70!=null && v>=.7 ? p.discAt70 : instDisc(p,v))+launch;}
-      var extra=p.noExtra?0:Math.max(0,inp.extra||0);
+      var opts=pvOptions(p), requested=inp.downShare!=null?inp.downShare:inp.pv && inp.pv[p.id];
+      var share=Number.isFinite(requested) && requested>=p.minPv && requested<=1 ? requested : p.minPv;
+      var actions=selectedPromotions(D,p,inp);
+      // Произвольная доп. скидка остаётся только у старых карточек без явного списка совместимости.
+      var manualExtra=p.noExtra || Array.isArray(p.compatiblePromotions)?0:Math.max(0,inp.extra||0);
+      var extras=[manualExtra].concat(actions.map(function(a){return a.percent||0;}));
+      var extra=combinedDiscount(extras,p.extraSequential), factor=p.extraSequential?1-extra:1;
+      var cashDisc=cashDiscount(D,inp.project,today);
+      function high(v){return v>=.71-1e-12;}
       function priceAt(v){
-        var d=discount(v);
-        return Math.round(inp.base*(p.extraSequential?(1-d)*(1-extra):1-d-extra));
+        if(high(v))return Math.round(inp.base*(1-combinedDiscount([cashDisc].concat(extras),p.extraSequential)));
+        var numerator=inp.base*(p.extraSequential?(1-p.disc)*factor:1-p.disc-extra);
+        return Math.round(p.pvFromBase ? numerator-inp.base*p.discFromPv*v*factor : numerator/(1+p.discFromPv*v*factor));
       }
-      function downAt(v){return Math.round((p.pvFromBase?inp.base:priceAt(v))*v);}
+      function discount(v){return high(v)?cashDisc:p.disc+p.discFromPv*(p.pvFromBase?v:priceAt(v)*v/inp.base);}
+      function downAt(v){return Math.min(priceAt(v),Math.round((p.pvFromBase?inp.base:priceAt(v))*v));}
       var manual=inp.downRub!=null, pvError='';
+      if(inp.downShare!=null && (!Number.isFinite(inp.downShare)||inp.downShare<p.minPv||inp.downShare>1))pvError='Доля взноса должна быть от '+pct1(p.minPv)+' до 100%.';
       if(manual){
-        var amount=inp.downRub, min=downAt(p.minPv);
+        var amount=inp.downRub;
         if(!Number.isSafeInteger(amount)||amount<0)pvError='Введите корректную сумму взноса.';
-        else if(amount<min)pvError='Минимальный взнос '+rub(min)+'. Не хватает '+rub(min-amount)+'.';
-        else if(p.pvChoices){
-          var exact=opts.find(function(v){return downAt(v)===amount;});
-          if(exact==null)pvError='По условиям программы взнос '+opts.map(function(v){return pct1(v)+' ('+rub(downAt(v))+')';}).join(' или ')+'.';
-          else share=exact;
-        }else{
-          // Скидка от взноса задана только для взноса от прайса. При фиксированной скидке цена ДДУ уже известна.
-          var basis=p.pvFromBase?inp.base:priceAt(p.minPv);
-          share=basis>0?amount/basis:0;
+        else if(p.pvFromBase)share=amount/inp.base;
+        else{
+          var highPrice=priceAt(1), highShare=highPrice>0?amount/highPrice:0;
+          // Доля ПВ от цены договора: отдельно решаем стандартную и льготную ветви цены.
+          var lowPrice=Math.round(inp.base*(p.extraSequential?(1-p.disc)*factor:1-p.disc-extra)-amount*p.discFromPv*factor);
+          share=high(highShare)?highShare:(lowPrice>0?amount/lowPrice:0);
+        }
+        if(!pvError && share<p.minPv-1e-9){
+          var min=downAt(p.minPv);pvError='Минимальный взнос '+rub(min)+'. Не хватает '+rub(Math.max(0,min-amount))+'.';
         }
       }
       var own=discount(share), total=priceAt(share), pv=manual?inp.downRub:downAt(share), rest=total-pv;
       var end=p.end || addMonths(today,p.months);
-      var card={id:p.id,name:p.name,kind:p.kind,note:p.note,disc:own,baseDisc:own-launch,launchDisc:launch,maxDisc:p.maxDisc,extra:extra,total:total,saved:inp.base-total,end:end,
+      var card={id:p.id,name:p.name,kind:p.kind,note:p.note,disc:own,baseDisc:own,launchDisc:0,extra:extra,total:total,saved:inp.base-total,end:end,
         termMonths:monthsBetween(today,end),share:share,pvFromBase:p.pvFromBase,extraSequential:p.extraSequential,
+        cashDiscountApplied:high(share),promotions:actions,
         warning:p.validUntil && today>p.validUntil?'Срок действия условий в источнике истёк '+dmy(p.validUntil)+'. Расчёт справочный; подтвердите условия.':'',
         pvOptions:opts.length>1?opts.map(function(v){return {share:v,disc:discount(v)};}):null,
         rows:[{when:'в день сделки',label:'Первый взнос',sub:pct1(share)+(p.pvFromBase?' прайса':' стоимости'),amount:pv}]};
-      if(end<=today){card.error='Срок погашения уже прошёл. Программа не рассчитывается.';card.rows=[];return card;}
-      if(pvError){card.error=pvError;card.rows=[];return card;}
-      if(pv>total){card.error='Введённый взнос превышает цену в договоре '+rub(total)+'.';card.rows=[];return card;}
-      if(!(total>0) || rest<0){card.error='Скидка и взнос несовместимы: взнос превышает стоимость или стоимость не положительна.';card.rows=[];return card;}
-      var milestones=p.milestones.map(function(m){var month=m.date && m.date.length===7;return {date:m.months?addMonths(today,m.months):toDate(month?m.date+'-31':m.date),when:month?toDate(m.date+'-01').toLocaleDateString('ru-RU',{month:'long',year:'numeric'})+' (день уточняется)':'до '+dmy(m.months?addMonths(today,m.months):toDate(m.date)),amount:Math.round(total*m.share),sub:pct1(m.share)+' стоимости'};});
-      if(milestones.some(function(m){return m.date<=today || m.date>=end;})){card.error='Дата промежуточного платежа не входит в срок рассрочки. Уточните индивидуальный график.';card.rows=[];return card;}
+      function fail(message){card.error=message;card.rows=[];return card;}
+      if(end<=today)return fail('Срок погашения уже прошёл. Программа не рассчитывается.');
+      if(pvError)return fail(pvError);
+      if(pv>total)return fail('Введённый взнос превышает цену в договоре '+rub(total)+'.');
+      if(!(total>0) || !Number.isFinite(total) || rest<0)return fail('Скидка и взнос несовместимы: взнос превышает стоимость или стоимость не положительна.');
+      if(rest===0){card.fullPayment=true;card.rows[0].sub='100% стоимости договора';return card;}
+      // Ежемесячная схема может включать отдельные этапы; equal/deferred их игнорируют.
+      var milestones=(p.kind==='scheduled'||p.kind==='monthly')?p.milestones.map(function(m){
+        var date=milestoneDate(m,today), month=typeof m.date==='string' && m.date.length===7;
+        return {date:date,when:month && date?date.toLocaleDateString('ru-RU',{month:'long',year:'numeric'})+' (день уточняется)':'до '+dmy(date),
+          amount:m.amount!=null?m.amount:Math.round(total*m.share),sub:m.amount!=null?'По условиям программы':pct1(m.share)+' стоимости'};
+      }).sort(function(a,b){return a.date-b.date;}):[];
+      if(milestones.some(function(m){return !m.date || m.date<=today || m.date>end;}))return fail('Дата промежуточного платежа не входит в срок рассрочки. Уточните индивидуальный график.');
+      if(milestones.some(function(m){return !Number.isSafeInteger(m.amount) || m.amount<0;}))return fail('Укажите корректную сумму каждого этапа.');
       var reserved=milestones.reduce(function(sum,m){return sum+m.amount;},0);
-      if(reserved>rest){card.error='Промежуточные платежи превышают остаток.';card.rows=[];return card;}
+      if(reserved>rest)return fail('Промежуточные платежи превышают остаток.');
       if(p.kind==='equal'){
         var step=inp.step && p.steps.indexOf(inp.step[p.id])>=0?inp.step[p.id]:p.steps[0];
-        // Один платёж на период со следующего месяца; более поздний день погашения не добавляет ещё один платёж.
+        // Один платёж на период; остаток округления погашается последним платежом.
         var n=Math.max(Math.ceil(((end.getFullYear()-today.getFullYear())*12+end.getMonth()-today.getMonth())/step),1);
         card.step=step;card.steps=p.steps.length>1?p.steps.map(function(v){return {step:v,name:STEP_NAMES[v]};}):null;
         card.payment=Math.floor(rest/n);var finalPay=rest-card.payment*(n-1);
@@ -260,15 +330,16 @@
           if(cnt)card.rows.push({when:'ежемесячно',label:'Платежи',sub:rub(monthly)+' × '+months(cnt)+'; со следующего месяца, до месяца погашения',amount:monthly*cnt});
           rest-=monthly*cnt;
         }
-        milestones.forEach(function(m){card.rows.push({when:m.when,label:'Промежуточный платёж',sub:m.sub,amount:m.amount});rest-=m.amount;});
-        card.rows.push({when:'до '+dmy(end),label:'Остаток',sub:pct1(rest/total)+' стоимости',amount:rest,final:true});
+        milestones.forEach(function(m){card.rows.push({when:m.when,label:'Промежуточный платёж',sub:m.sub,amount:m.amount,date:m.date});rest-=m.amount;});
+        if(rest>0)card.rows.push({when:'до '+dmy(end),label:'Остаток',sub:pct1(rest/total)+' стоимости',amount:rest,final:true});
       }
       return card;
     });
   }
 
   root.SMCalc = {
-    buildData: buildData, kidsOptions: kidsOptions, mortgage: mortgage, installments: installments, pmt: pmt, OK: OK,
-    fmt: { rub: rub, pct: pct, pct1: pct1, years: years, months: months, period: period, dmy: dmy, plural: plural, int: function (v) { return nf0.format(v); } }
+    buildData: buildData, kidsOptions: kidsOptions, mortgage: mortgage, installments: installments, pmt: pmt, OK: OK, cashDiscount: cashDiscount, compensationLimit: compensationLimit, compatiblePromotions: compatiblePromotions,
+    promotionRates: promotionRates, discountedPrice: discountedPrice,
+    fmt: { rub: rub, pct: pct, pct1: pct1, pct0: pct0, years: years, months: months, period: period, dmy: dmy, plural: plural, int: function (v) { return nf0.format(v); } }
   };
 })(typeof window !== 'undefined' ? window : globalThis);

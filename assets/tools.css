@@ -158,3 +158,15 @@
 .tools-periods { display: flex; flex-wrap: wrap; gap: 10px 18px; }
 .tools-periods label { display: inline-flex; align-items: center; gap: 6px; color: var(--grey); font-size: 14px; }
 .tools-periods input { width: 18px; height: 18px; }
+.tools-check-field > span:last-child { display:flex; align-items:center; gap:8px; min-height:42px; color:var(--grey); font-size:14px; }
+.tools-check-field input { width:18px; height:18px; flex:none; }
+.tools-period-picker { border:1px solid var(--field); border-radius:6px; padding:10px 14px; }
+.tools-period-picker summary { cursor:pointer; color:var(--grey); font-size:14px; }
+.tools-period-picker[open] .tools-periods { padding-top:12px; }
+.tools-combinations-panel { grid-column:1/-1; }
+.tools-combinations-panel > summary { color:var(--sky); cursor:pointer; font-weight:600; padding:8px 0; }
+.tools-promotion-list { display:grid; gap:10px; padding:12px 0 16px; }
+.tools-promotion-list label { display:flex; align-items:flex-start; gap:8px; font-size:14px; }
+.tools-promotion-list input { accent-color:var(--sky); width:18px; height:18px; flex:none; }
+.tools-milestone { grid-template-columns:repeat(2,minmax(0,1fr)); }
+.tools-milestone > button { grid-column:2; justify-self:end; }

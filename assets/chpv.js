@@ -14,6 +14,7 @@
   function setupPrograms(){programs=window.SM_DATA.chpv?window.SM_DATA.chpv.filter(function(p){return p.projects.includes(project);}).map(function(p){return [p.name,p.limit,p.years,p.rate,p];}):defaults;
   els.program.innerHTML = programs.map(function (p, i) { return '<option value="' + i + '">' + esc(p[0]) + '</option>'; }).join('');}
   setupPrograms();
+  const promotions=SMPromotionPicker.setup(els.program.closest('.sm-field'),render);
   U.pills(els.project, projects.map(function (p) { return {value:p,label:p}; }), project, 'v');
   var flats = window.SMFlats.setup({ select: els.flat, info: $('sm-flat-info'), price: els.price, project: project,
     onClear: function () { els.cash.value = ''; els.ddu.value = ''; },
@@ -21,16 +22,22 @@
     onChange: function () { render(); } });
   function inputs() {
     var p = programs[+els.program.value]||['',0,0,0,{}], settings=p[4]||{};
-    return { base: U.parseMoney(els.price.value), cash: U.parseMoney(els.cash.value), client: U.parseMoney(els.client.value), ddu: U.parseMoney(els.ddu.value),
-      minDown: settings.minDown==null?.201:settings.minDown, cost: settings.cost==null?(project === projects[0] ? .25 : .50):settings.cost, limit: p[1], years: p[2], rate: p[3], overRate: settings.overRate==null?.14:settings.overRate };
+    promotions.refresh(settings,project);
+    const base=U.parseMoney(els.price.value),originalCash=U.parseMoney(els.cash.value);
+    const rates=SMCalc.promotionRates(window.SM_DATA.promotions,project,settings,promotions.ids());
+    const cash=base&&originalCash?SMCalc.discountedPrice(base,1-originalCash/base,rates,settings.combinationMode):originalCash;
+    return { base, cash, client: U.parseMoney(els.client.value), ddu: U.parseMoney(els.ddu.value),
+      minDown: settings.minDown==null?.201:settings.minDown, cost: settings.cost, limit: p[1], years: p[2], rate: p[3], overRate: settings.overRate==null?.14:settings.overRate };
   }
   function render() {
     var x = inputs();
+    if(programs.length&&!Number.isFinite(x.cost)){els.result.innerHTML='<p class="sm-empty">Заполните «Стоимость денег» в настройках выбранного инструмента ЧПВ.</p>';return;}
     if(!programs.length){els.result.innerHTML='<p class="sm-empty">Активных программ ЧПВ нет.</p>';return;}
     if (!x.base || !x.cash || x.client == null || !x.ddu) { els.result.innerHTML = '<p class="sm-empty">Укажите цену по прайсу, цену за наличные, средства клиента и цену ДДУ.</p>'; return; }
     var r;try{r=calc.calculate(x);}catch(e){els.result.innerHTML='<p class="sm-empty">'+esc(e.message)+'</p>';return;}
     var rows=[];
     function add(k,v) { rows.push('<dt>' + k + '</dt><dd>' + v + '</dd>'); }
+    if(promotions.names().length){add('Акции',esc(promotions.names().join(' · ')));add('Цена с акциями',F.rub(x.cash));}
     add('Минимальный ПВ от прайса', F.rub(r.minimum)); add('Нехватка ПВ', F.rub(r.shortage));
     add('Сумма ПВ по ДДУ', F.rub(r.down)); add('Финансируемая сумма', F.rub(r.funded) + ' · ' + F.pct1(r.fundedPct));
     add('Стоимость денег', F.rub(r.cost) + ' · ' + F.pct(x.cost)); add('Удорожание в ДДУ', F.rub(r.rise));
@@ -42,10 +49,15 @@
       (r.excess > 0 ? '<div class="sm-note">Как в таблице, платёж для сверхлимита рассчитан по '+F.pct(x.overRate)+' на всю сумму. Реальные условия комбо-ипотеки уточните у брокера.</div>' : '') +
       '<div class="sm-note">Вердикт повторяет лист «Расчёт ЧПВ»; справочная ставка и применимость условий требуют подтверждения.</div>';
   }
-  U.onPill(els.project, 'v', function (v, btn) { project = v; setupPrograms(); flats.setProject(v); els.cash.value = ''; els.ddu.value = ''; Array.prototype.forEach.call(els.project.children, function (b) { b.setAttribute('aria-pressed', String(b === btn)); }); render(); });
+  U.onPill(els.project, 'v', function (v, btn) { project = v; setupPrograms(); els.cash.value = ''; els.ddu.value = ''; flats.setProject(v); Array.prototype.forEach.call(els.project.children, function (b) { b.setAttribute('aria-pressed', String(b === btn)); }); render(); });
   [els.price, els.cash, els.client, els.ddu].forEach(function (e) { U.moneyInput(e, render); });
   els.program.addEventListener('change', render);
-  $('sm-suggest').addEventListener('click', function () { var x = inputs(); if (x.cash && x.client != null) { els.ddu.value = F.int(calc.suggested(x)); render(); } });
+  $('sm-suggest').addEventListener('click', function () {
+    var x=inputs();if(!x.cash||x.client==null)return;
+    var amount=calc.suggested(x);
+    if(amount==null){els.result.innerHTML='<p class="sm-empty">При этих условиях дофинансирование первоначального взноса не требуется либо невозможно подобрать цену. Проверьте средства клиента и стоимость денег.</p>';return;}
+    els.ddu.value=F.int(amount);render();
+  });
   $('sm-print').addEventListener('click', function () { window.print(); });
   render();
 })();

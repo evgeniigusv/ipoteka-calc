@@ -1,9 +1,25 @@
 /* Предложения владельца остаются черновиками до принятия. */
 (function () {
+  let active;
   function setup(options) {
     const $ = id => document.getElementById(id);
     const dialog = $('ai-dialog'), input = $('ai-text'), status = $('ai-status'), M = options.model;
-    let items = [], revision = '', busy = false, recording = null, timer;
+    if (active?.dialog === dialog) return;
+    const editor = $('tools-editor');
+    let items = [], revision = '', busy = false, recording = null, timer, suspended = false;
+    active = {dialog, isTransitioning: () => suspended || busy || !!recording};
+    function open() {
+      if (suspended || editor?.open || document.querySelector('dialog[open]') && !dialog.open) return;
+      if (!dialog.open) dialog.showModal();
+      controls();
+    }
+    function resume() {
+      if (!suspended) return;
+      suspended = false;
+      open();
+    }
+    // Restore before the embedding host handles close and decides to return to the catalog.
+    editor?.addEventListener('close', resume);
     function controls() {
       $('ai-build').disabled = busy || !!recording || !input.value.trim();
       $('ai-accept').disabled = busy || !!recording || !items.some(i => i.selected);
@@ -31,31 +47,48 @@
         field('Вид',options.kinds[r.kind]);field('Условия',r.description);
         field('Сочетание',M.modes[r.mode]+(r.combination?' · '+r.combination:''));
         for(const f of M.fields[r.kind]) {
+          if(r.kind==='installment' && ['maxDisc','launchDiscount','launchUntil','pvChoices','discAt70'].includes(f.key))continue;
           let v=M.get(r.params,f.key);
           if(v==null || v==='') continue;
-          if(f.type==='percent') v=M.pct(v);
-          else if(f.type==='percentList') v=v.map(M.pct).join(' / ');
-          else if(f.type==='money') v=M.rub(v);
-          else if(f.type==='boolean') v=v?'Да':'Нет';
-          else if(f.labels) v=f.labels[f.options.indexOf(String(v))]||v;
-          field(f.label,v);
+          function format(value) {
+            if(f.type==='percent')return M.pct(value);
+            if(f.type==='percentList')return value.map(M.pct).join(' / ');
+            if(f.type==='money')return M.rub(value);
+            if(f.type==='boolean')return value?'Да':'Нет';
+            if(f.labels)return f.labels[f.options.indexOf(String(value))]||value;
+            return value;
+          }
+          const before=item.previous && M.get(item.previous.params,f.key);
+          field(f.label,before!=null && JSON.stringify(before)!==JSON.stringify(v)?format(before)+' → '+format(v):format(v));
         }
         if(r.params.validUntil) field('Условия действуют до',r.params.validUntil);
-        for(const m of r.params.milestones||[]) field('Этап',M.pct(m.share)+' · '+(m.date||('через '+m.months+' мес.')));
+        for(const m of r.params.milestones||[]) field('Этап',(m.amount!=null?M.rub(m.amount):M.pct(m.share))+' · '+(m.date||('через '+m.months+' мес.')));
         section.append(dl);
         const details=node('details');details.append(node('summary','Основание в исходном тексте'));
         item.quotes.forEach(q=>details.append(node('blockquote',q)));section.append(details);
         const edit=node('button','Редактировать');edit.className='t-btn';edit.type='button';
-        edit.onclick=()=>options.edit(r, item.action==='Добавление', async changed=>{
-          const result=await options.api('/api/ai/revise',{revision,ticket:item.ticket,previous:r,record:changed});
-          item.record=result.record;item.ticket=result.ticket;show();
-        });section.append(edit);list.append(section);
+        edit.onclick=()=>{
+          if(busy || suspended || recording || editor?.open)return;
+          suspended=true;
+          if(dialog.open)dialog.close();
+          try {
+            options.edit(r, item.action==='Добавление', async changed=>{
+              if(busy || !suspended)throw Error('Редактирование предложения уже завершено.');
+              busy=true;controls();
+              try {
+                const result=await options.api('/api/ai/revise',{revision,ticket:item.ticket,previous:r,record:changed});
+                item.record=result.record;item.ticket=result.ticket;show();
+              } finally {busy=false;controls();}
+            });
+            if(!editor?.open)resume();
+          } catch(e) {status.textContent=e.message;resume();}
+        };section.append(edit);list.append(section);
       });
       controls();
     }
     function invalidate() {items=[];revision='';status.textContent='';show();}
     async function work(action) {
-      if(busy)return;
+      if(busy || suspended)return;
       busy=true;controls();$('ai-items').inert=true;
       try {await action();} catch(e){status.textContent=e.message;}
       finally {busy=false;$('ai-items').inert=false;controls();}
@@ -67,8 +100,8 @@
     function append(text){input.value=[input.value.trim(),text].filter(Boolean).join('\n\n');invalidate();}
     function stop(){if(recording && recording.state!=='inactive') recording.stop();}
     $('tools-ai').hidden=false;
-    $('tools-ai').onclick=()=>{dialog.showModal();controls();};
-    $('ai-close').onclick=()=>dialog.close();
+    $('tools-ai').onclick=open;
+    $('ai-close').onclick=()=>{if(!busy && !recording && dialog.open)dialog.close();};
     dialog.addEventListener('cancel',e=>{if(busy || recording)e.preventDefault();});
     dialog.addEventListener('close',stop);
     input.oninput=invalidate;
@@ -113,5 +146,5 @@
     });
     controls();
   }
-  window.SMProposals={setup};
+  window.SMProposals={setup,isTransitioning:()=>!!active?.isTransitioning()};
 })();

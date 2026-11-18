@@ -17,6 +17,7 @@
     {"projects":["ДА — 2 очередь"],"name":"Траншевая ипотека · 19,2%","minPv":0.2,"tranches":3,"first":0.2,"second":0.2,"secondMonths":12,"lastMonthsBeforeCommissioning":1,"discount":0.1,"rate":0.192,"validUntil":"2026-11-30"}
   );
   var catalog=window.SM_DATA.tranche||fallback,programs=[],manual=false;
+  const promotions=SMPromotionPicker.setup(el.program.closest('.sm-field'),render);
   function isDaEstimate(){return !!selected&&selected.estimate&&!manual;}
   function pad(n){return String(n).padStart(2,'0');}
   function iso(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
@@ -92,7 +93,11 @@
   function monthText(s){return localDate(s.slice(0,7)+'-01').toLocaleDateString('ru-RU',{month:'long',year:'numeric'});}
   function read(){
     var base=U.parseMoney(el.price.value)||0, discount=U.parsePct(el.discount.value), p=selected||{};
-    return {base:base,discount:discount,price:Math.round(base*(1-discount)),down:U.parsePct(el.pv.value),
+    promotions.refresh(p,project);
+    const rates=SMCalc.promotionRates(window.SM_DATA.promotions,project,p,promotions.ids());
+    const price=SMCalc.discountedPrice(base,discount,rates,p.combinationMode);
+    if(base>0)discount=1-price/base;
+    return {base:base,discount:discount,price:price,down:U.parsePct(el.pv.value),
       rate:isDaEstimate()?calc.rateFromPayment(referencePrincipal(),p.referencePayment,p.referenceYears):U.parsePct(el.rate.value),
       estimate:isDaEstimate(),years:Number(el.term.value),first:U.parsePct(el.first.value),second:U.parsePct(el.second.value),
       date1:el.date1.value,date2:el.date2.value,date3:el.date3.value,
@@ -114,6 +119,7 @@
       }
       return 'С '+showDate(date)+(next&&next.date?' — до '+showDate(next.date):next?'':' и далее');
     }
+    if(promotions.names().length)html+='<p class="sm-note">Акции: '+esc(promotions.names().join(' · '))+'</p>';
     r.stages.forEach(function(s,i){
       html+='<div class="sm-stage"><div class="sm-stage-heading"><strong>'+(i===r.stages.length-1?(r.stages.length===2?'2-й (остаток)':'Последний'):(i+1)+'-й')+' транш</strong><span class="sm-stage-date">'+stagePeriod(i)+'</span></div><div class="sm-stage-metrics"><div><span>Сумма транша</span><b>'+F.rub(s.amount)+'</b></div><div><span>Всего выдано</span><b>'+F.rub(s.issued)+'</b></div><div><span>Платёж в месяц</span><b class="sm-stage-payment">'+F.rub(s.payment)+'</b></div></div></div>';});
     if(x.estimate)html+='<div class="sm-note">Предварительно по ориентиру: '+F.rub(selected.referencePayment)+' в месяц на '+F.rub(referencePrincipal())+' на '+selected.referenceYears+' лет. Из него получена расчётная ставка ≈ '+F.pct(x.rate)+'. Все платежи ориентировочные.</div>';

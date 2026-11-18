@@ -2,6 +2,7 @@
 'use strict';
 var M=SMToolsModel,U=SMUi,esc=U.esc,$=function(id){return document.getElementById(id);},local=location.hostname==='127.0.0.1'&&location.port==='8795';
 var data,baseline,revision,csrf,project='all',category='all',collapsed={},changes=new Map(),editing=null,busy=false,pendingPublish=false;
+var settingsEditor=null;
 var names={da1:'ДА1',da2:'ДА2',dnk2:'ДНК-2'},kindNames={mortgage:'Ипотечная программа',installment:'Рассрочка',tranche:'Траншевая ипотека',chpv:'Дофинансирование ПВ',discount:'Скидка за полную оплату',info:'Информационный инструмент'};
 function icon(n){return '<img src="assets/icons/'+n+'.svg" alt="">';}
 function alert(message){$('tools-error').textContent=message||'';$('tools-error').hidden=!message;}
@@ -27,12 +28,10 @@ function reportCell(r){
  const p=r.params;
  const lines=M.summary(r);
  if(r.kind==='installment'){
-  if(p.pay)lines.push('Студия / 1к: '+M.rub(p.pay[1])+' · 2к: '+M.rub(p.pay[2])+' · 3к: '+M.rub(p.pay[3]));
-  if(p.steps)lines.push('Платежи каждые '+p.steps.join(' / ')+' мес.');
-  if(p.maxDisc!=null)lines.push('Потолок скидки '+M.pct(p.maxDisc));
-  if(p.pvChoices)lines.push('Варианты ПВ: '+p.pvChoices.map(M.pct).join(' / '));
-  if(p.discAt70!=null)lines.push('При ПВ от 70% скидка '+M.pct(p.discAt70));
-  (p.milestones||[]).forEach(m=>lines.push(M.pct(m.share)+' — '+(m.date||'через '+m.months+' мес.')));
+  if(p.scheme==='monthly'&&p.pay)lines.push('Студия / 1к: '+M.rub(p.pay[1])+' · 2к: '+M.rub(p.pay[2])+' · 3к: '+M.rub(p.pay[3]));
+  if(p.scheme==='equal'&&p.steps)lines.push('Платежи каждые '+p.steps.join(' / ')+' мес.');
+  lines.push('При ПВ от 71% — актуальная скидка за полную оплату');
+  if(['monthly','scheduled'].includes(p.scheme))(p.milestones||[]).forEach(m=>lines.push((m.amount!=null?M.rub(m.amount):M.pct(m.share))+' — '+(m.date||'через '+m.months+' мес.')));
  }
  if(r.kind!=='info'&&r.description)lines.push(r.description);
  return lines;
@@ -42,8 +41,8 @@ function reportRow(g){
   const records=g.cells[key]||[];
   const terms=records.map(r=>'<div class="tools-cell">'+(r.name!==g.name?'<strong>'+esc(r.name)+'</strong>':'')+
    reportCell(r).map(line=>'<p>'+esc(line)+'</p>').join('')+'</div>').join('');
-  const combination=records.map(r=>'<div class="tools-cell"><p>'+esc(r.combination||M.modes[r.mode])+'</p>'+
-   (r.combination&&r.combination!==M.modes[r.mode]?'<span class="tools-tag">'+esc(M.modes[r.mode])+'</span>':'')+'</div>').join('');
+  const combination=records.map(r=>'<div class="tools-cell"><p>'+esc(M.combination(r,data.records))+'</p>'+
+   (M.combination(r,data.records)!==M.modes[r.mode]?'<span class="tools-tag">'+esc(M.modes[r.mode])+'</span>':'')+'</div>').join('');
   return '<td>'+(terms||'—')+'</td><td>'+(combination||'—')+'</td>';
  });
  return '<tr><th scope="row" class="tools-name">'+esc(g.name)+'</th>'+cells.join('')+'</tr>';
@@ -61,14 +60,14 @@ function brief(r){
   case 'chpv': return M.pct(p.rate)+' · до '+M.rub(p.limit);
   case 'discount': return 'До '+M.pct(p.percent);
   case 'installment': {
-   const terms=[p.pvChoices?'ПВ '+p.pvChoices.map(M.pct).join(' / '):'ПВ от '+M.pct(p.minPv)];
-   if(p.discAt70!=null)terms.push('скидка '+M.pct(p.disc||0)+'–'+M.pct(p.discAt70));
-   else if(p.discFromPv)terms.push('скидка '+M.pct(p.discFromPv)+' на ПВ');
+   const terms=['ПВ от '+M.pct(p.minPv)];
+   if(p.discFromPv)terms.push('скидка '+M.pct(p.discFromPv)+' на ПВ');
    else if(p.disc)terms.push('скидка '+M.pct(p.disc));
    else if(p.pay)terms.push('от '+M.rub(Math.min(...Object.values(p.pay)))+'/мес.');
    return terms.join(' · ');
   }
   default: {
+   if(r.category==='discount'&&typeof p.percent==='number')return 'Скидка '+M.pct(p.percent);
    const line=r.description.trim().split(/\r?\n/)[0];
    return line.length>78 ? line.slice(0,77).replace(/\s+\S*$/,'')+'…' : line||'Условия не указаны';
   }
@@ -84,13 +83,13 @@ function editAction(r){
 function compactCell(r){
  const lines=reportCell(r);
  const p=r.params;
- if(r.mode&&r.combination.trim()!==M.modes[r.mode])lines.push('Правило сочетания: '+M.modes[r.mode]);
+ if(r.mode&&M.combination(r,data.records)!==M.modes[r.mode])lines.push('Правило сочетания: '+M.modes[r.mode]);
  if(r.params.appManaged)lines.push('Условия ведутся в приложении');
  if(r.source==='subsidies')lines.push('Из справочника субсидий '+(r.project==='dnk2'?'ДНК':'ДА'));
  if(local&&r.kind==='mortgage')lines.push('Комиссия банку '+M.pct(p.subsidy));
- if(r.combination.trim()&&r.combination.trim()!=='-')lines.push('Сочетание: '+r.combination.trim());
+ lines.push('Сочетание: '+M.combination(r,data.records));
  const copy=local?'<button type="button" class="tools-add-cell" data-copy="'+r.id+'">Создать копию</button>':'';
- const archive=local?'<button type="button" class="tools-add-cell" data-toggle="'+r.id+'">'+(r.source==='subsidies'?'Вести здесь и архивировать':r.enabled?'В архив':'Восстановить')+'</button>':'';
+ const archive=local?'<button type="button" class="tools-add-cell" data-toggle="'+r.id+'">'+(r.enabled?'В архив':'Восстановить')+'</button>':'';
  return '<article class="tool-entry" data-record="'+r.id+'">'+(p.ownerOnly?'<span class="tools-tag tools-private">Только владельцу</span>':'')+
    '<p class="tool-brief">'+esc(brief(r))+'</p><div class="tool-entry-actions"><details><summary>Подробнее</summary><div class="tool-full">'+
    [...new Set(lines)].filter(Boolean).map(line=>'<p>'+esc(line)+'</p>').join('')+'<div class="tool-secondary">'+copy+archive+'</div></div></details>'+editAction(r)+'</div></article>';
@@ -199,6 +198,7 @@ function render(){if(!data)return;$('tools-head').innerHTML=compactHeader();$('t
  $('tools-publish').disabled=busy||!!changes.size;
  $('tools-pdf').disabled=busy||!!changes.size||!filtered(true).length;
  $('tools-pdf').title=changes.size?'Сначала сохраните или отмените черновик':'PDF действующих инструментов по выбранным фильтрам';
+ if(settingsEditor)settingsEditor.refresh();
  $('ai-context').textContent='Выбрано в каталоге: '+(names[project]||'все проекты')+' · '+(M.categories[category]||'все разделы');
 
 }
@@ -210,13 +210,13 @@ function editorFields(r,isNew){
  const section=M.section(r),kinds=kindsByCategory[section]||[];
  let html=field('Проект','project',r.project,'select',false,[['','Выберите проект'],...Object.entries(names)])
    +field('Раздел','category',section,'select',false,[['','Выберите раздел'],...Object.entries(M.categories)])
-   +field('Тип записи','kind',r.kind,'select',true,kinds.length?kinds.map(k=>[k,k==='info'?'Условия текстом':kindNames[k]]):[['','Сначала выберите раздел']])
+   +field('Тип записи','kind',r.kind,'select',true,kinds.length?kinds.map(k=>[k,k==='info'?(section==='discount'?'Акция':'Условия текстом'):kindNames[k]]):[['','Сначала выберите раздел']])
    +field('Название','name',r.name,'text',true)
    +field('Пояснение для партнёров','description',r.description,'textarea',true)
    +field('Сочетание с акциями','combination',r.combination,'textarea',true)
    +field('Как применять дополнительные скидки','mode',r.mode,'select',true,Object.entries(M.modes));
  if(isNew&&!proposalEdit)html+=field('Кому виден инструмент','visibility',r.params.ownerOnly?'private':'public','select',true,[['public','Партнёрам'],['private','Только мне']]);
- if(r.source==='subsidies')html+='<p class="tools-ownership-note">После сохранения вы ведёте эту программу здесь. Импорт больше не меняет её условия.</p>';
+ if(r.source==='subsidies')html+='<p class="tools-ownership-note">Ставка и комиссия обновляются из справочника субсидий. Здесь можно настроить акции и доступность. Если изменить банковские условия вручную, эта программа перейдёт под управление приложения.</p>';
  for(const f of M.fields[r.kind]||[]){
    let v=M.get(r.params,f.key),type=f.type;
    if(type==='percent'&&v!=null)v=+(v*100).toFixed(6);
@@ -227,7 +227,7 @@ function editorFields(r,isNew){
    html+=field(f.label,'p:'+f.key,v,type==='boolean'?'checkbox':type==='date'?'date':'text',false,opts);
  }
  html+=field('Оформление по программе до','validUntil',r.params.validUntil,'date',true);
- if(r.kind==='installment')html+='<div class="tools-field wide">Промежуточные платежи<div id="tools-milestones" class="tools-milestones"></div><button type="button" id="tools-add-stage" class="t-btn">Добавить платёж</button><small>Укажите долю цены квартиры и срок. Остаток рассчитывается автоматически.</small></div>';
+ if(r.kind==='installment')html+='<div class="tools-field wide">Промежуточные платежи<div id="tools-milestones" class="tools-milestones"></div><button type="button" id="tools-add-stage" class="t-btn">Добавить платёж</button><small>Укажите сумму и дату платежа. Остаток рассчитывается автоматически.</small></div>';
  $('tools-editor-fields').innerHTML=html;
  const form=$('tools-form');
  form.elements.kind.disabled=!isNew||kinds.length<2;
@@ -241,7 +241,7 @@ function editorFields(r,isNew){
    }
  }else if(kinds.length<2)form.elements.kind.closest('label').hidden=true;
  if(r.kind==='installment')(r.params.milestones||[]).forEach(addStage);
- SMToolsForm.mount(form,r);
+ SMToolsForm.mount(form,r,data.records);
  function switchFields(event){
    const previousCategory=r.category,previousKind=r.kind;
    const nextCategory=form.elements.category.value;
@@ -281,21 +281,25 @@ function addStage(stage){
  const row=document.createElement('div');
  row.className='tools-milestone';
  row.dataset.originalDate=stage.date||'';
- row.innerHTML='<label class="tools-field"><span class="tools-field-title">Доля цены, %</span><input data-stage="share" inputmode="decimal" required value="'+esc(stage.share?+(stage.share*100).toFixed(4):'')+'"></label>'
+ row.innerHTML='<label class="tools-field"><span class="tools-field-title">Размер платежа</span><select data-stage="amountMode"><option value="amount">Сумма, ₽</option><option value="share">Доля цены, %</option></select></label>'
+   +'<label class="tools-field"><span class="tools-field-title">Сумма платежа, ₽</span><input data-stage="amount" inputmode="numeric" value="'+esc(stage.amount||'')+'"></label>'
+   +'<label class="tools-field"><span class="tools-field-title">Доля цены, %</span><input data-stage="share" inputmode="decimal" value="'+esc(stage.share?+(stage.share*100).toFixed(4):'')+'"></label>'
    +'<label class="tools-field"><span class="tools-field-title">Когда платить</span><select data-stage="mode"><option value="date">В дату</option><option value="months">Через несколько месяцев</option></select></label>'
    +'<label class="tools-field"><span class="tools-field-title">Дата платежа</span><input data-stage="date" type="date" value="'+esc(stage.date?(stage.date.length===7?stage.date+'-01':stage.date):'')+'"></label>'
    +'<label class="tools-field"><span class="tools-field-title">Месяцев от сделки</span><input data-stage="months" type="number" min="1" max="60" value="'+esc(stage.months||'')+'"></label>'
    +'<button type="button" class="t-icon" aria-label="Убрать платёж">'+icon('x-lg')+'</button>';
- const mode=row.querySelector('[data-stage="mode"]');
+ const mode=row.querySelector('[data-stage="mode"]'),amountMode=row.querySelector('[data-stage="amountMode"]');
  mode.value=stage.months?'months':'date';
+ amountMode.value=stage.share?'share':'amount';
  const refresh=()=>{
-   for(const key of ['date','months']){
+   for(const key of ['amount','share','date','months']){
      const input=row.querySelector('[data-stage="'+key+'"]');
-     input.required=key===mode.value;
-     input.closest('label').hidden=key!==mode.value;
+     const selected=key===mode.value||key===amountMode.value;
+     input.required=selected;
+     input.closest('label').hidden=!selected;
    }
  };
- mode.onchange=refresh;
+ mode.onchange=amountMode.onchange=refresh;
  refresh();
  row.querySelector('button').onclick=()=>row.remove();
  $('tools-milestones').append(row);
@@ -323,12 +327,12 @@ function openEditor(id,draft,newProposal,projectConditions){
    var kind=(kindsByCategory[category]||[])[0];
    editing={id:'tool-'+crypto.randomUUID(),group:'group-'+crypto.randomUUID(),name:'',
      project:project==='all'?'':project,category:category==='all'?'':category,kind:kind,params:defaults(kind),
-     description:'',combination:'',mode:'none',enabled:true};
+     description:'',combination:'',mode:'additive',enabled:true};
  }
  $('tools-editor-title').textContent=projectConditions?'Добавить условия · '+editing.name:id?editing.name:'Новый инструмент';
  $('tools-editor-project').textContent=[names[editing.project]||'Черновик инструмента',editing.params.ownerOnly?'Только владельцу':''].filter(Boolean).join(' · ');
  $('tools-form-error').textContent='';
- $('tools-form').querySelector('button[type=submit]').textContent=proposalEdit?'Обновить предложение':editing.source==='subsidies'?'Вести в приложении · в черновик':'В черновик';
+ $('tools-form').querySelector('button[type=submit]').textContent=proposalEdit?'Обновить предложение':'В черновик';
  editorFields(editing,!id||newProposal);
  if(projectConditions){
   const form=$('tools-form');
@@ -364,10 +368,14 @@ $('tools-form').onsubmit=async function(e){e.preventDefault();if(busy)return;bus
  for(const key of ['name','project','kind','category','description','combination','mode'])r[key]=form.elements[key].value;
  if(!M.fields[r.kind])throw Error('Выберите раздел и тип записи.');
  r.params=SMToolsForm.readParams(form,editing);
+ r.combination='';
  if(!r.name.trim())r.name=SMToolsForm.suggestedName(form,r);
  M.validateRecord(r);
  var p=r.params;
- if(editing.source==='subsidies'||(r.kind==='mortgage'&&(p.type==='Семейная ипотека'||p.variant==='субсидированная ставка')))r=takeOwnership(r);
+ if(editing.source==='subsidies'){
+   const bankParams=params=>Object.fromEntries(Object.entries(params).filter(([key])=>key!=='compatiblePromotions'));
+   if(JSON.stringify(bankParams(p))!==JSON.stringify(bankParams(editing.params)))r=takeOwnership(r);
+ }else if(r.kind==='mortgage'&&(p.type==='Семейная ипотека'||p.variant==='субсидированная ставка'))r=takeOwnership(r);
  var original=baseline.records.find(function(item){return item.id===r.id;});
  if(!proposalEdit&&(editing.source==='subsidies'||!original||['name','description','combination'].some(function(k){return r[k]!==original[k];}))){
    $('tools-form-error').textContent='Проверяю условия и параметры расчёта…';
@@ -389,9 +397,10 @@ function stageRecord(r){
  M.validateRecord(r);
  var candidate=M.clone(data),index=candidate.records.findIndex(x=>x.id===r.id);
  if(index<0)candidate.records.push(r);else candidate.records[index]=r;
- M.validate(candidate);data=candidate;
+ M.cleanCompatibility(candidate);M.validate(candidate);data=candidate;
+ for(const id of changes.keys()){const current=data.records.find(item=>item.id===id);if(current)changes.set(id,current);}
  var original=baseline.records.find(x=>x.id===r.id);
- if(JSON.stringify(r)===JSON.stringify(original))changes.delete(r.id);else changes.set(r.id,r);
+ if(JSON.stringify(r)===JSON.stringify(original))changes.delete(r.id);else changes.set(r.id,data.records.find(item=>item.id===r.id));
  render();
 }
 $('tools-rows').onclick=function(e){var b=e.target.closest('button');if(!b||busy)return;
@@ -412,7 +421,7 @@ $('tools-rows').onclick=function(e){var b=e.target.closest('button');if(!b||busy
  var record=data.records.find(r=>r.id===b.dataset.toggle);
  if(record){
   try{
-   const draft=record.source==='subsidies'?takeOwnership(record):M.clone(record);
+   const draft=M.clone(record);
    draft.enabled=!record.enabled;
    stageRecord(draft);alert('');
   }catch(err){alert(err.message);}
@@ -478,7 +487,7 @@ if(local){
  revision:function(){return revision;},edit:function(record,isNew,done){proposalEdit=done;openEditor(record.id,record,isNew);},
  applied:function(res){
    var pending=Array.from(changes.values());accepted(res.data);
-   pending.forEach(function(r){var i=data.records.findIndex(function(x){return x.id===r.id;});if(i<0)data.records.push(r);else data.records[i]=r;changes.set(r.id,r);});
+   pending.forEach(function(r){var i=data.records.findIndex(function(x){return x.id===r.id;});if(i<0)data.records.push(r);else data.records[i]=r;changes.set(r.id,data.records.find(item=>item.id===r.id));});
    pendingPublish=!res.published;render();alert(res.published?'Выбранные предложения сохранены. Сайт обновится после сборки.':'Изменения сохранены. Публикация не завершена. '+res.error);
  },pending:function(){return Array.from(changes.keys());}});
  $('tools-editor').addEventListener('close',function(){proposalEdit=null;});
@@ -488,6 +497,13 @@ const showLinkedType=category==='mortgage'&&Object.hasOwn(M.mortgageTypes,linked
  &&!params.has('edit')&&!location.hash;
 if(showLinkedType)expandedMortgages.add(linkedType);
 accepted(window.SM_TOOLS_DATA);
+if(local){
+ settingsEditor=SMToolsSettings.setup({
+   getData:()=>data, api, canSave:()=>!busy&&!changes.size,
+   onSaved:res=>{accepted(res.data);pendingPublish=!res.published;render();}
+ });
+}
+
 if(showLinkedType)requestAnimationFrame(()=>$('mortgage-type-'+linkedType)?.scrollIntoView({block:'start'}));
 SMOwnerWindow.ready(function(action){
  if(!action||!['manage','new','edit','ai','add-project'].includes(action.kind))return;
@@ -503,7 +519,7 @@ SMOwnerWindow.ready(function(action){
 });
 if(SMOwnerWindow.embedded){
  const returnIfFinished=()=>{
-   if(!changes.size&&!pendingPublish&&!document.querySelector('dialog[open]')) SMOwnerWindow.close();
+   if(!changes.size&&!pendingPublish&&!window.SMProposals?.isTransitioning()&&!document.querySelector('dialog[open]')) SMOwnerWindow.close();
  };
  $('tools-editor').addEventListener('close',returnIfFinished);
  $('ai-dialog').addEventListener('close',returnIfFinished);

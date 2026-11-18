@@ -1,214 +1,88 @@
+import copy
 import json
-import re
-import sys
-import tempfile
-import threading
 import unittest
-from collections import OrderedDict
-from copy import deepcopy
-from http.client import HTTPConnection
-from pathlib import Path
 from unittest.mock import patch
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'automation'))
-import owner_catalog
-import subsidy_catalog as bank
-import tools_ai
+from owner_catalog_test import LocalCatalogTest
+import owner_catalog as store
+import tools_source as source
 import tools_editor as editor
-import tools_proposals
-import tools_source as store
+import subsidy_catalog as bank
+from sync_tools import merge_snapshot
 
 
-class ManualSubsidiesTest(unittest.TestCase):
-    """Настоящие HTTP, разбор условий, модель Node, запись строк и слияние снимков."""
-
-    def mock(self, obj, name, **kwargs):
-        binding = patch.object(obj, name, **kwargs)
-        self.addCleanup(binding.stop)
-        return binding.start()
-
+class ManualSubsidiesTest(LocalCatalogTest):
     def setUp(self):
-        fixture = json.loads((store.ROOT / 'tests/fixtures/tools-initial.json').read_text())
-        self.source = json.loads((store.ROOT / 'assets/mortgage.json').read_text())
-        self.program = next(p for p in self.source['programs'] if p.get('kids') and len(p['projects']) == 2)
-        # У двух строк одного банка совпадают все признаки, кроме ставки.
-        self.sibling = dict(self.program, rate=.09871)
-        self.source['programs'].append(self.sibling)
-        # Зарезервируем пример импортированного ID, которого в общем листе ещё нет.
-        imported_only = dict(self.program, bank='Новый тестовый банк')
-        self.source['programs'].append(imported_only)
-        self.temporary = tempfile.TemporaryDirectory()
-        self.addCleanup(self.temporary.cleanup)
-        self.snapshot = Path(self.temporary.name) / 'tools.json'
-        self.snapshot.write_text(json.dumps(fixture))
-        self.mock(bank, 'PUBLISHED', new=self.snapshot)
-        self.bank = self.mock(bank, 'sources', return_value=self.source)
-        self.books = {'test-public': [store.COLUMNS, *map(store.row, fixture['records'])],
-                      'test-private': [store.COLUMNS]}
-        self.mock(store, 'config', return_value=dict(spreadsheet_id='test-public', sheet_name='Общий',
-                  gid=1, owner_sheet=dict(spreadsheet_id='test-private', sheet_name='Личный', gid=2)))
-        self.google = self.mock(store, 'google', side_effect=self.google_request)
-        self.ai = self.mock(tools_ai, 'generate', return_value={'question':'', 'edits':[]})
-        self.publish = self.mock(editor, 'publish', side_effect=self.write_snapshot)
-        self.mock(owner_catalog, '_retries', new=OrderedDict())
-        self.mock(editor, 'PREPARED', new=set())
-        server = editor.ThreadingHTTPServer(('127.0.0.1', 0), editor.Handler)
-        threading.Thread(target=server.serve_forever, daemon=True).start()
-        self.addCleanup(server.server_close)
-        self.addCleanup(server.shutdown)
-        self.connection = HTTPConnection(*server.server_address, timeout=15)
-        self.addCleanup(self.connection.close)
-        self.catalog = self.request('/api/tools')
-        self.write_snapshot(self.catalog)
-        self.row = self.find_bank(self.program)
-        self.virtual = self.find_bank(imported_only)
-        self.assertTrue(self.virtual['id'].startswith('sub-'))
+        super().setUp()
+        self.bank_source = json.loads((source.ROOT/'assets/mortgage.json').read_text())
+        self.bank_source['checked_at'] = '2026-11-18T10:00:00+00:00'
+        incoming = bank.with_subsidies(self.catalog, self.bank_source)
+        self.catalog = store.import_bank_snapshot(incoming)
+        self.row = next(r for r in self.catalog['records'] if r.get('source')=='subsidies')
+        self.mock(editor,'interpret',side_effect=lambda previous,draft,context:draft)
 
-    def find_bank(self, program, project='da1'):
-        return next(r for r in self.catalog['records'] if r.get('source') == 'subsidies'
-                    and r['project'] == project and bank.identity(r['params']) == bank.identity(program))
+    def edit_row(self,draft):
+        self.catalog = store.save(self.catalog,self.catalog['revision'],[draft],editor.prepare,'edit')
+        return next(r for r in self.catalog['records'] if r['id']==draft['id'])
 
-    def google_request(self, method, path, body=None, *, source):
-        rows = self.books[source['spreadsheet_id']]
-        if method == 'GET':
-            self.assertTrue(path.startswith('/values/'))
-            return {'values':deepcopy(rows)}
-        self.assertEqual((method, path), ('POST', '/values:batchUpdate'))
-        for update in body['data']:
-            index = int(re.search(r'!A(\d+):', update['range'])[1]) - 1
-            rows[index:index+1] = update['values']
-        return {}
+    def refresh(self):
+        self.bank_source['checked_at']='2026-11-18T13:00:00+00:00'
+        incoming=bank.with_subsidies(self.catalog,self.bank_source)
+        self.catalog=store.import_bank_snapshot(incoming)
+        return next(r for r in self.catalog['records'] if r['id']==self.row['id'])
 
-    def write_snapshot(self, data):
-        self.snapshot.write_text(json.dumps(store.public_snapshot(data)))
-        return 'mock'
+    def test_imported_metadata_keeps_bank_rates_and_local_settings(self):
+        promo=next(r for r in self.catalog['records'] if r['category']=='discount' and r['project']==self.row['project'] and not store.private(r))
+        draft=copy.deepcopy(self.row)
+        draft['params']['compatiblePromotions']=[promo['id']]
+        draft.update(mode='sequential',combination='Локальное условие',name='Название владельца')
+        self.edit_row(draft)
+        previous_settings=copy.deepcopy(self.catalog['settings'])
+        for p in self.bank_source['programs']:
+            if bank.identity(p)==bank.identity(self.row['params']): p['subsidy']=.2321
+        result=self.refresh()
+        self.assertEqual(result['params']['subsidy'],.2321)
+        self.assertEqual(result['params']['compatiblePromotions'],[promo['id']])
+        self.assertEqual(result['mode'],'sequential')
+        self.assertEqual(result['name'],'Название владельца')
+        self.assertEqual(result.get('source'),'subsidies')
+        self.assertFalse(result['params'].get('appManaged'))
+        self.assertEqual(self.catalog['settings'],previous_settings)
 
-    def request(self, route, body=None, status=200):
-        self.connection.request('POST' if body is not None else 'GET', route, json.dumps(body), headers={
-            'Origin':editor.ORIGIN, 'Host':'127.0.0.1:8795', 'Cookie':'sm_owner='+editor.SESSION,
-            'X-CSRF-Token':editor.CSRF})
-        response = self.connection.getresponse()
-        data = json.loads(response.read())
-        self.assertEqual(response.status, status, data.get('error'))
-        return data
+    def test_numeric_bank_change_requires_ownership_then_survives_sync(self):
+        draft=copy.deepcopy(self.row);draft['params']['rate']=.021
+        with self.assertRaises(ValueError):self.edit_row(draft)
+        draft.pop('source');draft['params']['appManaged']=True
+        saved=self.edit_row(draft)
+        self.assertIn('subsidyOrigin',saved['params'])
+        for p in self.bank_source['programs']:
+            if bank.identity(p)==bank.identity(self.row['params']):p['rate']=.078
+        self.refresh()
+        self.assertIn(saved,self.catalog['records'])
+        self.assertNotIn('source',saved)
+        self.assertEqual(saved['params']['rate'],.021)
 
-    def edit(self, *rows, preview=False, status=200):
-        return self.request(editor.EVENT, dict(changes=rows, revision=self.catalog['revision'],
-                                               preview=preview), status)
+    def test_cloud_snapshot_updates_only_banks_never_settings_or_manual(self):
+        remote=source.public_snapshot(self.catalog)
+        remote['settings']['subsidyCompensation']['da1']=.99
+        manual=next(r for r in remote['records'] if not bank.bank_row(r))
+        manual['name']='Нельзя заменить локальное имя'
+        remote['mortgageCheckedAt']=dict.fromkeys(('da1','da2','dnk2'),'2026-11-18T14:00:00+00:00')
+        row=next(r for r in remote['records'] if r['id']==self.row['id'])
+        row['params']['subsidy']=.345
+        original=store.read(True)
+        after=store.import_bank_snapshot(remote)
+        self.assertEqual(after['settings'],original['settings'])
+        self.assertEqual([r for r in after['records'] if not bank.bank_row(r)],[r for r in original['records'] if not bank.bank_row(r)])
+        self.assertEqual(next(r for r in after['records'] if r['id']==row['id'])['params']['subsidy'],.345)
+        self.assertEqual(store.import_bank_snapshot(source.public_snapshot(original)),after)
 
-    @staticmethod
-    def adopt(row, **params):
-        draft = deepcopy(row)
-        draft.pop('source')
-        draft['params'].update(appManaged=True, **params)
-        return draft
-
-    def test_preview_save_reimport_archive_and_fallback(self):
-        draft = self.adopt(self.row, rate=.011, bank='Банк владельца')
-        other = self.adopt(self.virtual, subsidy=.12)
-        old_size = len(self.books['test-public'])
-        prepared = self.edit(draft, other, preview=True)['changes']
-        self.assertEqual(len(self.books['test-public']), old_size)
-        for row, original in zip(prepared, (self.row, self.virtual)):
-            self.assertEqual(row['params']['subsidyOrigin']['rate'], original['params']['rate'])
-            self.assertNotIn('source', row)
-        self.ai.assert_not_called()
-        self.catalog = self.edit(*prepared)['data']
-        self.assertEqual(len(self.books['test-public']), old_size + 1)
-        self.assertEqual(len(self.books['test-private']), 1)
-        self.assertEqual(self.request('/api/tools')['records'], self.catalog['records'])
-        saved = store.parse(self.books['test-public'])
-        for row in prepared:
-            self.assertIn(row, saved['records'])
-        self.program['rate'] = .06981
-        def available(project):
-            return [r['params']['rate'] for r in self.catalog['records'] if r['project'] == project
-                    and r.get('source') and bank.bank_key(r) == bank.bank_key(dict(self.row, project=project))]
-        self.catalog = self.request('/api/tools')
-        self.assertEqual(available('da1'), [self.sibling['rate']])
-        self.assertCountEqual(available('da2'), [self.sibling['rate'], self.program['rate']])
-        archived = dict(prepared[0], enabled=False)
-        self.catalog = self.edit(archived)['data']
-        for fallback in (True, False):
-            if fallback:
-                self.bank.side_effect = FileNotFoundError()
-            else:
-                self.bank.side_effect = None
-            self.catalog = self.request('/api/tools')
-            self.assertIn(archived, self.catalog['records'])
-            self.assertEqual(available('da1'), [self.sibling['rate']])
-            self.assertEqual(bool(self.catalog['mortgageWarnings']), fallback)
-            self.assertEqual(len(self.catalog['records']), len({r['id'] for r in self.catalog['records']}))
-
-    def test_interpret_imported_text_then_reject_stale_preview(self):
-        draft = dict(self.adopt(self.virtual), description='Ставка 2%.')
-        self.ai.return_value = {'question':'', 'edits':[
-            dict(field='rate', value_json='0.02', quote='Ставка 2%')]}
-        prepared, = self.edit(draft, preview=True)['changes']
-        self.assertEqual(prepared['params']['rate'], .02)
-        self.assertEqual(self.ai.call_args.args[0]['previous'], self.virtual)
-        self.assertEqual(self.edit(prepared, preview=True)['changes'], [prepared])
-        self.ai.assert_called_once()
-        # Банк сменил ставку ещё до записи. В общем листе исходного ID нет.
-        program = next(p for p in self.source['programs'] if p['bank'] == self.virtual['params']['bank'])
-        program['rate'] = .037
-        self.edit(prepared, status=400)
-        self.assertFalse(any(call.args[0]=='POST' for call in self.google.call_args_list))
-        self.assertNotIn(self.virtual['id'], [r['id'] for r in self.request('/api/tools')['records']])
-
-    def test_takeover_checks_and_ambiguous_reimport(self):
-        draft = self.adopt(self.virtual)
-        wrong_flag = deepcopy(draft)
-        del wrong_flag['params']['appManaged']
-        forged = self.adopt(self.virtual, subsidyOrigin={'key':'x'})
-        for invalid in (wrong_flag, forged, self.adopt(self.virtual, ownerOnly=True),
-                        dict(draft, id='sub-unknown'), dict(draft, project='da2')):
-            self.edit(invalid, status=400)
-        self.assertFalse(any(c.args[0]=='POST' for c in self.google.call_args_list))
-        # Резерв содержит только импортированные строки, до принятия карточки. При принятии во время сбоя
-        # и после возвращения банка архив скрывает только свою исходную программу.
-        self.source['errors'] = {'da':'Сбой'}
-        archived = dict(self.adopt(self.row), enabled=False)
-        self.catalog = self.edit(archived)['data']
-        self.source['errors'].clear()
-        self.program['rate'], self.sibling['rate'] = .09123, .08123
-        self.catalog = self.request('/api/tools')
-        self.assertIn('da1', self.catalog['mortgageWarnings'])
-        self.assertNotIn('da2', self.catalog['mortgageWarnings'])
-        rates = [r['params']['rate'] for r in self.catalog['records'] if r.get('source')
-                 and bank.bank_key(r) == bank.bank_key(self.row)]
-        self.assertEqual(rates, [.09871])
-        self.assertFalse(next(r for r in self.catalog['records'] if r['id']==archived['id'])['enabled'])
-
-    def test_new_public_private_and_ai_review(self):
-        new = deepcopy(self.row)
-        new.pop('source')
-        new.update(id='tool-new', group='group-new')
-        personal = dict(new, id='tool-private', params=dict(new['params'], ownerOnly=True))
-        adopted = self.adopt(self.virtual)
-        self.catalog = self.edit(new, personal, adopted)['data']
-        for r in (new, personal):
-            row = next(x for x in self.catalog['records'] if x['id']==r['id'])
-            self.assertTrue(row['params']['appManaged'])
-            self.assertNotIn('subsidyOrigin', row['params'])
-        self.assertEqual(self.books['test-private'][1][0], personal['id'])
-        published = json.loads(self.snapshot.read_text())
-        self.assertNotIn(personal['id'], [r['id'] for r in published['records']])
-        self.assertIn(self.row, published['records'])
-        item = dict(target=adopted['id'], name='Ручная ставка', project='da1', kind='mortgage',
-                    category='mortgage', terms='Уточнённое название', combination='', source_ids=[1])
-        imported = dict(item, target=self.row['id'])
-        with patch.object(tools_proposals, 'structured', return_value={'items':[item, imported], 'questions':[]}):
-            result = self.request('/api/ai/propose', {'text':'Согласованы изменения условий.'})
-        proposal, = result['items']
-        self.assertTrue(result['questions'])
-        self.assertEqual(proposal['record']['id'], adopted['id'])
-        self.assertEqual(proposal['record']['params']['subsidyOrigin']['key'], bank.bank_key(self.virtual))
-        revised = self.request('/api/ai/revise', dict(previous=proposal['record'], ticket=proposal['ticket'],
-                               revision=result['revision'], record=dict(proposal['record'], enabled=False)))
-        self.catalog = self.request('/api/ai/accept', dict(items=[revised], revision=result['revision']))['data']
-        self.assertIn(revised['record'], self.catalog['records'])
+    def test_cloud_sync_never_reads_all_tools_google(self):
+        previous=source.public_snapshot(self.catalog)
+        with patch.object(source,'read',side_effect=AssertionError('Нельзя читать старый каталог')):
+            result=merge_snapshot(previous,self.bank_source)
+        self.assertEqual(result['settings'],previous['settings'])
+        self.assertEqual([r for r in result['records'] if not bank.bank_row(r)],[r for r in previous['records'] if not bank.bank_row(r)])
 
 
-if __name__ == '__main__':
-    unittest.main()
+if __name__=='__main__':unittest.main()

@@ -15,3 +15,12 @@ console.log('ЧПВ совпадает с примером таблицы; по�
 
 assert.throws(()=>SMChpvCalc.calculate({...x,client:2000000}),/Субсидирование ПВ не требуется/);
 assert.throws(()=>SMChpvCalc.calculate({...x,ddu:0}),/Проверьте/);
+
+// Подбор не выдаёт ДДУ, который тот же калькулятор отклоняет.
+assert.equal(SMChpvCalc.suggested({...x,base:10000000,cash:9000000,client:2000000}),null);
+assert.equal(SMChpvCalc.suggested({...x,cost:undefined}),null);
+for(const client of [0,100000,500000,1000000,2000000]){
+ const candidate={...x,base:10000000,cash:9000000,client};
+ const suggested=SMChpvCalc.suggested(candidate);
+ if(suggested!=null){const result=SMChpvCalc.calculate({...candidate,ddu:suggested});assert.ok(result.funded>=0);assert.ok(result.profit<=1000);}
+}

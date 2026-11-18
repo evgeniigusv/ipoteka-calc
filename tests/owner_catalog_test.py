@@ -1,179 +1,206 @@
 import copy
 import json
+import sqlite3
 import sys
+import tempfile
 import threading
 import unittest
-from collections import OrderedDict
+from concurrent.futures import ThreadPoolExecutor
 from http.client import HTTPConnection
 from pathlib import Path
 from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'automation'))
-import owner_catalog
+import owner_catalog as store
 import tools_editor as editor
 import tools_source as source
 
 
-class OwnerCatalogTest(unittest.TestCase):
-    def mock(self, obj, name, **kwargs):
-        p = patch.object(obj, name, **kwargs)
-        self.addCleanup(p.stop)
-        return p.start()
+class LocalCatalogTest(unittest.TestCase):
+    def mock(self, obj, name, **kw):
+        binding = patch.object(obj, name, **kw)
+        self.addCleanup(binding.stop)
+        return binding.start()
 
     def setUp(self):
-        self.config = dict(spreadsheet_id='public-book', sheet_name='Общий', gid=0,
-                           credentials='test-only', owner_sheet=dict(
-                               spreadsheet_id='owner-book', sheet_name='Личный', gid=0))
-        self.mock(source, 'config', return_value=self.config)
-        self.mock(editor, 'config', return_value=self.config)
-        self.public = json.loads((source.ROOT/'tests/fixtures/tools-initial.json').read_text())['records']
-        self.info = next(r for r in self.public if r['kind'] == 'info')
-        self.owner = [dict(self.info, id='internal-' + str(i), params={'ownerOnly': True})
-                      for i in (1, 2)]
-        self.read_public = self.mock(source, 'read', side_effect=lambda *a, **kw: self.snapshot(self.public))
-        self.read_owner = self.mock(source, 'read_private', side_effect=lambda conf: self.snapshot(self.owner))
-        self.public_write = self.mock(source, 'write_changes', side_effect=self.write_public)
-        self.owner_write = self.mock(source, 'write_private', side_effect=self.write_owner)
-        self.publish = self.mock(editor, 'publish', return_value='test')
-        self.mock(editor, 'with_subsidies', side_effect=lambda data: data)
-        self.mock(editor, 'interpret', side_effect=lambda previous, draft, context: draft)
-        self.mock(owner_catalog, '_retries', new=OrderedDict())
-        self.server = editor.ThreadingHTTPServer(('127.0.0.1', 0), editor.Handler)
-        threading.Thread(target=self.server.serve_forever, daemon=True).start()
-        self.addCleanup(self.server.server_close)
-        self.addCleanup(self.server.shutdown)
-        self.archive = dict(self.owner[0], enabled=False)
-        self.change = dict(self.info, name='Обновлено')
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name)
+        self.conf = dict(catalog_path=str(self.root / 'catalog.sqlite'), backup_dir=str(self.root / 'backups'),
+                         external_backup_dir=str(self.root / 'external'), spreadsheet_id='public-test',
+                         owner_sheet={'spreadsheet_id':'private-test'})
+        self.mock(source, 'config', return_value=self.conf)
+        fixture = json.loads((source.ROOT / 'tests/fixtures/tools-initial.json').read_text())
+        info = next(r for r in fixture['records'] if r['kind'] == 'info')
+        self.owner = dict(info, id='internal-test', name='Закрытая запись', params={'ownerOnly':True})
+        self.mock(source, 'read', return_value=fixture)
+        self.mock(source, 'read_private', return_value={'records':[self.owner]})
+        self.report = store.migrate_google(self.root / 'migration')
+        self.catalog = store.read(True)
+        self.info = next(r for r in self.catalog['records'] if r['id'] == info['id'])
 
-    @staticmethod
-    def snapshot(rows):
-        return dict(version=1, checked_at='2026-11-14', records=copy.deepcopy(rows), revision=source.revision(rows))
+    def edit(self, current=None, **fields):
+        current = current or self.catalog
+        draft = dict(self.info, **fields)
+        return store.save(current, current['revision'], [draft], lambda _, r:r, 'edit')
 
-    def write_public(self, current, changes, *, source):
-        self.assertEqual(source['spreadsheet_id'], 'public-book')
-        self.assertEqual(current['records'], self.public)
-        self.assertTrue(all(not owner_catalog.private(r) for r in changes))
-        self.public = owner_catalog.updated(current, changes)
-        return self.snapshot(self.public)
+    def test_migration_hashes_restore_and_preserved_original(self):
+        self.assertEqual(self.report['owner'], 1)
+        self.assertEqual(self.report['importedHash'], self.report['restoredHash'])
+        self.assertTrue(self.report['restoreVerified'])
+        self.assertEqual(self.catalog['settings'], store.DEFAULT_SETTINGS)
+        self.assertTrue(all(r['mode'] == 'additive' for r in self.catalog['records']))
+        original = json.loads((self.root/'migration/original-google-catalog.json').read_text())
+        self.assertEqual(source.revision(original['records']), self.report['originalHash'])
+        store.backups()
+        copies = list((self.root/'external').glob('*.sqlite'))
+        restored = store.restore_backup(copies[0], self.root/'restored.sqlite')
+        self.assertEqual(restored, self.catalog)
+        with self.assertRaises(ValueError): store.migrate_google(self.root/'again')
 
-    def write_owner(self, current, changes, conf):
-        self.assertEqual(conf, self.config['owner_sheet'])
-        self.assertEqual(current['records'], self.owner)
-        self.assertTrue(all(owner_catalog.private(r) for r in changes))
-        self.owner = owner_catalog.updated(current, changes)
-        return self.snapshot(self.owner)
+    def test_batch_atomicity_and_retry_after_reopen(self):
+        hidden = dict(next(r for r in self.catalog['records'] if store.private(r)), enabled=False)
+        changed = dict(self.info, name='Новое имя')
+        result = store.save(self.catalog, self.catalog['revision'], [changed,hidden], lambda _,r:r, 'edit')
+        self.assertIn(changed, result['records']); self.assertIn(hidden, result['records'])
+        retry = store.save(store.read(True), self.catalog['revision'], [changed,hidden], lambda *_:self.fail('Повторный разбор'), 'edit')
+        self.assertEqual(result, retry)
+        self.assertNotIn(hidden, source.public_snapshot(result)['records'])
+        self.edit(result, name='Ещё одна версия')
+        with self.assertRaises(store.Conflict):
+            store.save(store.read(True), self.catalog['revision'], [changed,hidden], lambda _,r:r, 'edit')
 
-    def api(self, path, body=None):
-        conn = HTTPConnection(*self.server.server_address, timeout=10)
+    def test_invalid_batch_rolls_back_public_and_private(self):
+        hidden = dict(self.owner, name='')
+        with self.assertRaises(ValueError):
+            store.save(self.catalog, self.catalog['revision'], [dict(self.info,name='Не сохранять'),hidden], lambda _,r:r,'edit')
+        self.assertEqual(store.read(True), self.catalog)
+        with self.assertRaises(ValueError):
+            self.edit(params={'ownerOnly':True})
+        self.assertEqual(store.read(True), self.catalog)
+
+    def test_concurrent_compare_and_swap_only_one_winner(self):
+        barrier = threading.Barrier(2)
+        def run(name):
+            def prepare(_, rows): barrier.wait(timeout=5); return rows
+            try:
+                store.save(self.catalog, self.catalog['revision'], [dict(self.info,name=name)], prepare, 'edit')
+                return 'ok'
+            except store.Conflict:
+                return 'conflict'
+        with ThreadPoolExecutor(2) as pool:
+            self.assertCountEqual(list(pool.map(run, ('Первый','Второй'))), ['ok','conflict'])
+
+    def test_settings_cas_strict_validation_and_inventory(self):
+        settings = copy.deepcopy(store.DEFAULT_SETTINGS)
+        settings['subsidyCompensation']['da1'] = .12
+        first = store.save_settings(self.catalog, self.catalog['revision'], settings)
+        self.assertEqual(first['settings'], settings)
+        self.assertEqual(store.save_settings(store.read(True), self.catalog['revision'], settings),first)
+        with self.assertRaises(store.Conflict): self.edit(name='Устаревшая правка')
+        for invalid in (dict(settings, personal='secret'), dict(settings,specialFlats=['123:John']),
+                        dict(settings,specialFlats=['1:1','1:1']), dict(settings,subsidyCompensation={'da1':True,'da2':.1,'dnk2':.1})):
+            with self.assertRaises(ValueError): store.save_settings(first,first['revision'],invalid)
+        self.assertEqual(store.read(True), first)
+
+    def test_persistent_retry_receipts_restore(self):
+        saved = self.edit(name='Изменено')
+        backup = store.backup_to(self.root/'backup.sqlite')
+        path = self.root/'recovered.sqlite'
+        store.restore_backup(backup,path)
+        self.conf['catalog_path'] = str(path)
+        retry = store.save(store.read(True), self.catalog['revision'], [dict(self.info,name='Изменено')],lambda *_:self.fail(),'edit')
+        self.assertEqual(retry, saved)
+
+
+class ApiTest(LocalCatalogTest):
+    def setUp(self):
+        super().setUp()
+        self.pub = self.mock(editor,'publish',return_value={'published':True,'snapshotSaved':True,'error':None})
+        self.interpreter = self.mock(editor,'interpret',side_effect=lambda previous,draft,context:draft)
+        self.server = editor.ThreadingHTTPServer(('127.0.0.1',0),editor.Handler)
+        threading.Thread(target=self.server.serve_forever,daemon=True).start()
+        self.addCleanup(self.server.server_close); self.addCleanup(self.server.shutdown)
+
+    def api(self,path,body=None,headers=None):
+        conn=HTTPConnection(*self.server.server_address,timeout=10)
         try:
-            conn.request('GET' if body is None else 'POST', path, json.dumps(body), headers={
-                'Host': '127.0.0.1:8795', 'Cookie': 'sm_owner=' + editor.SESSION,
-                'Origin': editor.ORIGIN, 'X-CSRF-Token': editor.CSRF})
-            result = conn.getresponse()
-            return result.status, json.loads(result.read())
-        finally:
-            conn.close()
+            h={'Host':'127.0.0.1:8795','Origin':editor.ORIGIN,'Cookie':'sm_owner='+editor.SESSION,'X-CSRF-Token':editor.CSRF}
+            h.update(headers or {})
+            conn.request('GET' if body is None else 'POST',path,json.dumps(body),h)
+            response=conn.getresponse();return response.status,json.loads(response.read())
+        finally:conn.close()
 
-    def batch(self):
-        return dict(revision=self.api('/api/tools')[1]['revision'], changes=[self.change, self.archive])
+    def test_settings_get_save_publish_failure_and_retry(self):
+        status,data=self.api('/api/settings');self.assertEqual(status,200)
+        self.assertEqual(set(data),{'revision','settings'})
+        data['settings']['subsidyCompensation']['dnk2']=.15
+        self.pub.side_effect=RuntimeError('Публикация недоступна')
+        status,result=self.api('/api/settings',data)
+        self.assertEqual(status,200);self.assertTrue(result['saved']);self.assertFalse(result['published'])
+        self.assertEqual(result['data']['settings'],data['settings'])
+        self.pub.side_effect=None
+        self.assertTrue(self.api('/api/settings',data)[1]['published'])
+        self.assertEqual(self.api('/api/tools')[1]['revision'],result['data']['revision'])
+        self.assertEqual(self.api('/api/tools',{'revision':data['revision'],'changes':[self.info]})[0],409)
 
-    def test_read_session_preview_and_archive(self):
-        status, data = self.api('/api/tools')
-        self.assertEqual(status, 200)
-        self.assertEqual(data['records'], self.public + self.owner)
-        self.assertEqual(data['revision'], source.revision(self.public + self.owner))
-        self.assertNotIn('owner-book', json.dumps(data))
-        self.assertEqual(self.api('/api/session')[1]['source'],
-                         'https://docs.google.com/spreadsheets/d/public-book/edit#gid=0')
-        body = dict(revision=data['revision'], changes=[self.archive])
-        self.assertEqual(self.api(editor.EVENT, dict(body, preview=True)), (200, {'changes':[self.archive]}))
-        self.owner_write.assert_not_called()
-        status, result = self.api(editor.EVENT, body)
-        self.assertEqual(status, 200)
-        self.assertNotEqual(result['data']['revision'], data['revision'])
-        self.assertEqual(result['data']['records'][-2], self.archive)
-        self.assertEqual(self.publish.call_args.args[0]['records'], self.public)
-        self.public_write.assert_not_called()
-        self.owner_write.assert_called_once()
-        self.assertEqual(self.api(editor.EVENT, body)[0], 200)
-        self.owner_write.assert_called_once()
+    def test_settings_and_tools_same_security(self):
+        body={'revision':self.catalog['revision'],'settings':self.catalog['settings']}
+        for path in ('/api/settings','/api/tools'):
+            for headers in ({'Cookie':''},{'Origin':'https://evil.example'},{'Host':'evil.example'},
+                            {'X-CSRF-Token':'bad'},{'Sec-Fetch-Site':'cross-site'}):
+                self.assertEqual(self.api(path,body,headers)[0],403)
+            self.assertEqual(self.api(path,headers={'Cookie':''})[0],401)
+        self.assertEqual(self.api('/automation/owner_catalog.py')[0],404)
+        self.assertEqual(self.api('/api/session')[1]['storage'],'sqlite')
 
-    def test_partial_write_and_retry(self):
-        body = self.batch()
-        self.owner_write.side_effect = RuntimeError('Ошибка до записи')
-        self.assertEqual(self.api(editor.EVENT, body)[0], 503)
-        self.assertIn(self.change, self.public)
-        self.assertNotIn(self.archive, self.owner)
-        self.publish.assert_not_called()
-        self.owner_write.side_effect = self.write_owner
-        self.assertEqual(self.api(editor.EVENT, body)[0], 200)
-        self.public_write.assert_called_once()
-        self.assertEqual(self.owner_write.call_count, 2)
-        self.assertIn(self.archive, self.owner)
-
-    def test_lost_response_after_commit_and_signed_retry(self):
-        body = self.batch()
-        req = dict(revision=body['revision'], items=[
-            dict(record=r, ticket=editor.ticket(body['revision'], r)) for r in body['changes']])
-
-        def lose_response(*args):
-            self.write_owner(*args)
-            raise RuntimeError('Ответ потерян')
-        self.owner_write.side_effect = lose_response
-        self.assertEqual(self.api('/api/ai/accept', req)[0], 503)
-        self.assertEqual(self.api('/api/ai/accept', req)[0], 200)
-        self.public_write.assert_called_once()
-        self.owner_write.assert_called_once()
-
-    def test_partial_write_with_external_edit_is_conflict(self):
-        body = self.batch()
-        self.owner_write.side_effect = RuntimeError('Нет сети')
-        self.assertEqual(self.api(editor.EVENT, body)[0], 503)
-        self.owner[1] = dict(self.owner[1], name='Внешняя правка')
-        self.assertEqual(self.api(editor.EVENT, body)[0], 409)
-        self.public_write.assert_called_once()
-        self.owner_write.assert_called_once()
-        self.publish.assert_not_called()
-
-    def test_move_in_either_direction_rejected_before_write(self):
-        revision = self.batch()['revision']
-        for old in [self.info, self.owner[0]]:
-            moved = dict(old, params=dict(old['params'], ownerOnly=not owner_catalog.private(old)))
-            body = dict(revision=revision, changes=[moved])
-            self.assertEqual(self.api(editor.EVENT, body)[0], 400)
-            self.assertEqual(self.api('/api/ai/accept', dict(revision=revision, items=[
-                dict(record=moved, ticket=editor.ticket(revision, moved))]))[0], 400)
-        self.public_write.assert_not_called()
-        self.owner_write.assert_not_called()
-
-    def test_invalid_owner_source_and_failed_private_read(self):
-        self.read_owner.side_effect = RuntimeError('Закрытый файл недоступен')
-        self.assertEqual(self.api('/api/tools')[0], 503)
-        self.assertEqual(self.read_public.call_count, 1)
-        self.assertEqual(self.read_public.call_args.args, (True,))
-        self.read_owner.reset_mock()
-        for invalid in [None, {}, dict(self.config['owner_sheet'], spreadsheet_id='public-book')]:
-            self.config['owner_sheet'] = invalid
-            self.assertEqual(self.api('/api/tools')[0], 503)
-        self.read_owner.assert_not_called()
-
-    def test_duplicate_id_or_wrong_book_rejected(self):
-        original = self.owner[0]
-        for invalid in [dict(original, id=self.info['id']), self.info]:
-            self.owner[0] = invalid
-            self.assertEqual(self.api('/api/tools')[0], 503)
-        self.owner[0] = original
-        self.public.append(dict(original, id='misplaced'))
-        self.assertEqual(self.api('/api/tools')[0], 503)
-
-    def test_legacy_single_source(self):
-        del self.config['owner_sheet']
-        status, data = self.api('/api/tools')
-        self.assertEqual(status, 200)
-        self.assertEqual(data['revision'], source.revision(self.public))
-        self.read_public.assert_called_once_with(True)
-        self.read_owner.assert_not_called()
+    def test_tools_preview_save_and_snapshot_is_public(self):
+        request={'revision':self.catalog['revision'],'changes':[dict(self.info,name='Новое название')]}
+        status,_=self.api(editor.EVENT,dict(request,preview=True));self.assertEqual(status,200)
+        self.assertEqual(store.read(True),self.catalog)
+        status,result=self.api('/api/tools',request);self.assertEqual(status,200)
+        public=source.public_snapshot(result['data'])
+        self.assertEqual(public['settings'],store.DEFAULT_SETTINGS)
+        self.assertNotIn('Закрытая запись',json.dumps(public,ensure_ascii=False))
+        self.assertNotIn('revision',public)
+        self.assertEqual(self.api('/api/tools',request)[0],200)
 
 
-if __name__ == '__main__':
-    unittest.main()
+    def test_info_promotions_in_prepare_cache_and_ai_revise_context(self):
+        promo = dict(self.info, id='test-info-promotion', category='discount', params={'percent':.05})
+        hidden = dict(promo, id='test-hidden-promotion', params={'percent':.04,'ownerOnly':True})
+        current = store.save(self.catalog,self.catalog['revision'],[promo,hidden],lambda _,r:r,'edit')
+        draft = dict(self.info, description='Новое описание')
+        request = {'revision':current['revision'],'changes':[draft],'preview':True}
+        self.assertEqual(self.api(editor.EVENT,request)[0],200)
+        context = self.interpreter.call_args.args[2]
+        self.assertIn(promo,context);self.assertNotIn(hidden,context)
+        self.interpreter.reset_mock()
+        self.assertEqual(self.api(editor.EVENT,request)[0],200)
+        self.interpreter.assert_not_called()
+        req = {'revision':current['revision'],'previous':self.info,'record':draft,
+               'ticket':editor.ticket(current['revision'],self.info)}
+        self.assertEqual(self.api('/api/ai/revise',req)[0],200)
+        self.assertIn(promo,self.interpreter.call_args.args[2])
+
+    def test_promotion_visibility_and_project_move_clean_references_atomically(self):
+        promo = dict(self.info,id='test-move-promotion',category='discount',params={'percent':.05})
+        linked = dict(self.info,params=dict(self.info['params'],compatiblePromotions=[promo['id']]))
+        current = store.save(self.catalog,self.catalog['revision'],[promo,linked],lambda _,r:r,'edit')
+        private_promo = dict(promo,params=dict(promo['params'],ownerOnly=True))
+        status,result = self.api('/api/tools',{'revision':current['revision'],'changes':[private_promo]})
+        self.assertEqual(status,200,result)
+        current = result['data']
+        self.assertEqual(next(r for r in current['records'] if r['id']==linked['id'])['params']['compatiblePromotions'],[])
+        self.assertNotIn(promo['id'],[r['id'] for r in source.public_snapshot(current)['records']])
+        # Возвращаем в общий список, снова связываем и переносим в другой проект.
+        current = store.read(True)
+        current = store.save(current,current['revision'],[promo,linked],lambda _,r:r,'edit')
+        moved = dict(promo, project='dnk2' if promo['project']!='dnk2' else 'da1')
+        status,result = self.api('/api/tools',{'revision':current['revision'],'changes':[moved]})
+        self.assertEqual(status,200,result)
+        self.assertEqual(next(r for r in result['data']['records'] if r['id']==linked['id'])['params']['compatiblePromotions'],[])
+        self.assertIn(moved,result['data']['records'])
+
+
+if __name__=='__main__':unittest.main()

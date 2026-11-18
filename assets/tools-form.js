@@ -58,7 +58,7 @@
     }
   }
 
-  function mount(form, record) {
+  function mount(form, record, records) {
     const host = document.getElementById('tools-editor-fields');
     const p = record.params;
     const core = document.createElement('div');
@@ -83,7 +83,7 @@
       'p:firstRub': 'Первый транш, ₽', 'p:second': 'Второй транш, % цены',
       'p:secondMonths': 'Месяцев от сделки до второго транша',
       'p:lastMonthsBeforeCommissioning': 'За сколько месяцев до ввода',
-      'p:disc': 'Скидка от цены квартиры, %',
+      'p:disc': 'Скидка в процентах',
       'p:referencePrincipal': 'Сумма кредита для ориентира, ₽',
       'p:referenceYears': 'Срок кредита для ориентира, лет'
     };
@@ -98,7 +98,8 @@
     if (record.kind === 'info') {
       core.append(label(form, 'description'));
       control(form, 'description').required = true;
-      control(form, 'description').placeholder = 'Например, бронь на 7 дней, стоимость 10 000 ₽';
+      control(form, 'description').placeholder = record.category==='discount'?'Кому доступна акция и на каких условиях':'Например, бронь на 7 дней, стоимость 10 000 ₽';
+      if(record.category==='discount')core.append(label(form,'p:percent'));else label(form,'p:percent').hidden=true;
     } else {
       control(form, 'description').placeholder = 'Особые условия или пояснение для партнёров';
     }
@@ -138,9 +139,19 @@
       shared.className = 'tools-field';
       shared.innerHTML = '<span class="tools-field-title">Платёж в месяц, ₽</span><input name="ui:payment" inputmode="numeric" value="' + esc(p.pay?.[1] ?? '') + '">';
       payments.after(shared);
-      const discount = p.discFromPv ? (p.disc ? 'both' : 'pv') : p.disc ? 'price' : 'none';
-      label(form, 'p:disc').before(select('ui:discount', 'Как считать скидку', [['none', 'Без скидки'], ['price', 'От цены квартиры'], ['pv', 'Только от суммы взноса'], ['both', 'От цены и от взноса']], discount));
-      hint(form, 'p:discFromPv', 'Укажите полную ставку скидки. Например, 13% при взносе 50% дадут скидку 6,5% от цены.');
+      const discount = document.createElement('label');
+      discount.className = 'tools-field';
+      discount.innerHTML = '<span class="tools-field-title">Скидка в процентах</span><input name="ui:discountPercent" inputmode="decimal" value="'+esc(+((p.discFromPv||p.disc||0)*100).toFixed(6))+'">';
+      const fromPv = document.createElement('label');
+      fromPv.className = 'tools-field tools-check-field';
+      fromPv.innerHTML = '<span class="tools-field-title">База скидки</span><span><input type="checkbox" name="ui:discountFromPv"'+(p.discFromPv?' checked':'')+'> Скидка на сумму ПВ</span>';
+      label(form,'p:disc').before(discount,fromPv);
+      hint(form,'ui:discountFromPv','Без галочки скидка применяется ко всей цене квартиры.');
+      for(const key of ['disc','discFromPv','maxDisc','launchDiscount','launchUntil','pvChoices','discAt70'])label(form,'p:'+key).hidden=true;
+      const highDown = document.createElement('p');
+      highDown.className='tools-form-help wide';
+      highDown.textContent='При взносе от 71% действует актуальная скидка за полную оплату.';
+      core.append(highDown);
       const stages = document.getElementById('tools-milestones').closest('.tools-field');
       const stagePanel = document.createElement('details');
       stagePanel.className = 'tools-stages-panel';
@@ -152,9 +163,9 @@
       const stepInput = control(form, 'p:steps');
       const periods = document.createElement('div');
       periods.className = 'tools-field wide';
-      periods.innerHTML = '<span class="tools-field-title">Как часто можно платить *</span><div class="tools-periods"></div><small>Можно разрешить несколько вариантов на выбор клиента.</small>';
+      periods.innerHTML = '<span class="tools-field-title">Периодичность платежей *</span><details class="tools-period-picker"><summary>Выберите периодичность</summary><div class="tools-periods"></div></details><small>Можно разрешить несколько вариантов на выбор клиента.</small>';
       const choices = periods.querySelector('.tools-periods');
-      for (const [step, text] of [[1, 'Каждый месяц'], [3, 'Раз в квартал'], [6, 'Раз в полгода'], [12, 'Раз в год']]) {
+      for (const [step, text] of [[1, 'Каждый месяц'], [2, 'Раз в 2 месяца'], [3, 'Раз в квартал'], [6, 'Раз в полгода'], [12, 'Раз в год']]) {
         const option = document.createElement('label');
         option.innerHTML = '<input type="checkbox" data-period="' + step + '"' + (p.steps?.includes(step) ? ' checked' : '') + '> ' + text;
         choices.append(option);
@@ -163,8 +174,14 @@
       stepInput.type = 'hidden';
       periods.append(stepInput);
       oldLabel.replaceWith(periods);
+      function periodTitle(){
+        const selected=[...choices.querySelectorAll(':checked')].map(input=>input.parentElement.textContent.trim());
+        periods.querySelector('summary').textContent=selected.join(', ')||'Выберите периодичность';
+      }
+      periodTitle();
       choices.addEventListener('change', () => {
         stepInput.value = [...choices.querySelectorAll(':checked')].map(input => input.dataset.period).join(', ');
+        periodTitle();
       });
     }
 
@@ -191,7 +208,38 @@
       core.append(remainder);
     }
 
+    const combinations=document.createElement('details');
+    combinations.className='tools-combinations-panel';
+    combinations.innerHTML='<summary>Сочетание с акциями</summary><div class="tools-promotion-list"></div>';
+    extra.prepend(combinations);
+    if(record.combination&&Array.isArray(p.compatiblePromotions)){
+      const previous=document.createElement('p');previous.className='tools-form-help';
+      previous.textContent='Прежние условия: '+record.combination+' Выберите применимые акции ниже.';
+      combinations.querySelector('.tools-promotion-list').before(previous);
+    }
+    label(form,'combination').hidden=true;
+    const mode=control(form,'mode');
+    mode.replaceChildren(new Option('Суммирование','additive'),new Option('Последовательно','sequential'));
+    mode.value=record.mode==='sequential'?'sequential':'additive';
+    combinations.append(label(form,'mode'));
+    const selectedPromotions=new Set(p.compatiblePromotions||[]);
+    function promotionList(){
+      const project=value(form,'project');
+      const list=combinations.querySelector('.tools-promotion-list');
+      list.replaceChildren();
+      const available=records.filter(item=>item.category==='discount'&&item.enabled&&item.id!==record.id&&item.project===project&&((control(form,'visibility')?value(form,'visibility')==='private':p.ownerOnly)||!item.params.ownerOnly));
+      for(const item of available){
+        const option=document.createElement('label');
+        const input=document.createElement('input');input.type='checkbox';input.dataset.promotion=item.id;input.checked=selectedPromotions.has(item.id);
+        input.onchange=()=>{if(input.checked)selectedPromotions.add(item.id);else selectedPromotions.delete(item.id);};
+        const text=document.createElement('span');text.textContent=item.name;
+        option.append(input,text);list.append(option);
+      }
+      if(!available.length){const note=document.createElement('p');note.textContent='Для этого проекта пока нет акций. Добавьте их в раздел «Скидки и акции».';list.append(note);}
+    }
+    promotionList();
     function refresh(event) {
+      if(['project','visibility'].includes(event?.target.name))promotionList();
       if (event?.target.name === 'ui:pay' && value(form, 'ui:pay') === 'different') {
         for (const key of ['pay.1', 'pay.2', 'pay.3']) {
           const input = control(form, 'p:' + key);
@@ -218,11 +266,15 @@
         show(form, 'ui:pay', monthly);
         show(form, 'ui:payment', monthly && !different, true);
         for (const key of ['pay.1', 'pay.2', 'pay.3']) show(form, 'p:' + key, monthly && different, true);
-        const discount = value(form, 'ui:discount');
-        show(form, 'p:disc', discount === 'price' || discount === 'both', true);
-        show(form, 'p:discFromPv', discount === 'pv' || discount === 'both', true);
-        show(form, 'p:pvFromBase', discount !== 'pv' && discount !== 'both');
-        if (scheme === 'scheduled') host.querySelector('.tools-stages-panel').open = true;
+        show(form, 'p:pvFromBase', !control(form,'ui:discountFromPv').checked);
+        const stagePanel=host.querySelector('.tools-stages-panel');
+        stagePanel.hidden=scheme!=='scheduled'&&scheme!=='monthly';
+        if(scheme==='scheduled')stagePanel.open=true;
+        for(const row of stagePanel.querySelectorAll('.tools-milestone')){
+          const amountMode=row.querySelector('[data-stage="amountMode"]').value;
+          const dateMode=row.querySelector('[data-stage="mode"]').value;
+          for(const input of row.querySelectorAll('input'))input.required=!stagePanel.hidden&&[amountMode,dateMode].includes(input.dataset.stage);
+        }
       }
       if (record.kind === 'tranche') {
         const estimate = value(form, 'ui:rate') === 'estimate';
@@ -249,7 +301,7 @@
         show(form, 'p:maxDate', flexible, true);
       }
       const launch = control(form, 'p:launchDiscount');
-      if (launch) control(form, 'p:launchUntil').required = Number(launch.value.replace(',', '.')) > 0;
+      if (launch && record.kind!=='installment') control(form, 'p:launchUntil').required = Number(launch.value.replace(',', '.')) > 0;
     }
     form.oninput = refresh;
     form.onchange = refresh;
@@ -303,20 +355,30 @@
           params.pay = {1: amount, 2: amount, 3: amount};
         } else delete params.pay;
       }
-      const discount = value(form, 'ui:discount');
-      if (!['price', 'both'].includes(discount)) delete params.disc;
-      if (!['pv', 'both'].includes(discount)) delete params.discFromPv;
-      else params.pvFromBase = true;
-      params.milestones = [...document.getElementById('tools-milestones').children].map(row => {
-        const stage = {share: number(row.querySelector('[data-stage="share"]').value, 'Доля этапа') / 100};
-        const mode = row.querySelector('[data-stage="mode"]').value;
-        const input = row.querySelector('[data-stage="' + mode + '"]');
-        stage[mode] = mode === 'months' ? number(input.value, 'Месяцев до этапа') : input.value;
-        const original = row.dataset.originalDate;
-        if (mode === 'date' && original?.length === 7 && stage.date === original + '-01') stage.date = original;
-        return stage;
-      });
-      if (!params.milestones.length) delete params.milestones;
+      const discountText=value(form,'ui:discountPercent');
+      const discount=discountText?number(discountText,'Скидка в процентах')/100:0;
+      delete params.disc;
+      delete params.discFromPv;
+      if(control(form,'ui:discountFromPv').checked){params.discFromPv=discount;params.pvFromBase=true;}
+      else params.disc=discount;
+      for(const key of ['maxDisc','launchDiscount','launchUntil','pvChoices','discAt70'])delete params[key];
+      if(params.scheme!=='equal')delete params.steps;
+      if(params.scheme!=='monthly')delete params.pay;
+      if(['scheduled','monthly'].includes(params.scheme)){
+        params.milestones=[...document.getElementById('tools-milestones').children].map(row=>{
+          const stage={};
+          const amountMode=row.querySelector('[data-stage="amountMode"]').value;
+          const amountInput=row.querySelector('[data-stage="'+amountMode+'"]');
+          stage[amountMode]=number(amountInput.value,amountMode==='amount'?'Сумма этапа':'Доля этапа')/(amountMode==='share'?100:1);
+          const mode=row.querySelector('[data-stage="mode"]').value;
+          const input=row.querySelector('[data-stage="'+mode+'"]');
+          stage[mode]=mode==='months'?number(input.value,'Месяцев до этапа'):input.value;
+          const original=row.dataset.originalDate;
+          if(mode==='date'&&original?.length===7&&stage.date===original+'-01')stage.date=original;
+          return stage;
+        });
+        if(!params.milestones.length)delete params.milestones;
+      }else delete params.milestones;
       delete params.noExtra;
       delete params.extraSequential;
     }
@@ -344,6 +406,7 @@
         else delete params.date3;
       }
     }
+    params.compatiblePromotions=[...form.querySelectorAll('[data-promotion]:checked')].map(input=>input.dataset.promotion);
     if (value(form, 'validUntil')) params.validUntil = value(form, 'validUntil');
     else delete params.validUntil;
     if (control(form, 'visibility')) {

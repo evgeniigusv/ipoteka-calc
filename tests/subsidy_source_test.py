@@ -99,7 +99,7 @@ class SourceTest(unittest.TestCase):
     def test_owner_http_route(self):
         published = self.enter_patch(editor, 'PUBLISHED')
         published.read_text.return_value = json.dumps({'records': [FAMILY, dict(FAMILY, id='ordinary', source=None)]})
-        current = self.enter_patch(editor, 'read_catalog', return_value={})
+        current = self.enter_patch(editor, 'read_catalog', return_value={'records': [dict(FAMILY, id='sub-new')]})
         newer = dict(FAMILY, id='sub-new')
         self.enter_patch(editor, 'with_subsidies', return_value={'records': [newer]})
         self.google.return_value = {'sheets': [sheet(ROW)]}

@@ -55,3 +55,26 @@ assert.equal(M.mortgageBucket(info),'it');
 assert.deepEqual(M.mortgageOffers(info),[{rate:.035,bank:'Металлинвест'},{rate:.04,bank:'Совком'}]);
 assert.deepEqual(M.mortgageOffers({...info,description:'Банки: уточняется\nСтавка - 6%\nСкидка 1%'}),[]);
 assert.equal(M.mortgageBucket({...info,name:'Комбо ипотека'}),'other');
+
+// Новые настройки не меняют схему существующих записей и не раскрывают частные акции.
+const settings={subsidyCompensation:{da1:.1,da2:.1,dnk2:.1},specialFlats:['6736582:17']};
+M.validateSettings(settings);
+assert.throws(()=>M.validateSettings({...settings,subsidyCompensation:{...settings.subsidyCompensation,da1:10}}));
+assert.throws(()=>M.validateSettings({...settings,specialFlats:['6736582:17','6736582:17']}));
+const modern=M.clone(live);modern.settings=settings;
+const installment=modern.records.find(r=>r.kind==='installment');
+installment.params={scheme:'scheduled',minPv:.2,months:24,milestones:[{amount:300000, date:'2028-01-01'}]};
+M.validate(modern);
+installment.params.scheme='equal';installment.params.steps=[1,2,3,6,12];M.validate(modern);
+const promotion={id:'qa-promotion',group:'qa-promotion',category:'discount',project:installment.project,kind:'info',name:'Акция 5%',description:'Дополнительная скидка',combination:'',mode:'additive',params:{percent:.05},enabled:true};
+modern.records.push(promotion);installment.params.compatiblePromotions=[promotion.id];
+const converted=M.calcData(modern);
+assert.equal(converted.promotions.find(p=>p.id===promotion.id).percent,.05);
+assert.deepEqual(converted.settings,settings);
+promotion.params.ownerOnly=true;assert.throws(()=>M.validate(modern));
+
+M.cleanCompatibility(modern);M.validate(modern);
+assert.deepEqual(installment.params.compatiblePromotions,[]);
+promotion.params.ownerOnly=false;installment.params.compatiblePromotions=[promotion.id];
+promotion.category='extra';M.cleanCompatibility(modern);M.validate(modern);
+assert.deepEqual(installment.params.compatiblePromotions,[]);

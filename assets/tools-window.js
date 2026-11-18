@@ -12,18 +12,34 @@
     document.body.classList.add('tools-embedded');
     $('owner-return').hidden = false;
     $('owner-return').onclick = () => sendParent('tools:close');
+    // The iframe is a transport container. Show its catalog only outside an editor,
+    // so the user sees one heading and one active dialog during an action.
+    const shell = document.querySelector('.tools-shell');
+    const syncShell = () => {
+      const modal = document.querySelector('dialog[open]');
+      if (shell) shell.hidden = !!modal;
+    };
+    const observer = new MutationObserver(syncShell);
+    document.querySelectorAll('dialog').forEach(d => observer.observe(d, {attributes:true, attributeFilter:['open']}));
+    syncShell();
     document.addEventListener('keydown', event => {
       if (event.key === 'Escape' && !document.querySelector('dialog[open]')) sendParent('tools:close');
     });
     window.addEventListener('message', event => {
       if (event.origin === site && event.source === window.parent && event.data?.type === 'tools:open' && openAction) {
+        if (document.querySelector('dialog[open]') || window.SMProposals?.isTransitioning()) return;
         openAction(event.data.action);
       }
     });
     sendParent('tools:loading');
   }
   const dialog = $('owner-window');
-  let frame, ready = false, action, timeout;
+  let frame, ready = false, action, timeout, delivered = false;
+  function visibility(element, visible) {
+    element.hidden = !visible;
+    // #owner-window iframe {display:block} otherwise overrides the hidden attribute.
+    element.style.display = visible ? '' : 'none';
+  }
   function report(message, retry) {
     $('owner-progress').textContent = message;
     $('owner-recovery').hidden = !retry;
@@ -32,24 +48,27 @@
     clearTimeout(timeout);
     if (frame) frame.remove();
     ready = false;
+    delivered = false;
     frame = document.createElement('iframe');
     frame.title = 'Личный редактор инструментов';
     frame.allow = 'microphone; local-network-access; loopback-network';
-    frame.hidden = true;
+    visibility(frame, false);
     frame.src = owner + '/tools.html?theme=' + document.documentElement.dataset.theme;
-    $('owner-connection').hidden = false;
+    visibility($('owner-connection'), true);
     dialog.append(frame);
     report('Подключаем личный редактор на вашем Маке…', false);
     timeout = setTimeout(() => report('Нет связи с личным редактором. Откройте каталог на Маке владельца и разрешите браузеру доступ к локальной сети, если он запросит разрешение.', true), 9000);
   }
   function showFrame() {
+    if (!dialog.open || delivered) return;
     const frameUrl = new URL(frame.src);
     if (frameUrl.searchParams.get('theme') !== document.documentElement.dataset.theme) {
       start();
       return;
     }
-    frame.hidden = false;
-    $('owner-connection').hidden = true;
+    visibility(frame, true);
+    visibility($('owner-connection'), false);
+    delivered = true;
     frame.contentWindow.postMessage({type:'tools:open', action}, owner);
     frame.focus();
   }
@@ -68,6 +87,10 @@
         break;
       case 'tools:failed':
         clearTimeout(timeout);
+        ready = false;
+        delivered = false;
+        visibility(frame, false);
+        visibility($('owner-connection'), true);
         report('Личный редактор открылся, но не смог загрузить каталог. Проверьте соединение и повторите.', true);
         break;
       case 'tools:close':
@@ -77,6 +100,7 @@
   });
   $('owner-retry').onclick = start;
   $('owner-cancel').onclick = () => dialog.close();
+  dialog.addEventListener('close', () => { clearTimeout(timeout); delivered = false; });
   dialog.addEventListener('cancel', event => { if (ready) event.preventDefault(); });
   window.SMOwnerWindow = {
     embedded,
@@ -84,6 +108,8 @@
     failed() { if (embedded) sendParent('tools:failed'); },
     close() { if (embedded) sendParent('tools:close'); },
     open(next, title) {
+      if (dialog.open) { if (ready) frame?.focus(); return; }
+      if (document.querySelector('dialog[open]')) return;
       action = next;
       $('owner-action-title').textContent = title;
       const url = new URL('/tools.html', owner);
@@ -93,7 +119,7 @@
       if (next.id) url.searchParams.set(next.kind === 'add-project' ? 'template' : 'edit', next.id);
       if (next.kind === 'new' || next.kind === 'ai') url.hash = next.kind;
       $('owner-direct').href = url.href;
-      dialog.showModal();
+      if (!dialog.open) dialog.showModal();
       if (ready) showFrame();
       else if (!frame || !$('owner-recovery').hidden) start();
     }

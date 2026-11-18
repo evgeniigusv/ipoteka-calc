@@ -17,10 +17,14 @@
       verdict: profit > 1000 ? 'Не подходит' : excess > 0 ? 'Комбо-ипотека' : 'Подходит' };
   }
   function suggested(x) {
+    if(![x.cash,x.client,x.minDown,x.cost].every(Number.isFinite)||x.cash<=0||x.client<0||x.minDown<=0||x.minDown>=1||x.cost<0)return null;
     var denominator = 1 - x.minDown * (1 + x.cost);
     if (denominator <= 0) return null;
     var amount = (x.cash - (1 + x.cost) * x.client - 1000) / denominator;
-    return Math.max(0, Math.ceil(amount / 1000) * 1000);
+    var rounded=Math.ceil(amount / 1000) * 1000;
+    // Не подставляем отрицательное финансирование и не завышаем ДДУ ради него.
+    if(rounded<=0||rounded*x.minDown<=x.client)return null;
+    return rounded;
   }
   root.SMChpvCalc = { calculate: calculate, suggested: suggested };
 })(window);

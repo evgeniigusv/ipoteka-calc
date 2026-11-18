@@ -6,8 +6,6 @@
   var CONFIG = Object.assign({
     // true — показывать внутренние цифры: комиссию банку и профицит. Включается и адресом: index.html?internal=1
     showInternal: /[?&]internal=1/.test(location.search),
-    // true — показывать кредит и платёж от «прайс − ПВ», как в таблице «Калькулятор субсидирования»; false — от цены в договоре
-    loanFromBase: false,
     defaultPrice: 10000000
   }, window.SM_CALC_CONFIG || {});
 
@@ -19,10 +17,10 @@
     project: $('sm-project'), flat: $('sm-flat'), price: $('sm-price'), disc: $('sm-disc'), type: $('sm-type'),
     kidsField: $('sm-kids-field'), kids: $('sm-kids'), pv: $('sm-pv'), term: $('sm-term'),
     detail: $('sm-detail'), title: $('sm-table-title'), tip: $('sm-tip'), thead: $('sm-thead'), tbody: $('sm-tbody'),
-    updated: $('sm-rate-status')
+    updated: $('sm-rate-status'), companyPays: $('sm-company-pays'), promotions: $('sm-promotions')
   };
-  var state = { project: D.projects[0], type: D.types[0], pick: null };
-  function catalogDiscount(){var p=(window.SM_DATA.cashDiscounts||{})[state.project];if(!p)return D.defaultDiscount;var today=new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Yekaterinburg'});return p.percent+(p.launchUntil&&today<=p.launchUntil?(p.launchDiscount||0):0);}
+  var state = { project: D.projects[0], type: D.types[0], pick: null, promotionIds: [] };
+  function catalogDiscount(){return C.cashDiscount(D,state.project);}
   var last = null; // последний расчёт — из него собирается PDF
 
   function readInputs() {
@@ -30,7 +28,8 @@
     return {
       project: state.project, type: state.type, kids: el.kids.value,
       base: U.parseMoney(el.price.value) || 0, disc: U.parsePct(el.disc.value), cash: flats.cashPrice(), pv: U.parseMoney(el.pv.value),
-      term: isFinite(term) && term > 0 ? term : null, pick: state.pick
+      term: isFinite(term) && term > 0 ? term : null, pick: state.pick,
+      companyPays: el.companyPays.checked, compensationLimit: C.compensationLimit(D,state.project), promotionIds: state.promotionIds
     };
   }
 
@@ -39,6 +38,16 @@
     var opts = C.kidsOptions(D, state.project, state.type), cur = el.kids.value;
     el.kidsField.hidden = !opts.length;
     el.kids.innerHTML = opts.map(function (k) { return '<option' + (k === cur ? ' selected' : '') + '>' + esc(k) + '</option>'; }).join('');
+  }
+  function promotionOptions() {
+    var programs=D.programs.filter(function(p){return (!p.projects.length||p.projects.indexOf(state.project)>=0)&&p.type===state.type&&(!p.kids||p.kids===el.kids.value);});
+    var available=D.promotions.filter(function(a){return programs.some(function(p){return C.compatiblePromotions(D,p,state.project).some(function(v){return v.id===a.id;});});});
+    state.promotionIds=state.promotionIds.filter(function(id){return available.some(function(a){return a.id===id;});});
+    el.promotions.innerHTML=available.map(function(a){return '<label class="sm-check"><input type="checkbox" data-promotion="'+esc(a.id)+'"'+(state.promotionIds.indexOf(a.id)>=0?' checked':'')+'><span>'+esc(a.name)+(a.percent!=null?' · '+F.pct(a.percent):' · информационная акция')+'</span></label>';}).join('');
+    $('sm-promotions-field').hidden=!available.length;
+    $('sm-company-field').hidden=!programs.some(function(p){return p.sub>0;});
+    var limit=C.compensationLimit(D,state.project);
+    $('sm-company-hint').textContent=limit==null?'Лимит компенсации не задан в инструментах. До его настройки компенсация не учитывается.':'До '+F.pct(limit)+' акционной стоимости. Сумма сверх лимита включается в цену квартиры.';
   }
 
   /* ---------- Расчёт выбранной программы ---------- */
@@ -53,6 +62,9 @@
     if (grace) { add('Ставка после льготного периода', F.pct(r.r2)); add('Льготный период', F.period(r.graceMonths)); }
     add('Срок кредита', F.years(r.term));
     add('Цена по прайсу', F.rub(inp.base));
+    add('Акционная стоимость', F.rub(r.cashPrice));
+    if(r.sub>0){add('Компенсация компании', F.rub(r.companyCompensation));add('Доплата клиента за субсидию', F.rub(r.clientSubsidy));}
+    if(r.promotions.length)add('Применённые акции',r.promotions.map(function(a){return esc(a.name);}).join(', '));
     add('Цена квартиры в договоре', F.rub(r.price), 'sm-strong');
     add('Скидка', F.rub(inp.base - r.price) + dim(F.pct1(r.disc)));
     add('Первоначальный взнос', F.rub(r.pv) + dim(F.pct1(r.pvShare) + ' прайса'), 'sm-strong');
@@ -72,7 +84,8 @@
           (grace ? '<div><div class="sm-k">Платёж после</div><div class="sm-v sm-v2">' + F.rub(r.pay2) + '</div></div>' : '') +
         '</div></div>' +
       '<dl>' + rows.join('') + '</dl>' +
-      '<div class="sm-note">Комиссия банку считается от прайса за вычетом взноса; платёж — от цены ДДУ за вычетом взноса.</div>' +
+      '<div class="sm-note">Комиссия банку и платёж считаются от окончательного кредита: цена ДДУ за вычетом взноса. Доплата за субсидию включена в цену ДДУ.</div>' +
+      (r.compensationWarning?'<div class="sm-note sm-why">'+esc(r.compensationWarning)+'</div>':'')+
       (source && source.sub>0 && r.term<source.maxTerm ? '<div class="sm-note">Срок сокращён; ставка и комиссия взяты из программы на '+F.years(source.maxTerm)+'. Подтвердите их у банка для выбранного срока.</div>' : '') +
       (r.note ? '<div class="sm-note">' + esc(r.note) + '</div>' : '');
   }
@@ -100,6 +113,7 @@
   function headHtml() { return '<tr>' + COLS.map(function (c) { return '<th' + cls(c) + '>' + c[0] + '</th>'; }).join('') + '</tr>'; }
 
   function render() {
+    promotionOptions();
     var inp = readInputs();
     if (flats.isPif()) { el.detail.innerHTML = '<p class="sm-empty">Для квартиры ПИФ условия покупки нужно уточнить. Расчёт отключён.</p>'; el.thead.innerHTML = el.tbody.innerHTML = el.tip.innerHTML = ''; last = null; return; }
     el.title.textContent = inp.type + (hasKids() ? ', ' + inp.kids : '') + ': все программы';
@@ -111,7 +125,7 @@
     }
     if(!el.disc.value.trim()){el.detail.innerHTML='<p class="sm-empty">Укажите скидку при полной оплате. Если скидки нет, введите 0.</p>';el.thead.innerHTML=el.tbody.innerHTML=el.tip.innerHTML='';last=null;return;}
     if(inp.disc>=1 || (el.term.value && !(Number.isInteger(Number(el.term.value))&&Number(el.term.value)>=1&&Number(el.term.value)<=30))){el.detail.innerHTML='<p class="sm-empty">Скидка должна быть меньше 100%, срок — целое число от 1 до 30 лет.</p>';el.thead.innerHTML=el.tbody.innerHTML=el.tip.innerHTML='';last=null;return;}
-    var res = C.mortgage(D, inp, { loanFromBase: CONFIG.loanFromBase });
+    var res = C.mortgage(D, inp);
     if (state.pick != null && !res.picked) state.pick = null; // выбранная вручную перестала подходить — снова автоподбор
     last = { inp: inp, res: res };
     el.detail.innerHTML = res.best ? detailHtml(inp, res.best)
@@ -134,6 +148,7 @@
     if (flat) add('Номер квартиры', esc(flat));
     add('Стоимость квартиры по прайсу', F.rub(inp.base), true);
     add('Скидка', F.pct(inp.disc));
+    add('Компания оплачивает субсидию',inp.companyPays?(inp.compensationLimit==null?'Лимит не задан, компенсация не учтена':'Да, до '+F.pct(inp.compensationLimit)+' акционной стоимости'):'Нет');
     add('Тип ипотеки', esc(inp.type));
     if (hasKids()) add('Количество детей', esc(inp.kids));
     add('Первоначальный взнос', inp.pv ? F.rub(inp.pv) : 'минимальный');
@@ -193,6 +208,8 @@
   U.pctInput(el.disc, render);
   el.term.addEventListener('input', render);
   el.kids.addEventListener('change', render);
+  el.companyPays.addEventListener('change',render);
+  el.promotions.addEventListener('change',function(e){var id=e.target.getAttribute('data-promotion');if(!id)return;state.promotionIds=state.promotionIds.filter(function(v){return v!==id;});if(e.target.checked)state.promotionIds.push(id);render();});
 
   var pick = function (e) {
     var tr = e.target.closest('tr.sm-pick');

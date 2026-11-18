@@ -7,6 +7,27 @@
     var projectState = Object.create(null);
     var list = [], project = options.project, updated = '', loaded = false, failed = false;
     var select = options.select, search = document.getElementById('sm-flat-search'), info = options.info;
+    var warning = document.createElement('div');
+    warning.className = 'sm-special-flat-warning';
+    warning.setAttribute('role', 'alert');
+    warning.setAttribute('aria-atomic', 'true');
+    warning.hidden = true;
+    // Общий компонент всех калькуляторов; оформление не зависит от CSS редактора.
+    warning.style.cssText = 'margin:16px 0;padding:18px;border:2px solid var(--indian-text,#A63F3F);border-radius:var(--r-md,16px);background:var(--white,#fff);color:var(--indian-text,#A63F3F);font-size:clamp(18px,2vw,22px);font-weight:600;line-height:1.45;';
+    var warningTitle = document.createElement('strong'), warningText = document.createElement('p');
+    warningTitle.textContent = 'ВНИМАНИЕ!';
+    warningText.textContent = 'Квартира доступна к покупке только при 100% оплате или по любой ипотечной программе без субсидирования.';
+    warningText.style.margin = '8px 0 0';
+    warning.append(warningTitle, warningText);
+    info.after(warning);
+    function updateWarning(row) {
+      if (arguments.length === 0) row = current();
+      var settings = (root.SM_TOOLS_DATA && root.SM_TOOLS_DATA.settings) || (root.SM_DATA && root.SM_DATA.settings) || {};
+      warning.hidden = !row || !Array.isArray(settings.specialFlats) || settings.specialFlats.indexOf(String(row.house_id) + ':' + String(row.num)) < 0;
+    }
+    // Загрузка метаданных может закончиться уже после выбора квартиры.
+    Promise.resolve(root.SM_TOOLS_READY).then(function () { updateWarning(); }, function () { updateWarning(); });
+    root.addEventListener('sm-settings-changed', function () { updateWarning(); });
     function normalize(value) { return String(value || '').trim().replace(/^(?:кв\.?\s*)?№?\s*/i, '').toLowerCase(); }
     function current() { var i = Number(select.value); return i > 0 ? list[i - 1] : null; }
     function matches() {
@@ -33,10 +54,12 @@
         select.add(new Option(title, String(item.index + 1)));
       });
       info.textContent = hint(found, exact.length);
+      updateWarning();
       return exact;
     }
     function apply(row) {
       selectedCash=null;
+      updateWarning(row);
       if (options.onClear) options.onClear();
       if (row) {
         options.price.value = Number(row.price).toLocaleString('ru-RU');
@@ -93,6 +116,7 @@
       var row = current();
       if (row) { search.value = String(row.num); apply(row); }
       else { options.price.value = ''; if (options.onClear) options.onClear(); if (options.discount) options.discount.value = ''; }
+      updateWarning(row);
       options.onChange();
     });
     fetch('assets/macro-flats.json', { cache: 'no-store' }).then(function (r) {

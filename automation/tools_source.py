@@ -1,5 +1,5 @@
-"""Единый справочник Google; секреты и адрес источника только во внешней конфигурации."""
-import base64, csv, hashlib, io, json, os, subprocess, tempfile
+"""Google-адаптер для одноразового переноса; общий валидатор и безопасная публикация."""
+import base64, csv, hashlib, io, json, os, re, subprocess, tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import urlencode, quote
@@ -62,7 +62,7 @@ def revision(records):
     return hashlib.sha256(json.dumps(records,ensure_ascii=False,sort_keys=True,separators=(',',':')).encode()).hexdigest()
 
 def authenticated_rows(c):
-    tab = "'" + c['sheet_name'].replace("'", "''") + "'!A1:K601"
+    tab = "'" + c['sheet_name'].replace("'", "''") + "'!A:K"
     path = '/values/' + quote(tab, safe='') + '?valueRenderOption=UNFORMATTED_VALUE'
     return google('GET', path, source=c).get('values', [])
 
@@ -109,6 +109,8 @@ def write_changes(current, changes, *, source=None):
 
 
 def _write_rows(current, changes, source, private=False):
+    if config().get('storage') == 'sqlite':
+        raise RuntimeError('Запись инструментов в Google отключена после переноса в SQLite.')
     byid={r['id']:i+2 for i,r in enumerate(current['records'])}; records={r['id']:r for r in current['records']}
     if not isinstance(changes,list) or not changes or len(changes)>100: raise ValueError('От 1 до 100 изменений за сохранение.')
     seen=set(); nextrow=len(byid)+2; updates=[]; title="'"+(source or config())['sheet_name'].replace("'","''")+"'"
@@ -127,22 +129,34 @@ def _write_rows(current, changes, source, private=False):
     google('POST','/values:batchUpdate',body,source=source)
 
 def public_snapshot(data):
+    import copy
+    from owner_catalog import validate_settings
     clean = {key: data[key] for key in ('version', 'checked_at', 'full_checked_at', 'mortgageWarnings', 'mortgageCheckedAt') if key in data}
-    clean['records'] = [r for r in data['records'] if not r['params'].get('ownerOnly')]
+    public_rows = {r['id']: r for r in data['records'] if not r['params'].get('ownerOnly')}
+    public_ids = set(public_rows)
+    clean['records'] = []
+    for r in data['records']:
+        if r['id'] not in public_ids:
+            continue
+        row = {k: copy.deepcopy(r[k]) for k in KEYS}
+        if r.get('source') == 'subsidies': row['source'] = 'subsidies'
+        if 'compatiblePromotions' in row['params']:
+            row['params']['compatiblePromotions'] = [i for i in row['params']['compatiblePromotions'] if i in public_ids and public_rows[i]['category'] == 'discount' and public_rows[i]['project'] == row['project'] and i != row['id']]
+        clean['records'].append(row)
+    if 'settings' in data:
+        clean['settings'] = copy.deepcopy(validate_settings(data['settings']))
+    # Адреса внутренних Google-таблиц не нужны калькулятору и остаются только владельцу.
+    def redact(value):
+        if isinstance(value, str):
+            return re.sub(r"https?://(?:docs|sheets)\.google\.com/[^\s<>\"'()]+", '[ссылка доступна владельцу]', value, flags=re.I)
+        if isinstance(value, list): return [redact(v) for v in value]
+        if isinstance(value, dict): return {k:redact(v) for k,v in value.items()}
+        return value
+    clean = redact(clean)
     validate(clean)
     return clean
 
 
 def publish(data):
-    clean = public_snapshot(data)
-    payload = json.dumps(clean, ensure_ascii=False, indent=2) + '\n'
-    endpoint='repos/'+config().get('repo','evgeniigusv/ipoteka-calc')+'/contents/assets/tools.json'
-    def gh(args,stdin=None):
-        p=subprocess.run(['gh','api',*args],input=stdin,text=True,capture_output=True,timeout=60)
-        if p.returncode: raise RuntimeError('Google сохранён; GitHub не принял обновление. Повторите публикацию.')
-        return json.loads(p.stdout)
-    old=gh([endpoint+'?ref=main'])
-    sha=old.get('sha')
-    req={'message':'Обновить инструменты из Google','branch':'main','content':base64.b64encode(payload.encode()).decode(),'sha':sha}
-    result=gh(['--method','PUT',endpoint,'--input','-'],json.dumps(req))
-    return result['commit']['sha']
+    from publish_tools import publish_local
+    return publish_local(data)

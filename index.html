@@ -7,9 +7,13 @@
 <link rel="icon" type="image/svg+xml" href="assets/mark-da.svg">
 <meta name="theme-color" content="#355DB3">
 <meta name="robots" content="noindex, nofollow">
-<link rel="stylesheet" href="assets/style.css?v=brand-20261115">
+<link rel="stylesheet" href="assets/style.css?v=tools13-20261118">
 <link rel="stylesheet" href="assets/themes.css?v=1">
 <script src="assets/theme.js?v=1"></script>
+<style>
+.sm .sm-check { display:flex; align-items:center; gap:10px; color:var(--ink); }
+.sm .sm-check input { width:18px; height:18px; padding:0; flex:0 0 18px; accent-color:var(--sky); }
+</style>
 </head>
 <body>
 
@@ -48,6 +52,15 @@
       <div class="sm-field" id="sm-kids-field" hidden>
         <label for="sm-kids">Количество детей</label>
         <select id="sm-kids"></select>
+      </div>
+      <div class="sm-field" id="sm-company-field" hidden>
+        <label class="sm-check"><input type="checkbox" id="sm-company-pays"><span>Компания оплачивает субсидию</span></label>
+        <span class="sm-hint" id="sm-company-hint"></span>
+      </div>
+      <div class="sm-field" id="sm-promotions-field" hidden>
+        <span class="sm-label">Дополнительные акции</span>
+        <div id="sm-promotions"></div>
+        <span class="sm-hint">Выбранные акции применяются только к совместимым программам.</span>
       </div>
       <div class="sm-row2">
         <div class="sm-field">
@@ -94,11 +107,11 @@
 
 <script src="assets/data.js?v=20261114-da"></script>
 <script src="assets/mortgage-loader.js?v=20261106-auto"></script>
-<script src="assets/tools-model.js?v=tools-modal-20261114"></script>
-<script src="assets/tools-loader.js?v=tools-modal-20261114"></script>
-<script src="assets/engine.js?v=20261106-tools"></script>
-<script src="assets/common.js?v=20261106-tools"></script>
-<script src="assets/flats.js?v=20261106-switch"></script>
-<script src="assets/ipoteka.js?v=20261114-status"></script>
+<script src="assets/tools-model.js?v=tools13-20261118"></script>
+<script src="assets/tools-loader.js?v=tools13-20261118"></script>
+<script src="assets/engine.js?v=tools13-20261118"></script>
+<script src="assets/common.js?v=tools13-20261118"></script>
+<script src="assets/flats.js?v=tools13-20261118"></script>
+<script src="assets/ipoteka.js?v=tools13-20261118"></script>
 </body>
 </html>

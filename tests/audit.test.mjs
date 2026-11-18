@@ -14,15 +14,15 @@ for(const project of D.projects)for(const type of D.types)for(const kids of [nul
 const input={project:dnk,base:10000000,rooms:1,extra:0};
 let cards=C.installments(D,input,now);
 const quarter=cards.find(c=>c.name==='Рассрочка 4/25');
-assert.equal(quarter.total,9100000);assert.deepEqual(quarter.rows.map(r=>r.amount),[2275000,2275000,2275000,2275000]);
+assert.equal(quarter.total,9300000);assert.deepEqual(quarter.rows.map(r=>r.amount),[2325000,2325000,2325000,2325000]);
 const monthly=cards.find(c=>c.name==='Рассрочка 20/20');
-assert.equal(monthly.total,9400000);assert.deepEqual(monthly.rows.map(r=>r.amount),[1880000,500000,470000,6550000]);
+assert.equal(monthly.total,9600000);assert.deepEqual(monthly.rows.map(r=>r.amount),[1920000,500000,480000,6700000]);
 const zero=cards[0];assert.deepEqual(zero.rows.map(r=>r.amount),[0,1250000,1000000,500000,7250000]);
 assert.equal(C.installments(D,{...input,extra:.02},now)[0].total,10000000);
 const december=C.installments(D,input,new Date(2026,11,1));assert.equal(december.find(c=>c.name==='Рассрочка 4/25').total,9300000);
 const half=cards.find(c=>c.name==='Рассрочка 50/50');
 const seventy=C.installments(D,{...input,pv:{[half.id]:.7}},now).find(c=>c.id===half.id);
-assert.equal(seventy.total,8600000);assert.deepEqual(seventy.rows.map(r=>r.amount),[6020000,430000,2150000]);
+assert.equal(seventy.total,9000000);assert.deepEqual(seventy.rows.map(r=>r.amount),[6300000,450000,2250000]);
 for(const project of D.projects)for(const price of [100000,6000000,10000000,30000000])for(const date of [now,new Date(2026,10,30),new Date(2026,11,1),new Date(2028,10,1),new Date(2030,0,1)]) {
  for(const c of C.installments(D,{project,base:price,rooms:3,extra:.01},date)){
   if(c.error){assert.equal(c.rows.length,0);continue;}

@@ -62,13 +62,7 @@ class HttpTests(unittest.TestCase):
    self.assertEqual(result.getheader('Content-Security-Policy'),"frame-ancestors 'self' https://evgeniigusv.github.io")
    result.read()
   finally:conn.close()
- def test_conflict_no_write(self):
-  with patch.object(editor,'read',return_value=DATA),patch.object(editor,'write_changes') as write:
-   self.assertEqual(self.request(body={'revision':'old','changes':[]})[0],409);write.assert_not_called()
- def test_google_saved_publish_failed(self):
-  with patch.object(editor,'read',return_value=DATA),patch.object(editor,'write_changes',return_value=DATA),patch.object(editor,'publish',side_effect=RuntimeError('Публикация недоступна')):
-   code,result=self.request(body={'revision':DATA['revision'],'changes':[next(r for r in DATA['records'] if r['kind']=='installment')]});self.assertEqual(code,200);self.assertTrue(result['saved']);self.assertFalse(result['published']);self.assertEqual(result['data']['revision'],DATA['revision'])
- def test_publish_retry_does_not_write_google(self):
-  with patch.object(editor,'read',return_value=DATA),patch.object(editor,'write_changes') as write,patch.object(editor,'publish',return_value='sha'):
+ def test_publish_retry_does_not_write_catalog(self):
+  with patch.object(editor,'read',return_value=DATA),patch.object(editor.owner_catalog,'backups'),patch.object(editor.owner_catalog,'save') as write,patch.object(editor,'publish',return_value='sha'):
    code,result=self.request('/api/publish',{});self.assertEqual(code,200);self.assertTrue(result['published']);write.assert_not_called()
 if __name__=='__main__':unittest.main()

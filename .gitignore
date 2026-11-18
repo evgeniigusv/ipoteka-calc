@@ -4,3 +4,10 @@ local-data/
 
 __pycache__/
 *.pyc
+
+# Личные каталоги и ключи не публикуются
+*.sqlite
+*.sqlite-*
+*.db
+.env
+.env.*

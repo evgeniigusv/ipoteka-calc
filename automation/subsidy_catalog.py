@@ -39,6 +39,16 @@ def bank_key(record):
 
 def manual_record(previous, draft, imported=()):
     """Служебные поля выводим из доверенных строк, в том числе при повторе предпросмотра."""
+    # Дополнительные условия ведутся локально; числовые условия остаются банковскими.
+    if previous and previous.get('source') == 'subsidies' and draft.get('source') == 'subsidies':
+        allowed = {'name', 'description', 'combination', 'mode', 'enabled', 'params'}
+        if any(previous.get(k) != draft.get(k) for k in set(previous) | set(draft) if k not in allowed):
+            raise ValueError('Нельзя менять идентификатор банковской карточки.')
+        before = {k: v for k, v in previous['params'].items() if k != 'compatiblePromotions'}
+        after = {k: v for k, v in draft['params'].items() if k != 'compatiblePromotions'}
+        if before != after:
+            raise ValueError('Для изменения ставки примите программу под управление приложения.')
+        return dict(draft, params=dict(draft['params']))
     params = dict(draft['params'])
     origin = None
     adopting = previous is not None and previous.get('source') == 'subsidies'
@@ -116,15 +126,23 @@ def project_cards(programs, labels, old):
             row = old.get((project, identity(p)))
             if row is None:
                 name = ' · '.join([p['bank'], p.get('kids') or p['type'], str(p['term'])+' лет'])
+                peers = [r for (proj, ident), r in old.items() if proj == project and ident[:-1] == identity(p)[:-1]]
+                fresh_peers = [v for v in programs if v['projects'] == labels and identity(v)[:-1] == identity(p)[:-1]]
+                row = peers[0] if len(peers) == 1 and len(fresh_peers) == 1 else None
+            if row is None:
                 row = dict(id='sub-'+project+'-'+group, group='sub-'+group, name=name, project=project,
                            kind='mortgage', category='mortgage', enabled=True, description='',
-                           combination='По условиям банка', mode='individual')
-            cards.append(dict(row, params=p, source='subsidies'))
+                           combination='По условиям банка', mode='additive')
+            params = dict(p)
+            for key in ('compatiblePromotions', 'note', 'noExtra', 'extraSequential'):
+                if key in row.get('params', {}): params[key] = row['params'][key]
+            params.setdefault('compatiblePromotions', [])
+            cards.append(dict(row, params=params, source='subsidies'))
     return cards
 
 
 def with_subsidies(data, source=None):
-    previous = json.loads(PUBLISHED.read_text())
+    previous = data if data.get('mortgageCheckedAt') else json.loads(PUBLISHED.read_text())
     if source is None:
         try:
             source = sources(int(monotonic() // 180))
@@ -156,6 +174,11 @@ def with_subsidies(data, source=None):
                     problem = 'Резко уменьшилось число субсидированных программ.'
                 else:
                     try:
+                        fresh_ids = {r['id'] for r in cards}
+                        for prior in (r for r in data['records'] if r['project'] == project and bank_row(r)):
+                            overlay = prior['params'].get('compatiblePromotions') or prior['mode'] != 'additive' or not prior['enabled']
+                            if overlay and prior['id'] not in fresh_ids and any(bank_key(r) == bank_key(prior) for r in cards):
+                                raise ValueError('Невозможно однозначно перенести локальные условия между вариантами ставки; сохранён прежний снимок.')
                         cards = without_claimed(cards, claims)
                     except ValueError as exc:
                         problem = str(exc)

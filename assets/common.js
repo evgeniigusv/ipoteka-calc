@@ -57,7 +57,40 @@
     'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'
   ];
   var SIZES = { landscape: [1123, 794, 297, 210], portrait: [794, 1123, 210, 297] }; // px при 96 dpi и мм
+  var PDF_DISCLAIMER = 'Не является публичной офертой. Окончательные расчёты уточнять у менеджера отдела продаж.';
+  var PDF_FOOTER_MM = 18;
   var libs = null, logo = null;
+
+  // Включая ЧПВ и Ctrl+P. Поле @page отделяет колонтитул от расчётов на каждом листе.
+  // В браузерах без полей страниц текст остаётся в потоке в конце документа.
+  function preparePrint() {
+    if (!document.getElementById('sm-print-disclaimer-style')) {
+      var marginBoxes = typeof window.CSSMarginRule !== 'undefined';
+      var style = document.createElement('style');
+      style.id = 'sm-print-disclaimer-style';
+      style.textContent = '#sm-print-disclaimer{display:none}' +
+        '@media print{@page{margin:12mm 12mm 24mm;' +
+        (marginBoxes ? '@bottom-center{content:' + JSON.stringify(PDF_DISCLAIMER) + ';font:9pt/1.35 Arial,sans-serif;color:#2f2f2f;vertical-align:middle;}' : '') + '}' +
+        'html body > #sm-print-disclaimer,html body.tools > #sm-print-disclaimer{' +
+        'display:' + (marginBoxes ? 'none' : 'block') + '!important;position:static;break-inside:avoid;' +
+        'box-sizing:border-box;padding:2mm 0;margin:12mm 0 0;border-top:.2mm solid #aaa;' +
+        'background:#fff;color:#2f2f2f;font:9pt/1.35 Arial,sans-serif;text-align:center;' +
+        '-webkit-print-color-adjust:exact;print-color-adjust:exact}}';
+      document.head.appendChild(style);
+    }
+    if (!document.getElementById('sm-print-disclaimer')) {
+      var footer = document.createElement('div');
+      footer.id = 'sm-print-disclaimer'; footer.textContent = PDF_DISCLAIMER;
+      document.body.appendChild(footer);
+    }
+  }
+  if (window.addEventListener) {
+    window.addEventListener('beforeprint', preparePrint);
+    window.addEventListener('afterprint', function () {
+      var footer = document.getElementById('sm-print-disclaimer');
+      if (footer) footer.remove();
+    });
+  }
 
   function loadScript(src) {
     return new Promise(function (res, rej) {
@@ -115,19 +148,32 @@
     }).then(function (c) { done(); return c; }, function (e) { done(); throw e; });
   }
   // build(logoPng) → { pages: [узлы], file: 'имя.pdf' }
+  function drawDisclaimer(size) {
+    // Отдельный растр сохраняет кириллицу без зависимости от встроенных шрифтов jsPDF.
+    var footer = document.createElement('div');
+    footer.className = 'sm-pdf-disclaimer';
+    footer.textContent = PDF_DISCLAIMER;
+    footer.style.cssText = 'box-sizing:border-box;width:' + size[0] + 'px;min-height:52px;padding:10px 30px;background:#fff;color:#2f2f2f;font:14px/1.4 Onest,Arial,sans-serif;text-align:center;';
+    return draw(footer, [size[0], 52]);
+  }
   function makePdf(build, orientation) {
     var size = SIZES[orientation];
     return Promise.all([loadLibs(), logoPng(), document.fonts ? document.fonts.ready : null]).then(function (r) {
       var rep = build(r[1]), canvases = [];
       return rep.pages.reduce(function (p, node) {
         return p.then(function () { return draw(node, size); }).then(function (c) { canvases.push(c); });
-      }, Promise.resolve()).then(function () {
+      }, Promise.resolve()).then(function () { return drawDisclaimer(size); }).then(function (footer) {
         var pdf = new window.jspdf.jsPDF({ orientation: orientation, unit: 'mm', format: 'a4' });
         canvases.forEach(function (c, i) {
           if (i) pdf.addPage();
           pdf.setFillColor(236, 232, 239); pdf.rect(0, 0, size[2], size[3], 'F');
-          var k = Math.min(size[2] / c.width, size[3] / c.height), w = c.width * k;
+          // Расчёты целиком помещаются над зарезервированной нижней полосой.
+          var k = Math.min(size[2] / c.width, (size[3] - PDF_FOOTER_MM) / c.height), w = c.width * k;
           pdf.addImage(c.toDataURL('image/jpeg', 0.92), 'JPEG', (size[2] - w) / 2, 0, w, c.height * k);
+          pdf.setFillColor(255, 255, 255); pdf.rect(0, size[3] - PDF_FOOTER_MM, size[2], PDF_FOOTER_MM, 'F');
+          var footerScale = Math.min(size[2] / footer.width, (PDF_FOOTER_MM - 4) / footer.height);
+          var footerWidth = footer.width * footerScale, footerHeight = footer.height * footerScale;
+          pdf.addImage(footer.toDataURL('image/png'), 'PNG', (size[2] - footerWidth) / 2, size[3] - PDF_FOOTER_MM + 2, footerWidth, footerHeight);
         });
         return { pdf: pdf, file: rep.file.replace(/[\\/:*?"<>|]+/g, '-') + '.pdf', canvases: canvases };
       });

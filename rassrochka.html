@@ -7,9 +7,13 @@
 <link rel="icon" type="image/svg+xml" href="assets/mark-da.svg">
 <meta name="theme-color" content="#355DB3">
 <meta name="robots" content="noindex, nofollow">
-<link rel="stylesheet" href="assets/style.css?v=brand-20261115">
+<link rel="stylesheet" href="assets/style.css?v=tools13-20261118">
 <link rel="stylesheet" href="assets/themes.css?v=1">
 <script src="assets/theme.js?v=1"></script>
+<style>
+.sm .sm-check { display:flex; align-items:center; gap:10px; color:var(--ink); }
+.sm .sm-check input { width:18px; height:18px; padding:0; flex:0 0 18px; accent-color:var(--sky); }
+</style>
 </head>
 <body>
 
@@ -43,9 +47,9 @@
         <span class="sm-label">Первоначальный взнос клиента</span>
         <div class="sm-row2">
           <div><label for="sm-down-rub">Сумма, ₽</label><input id="sm-down-rub" type="text" inputmode="numeric" placeholder="По программе" autocomplete="off"></div>
-          <div><label for="sm-down-pct">Доля от прайса, %</label><input id="sm-down-pct" type="text" inputmode="decimal" placeholder="По программе" autocomplete="off"></div>
+          <div><label for="sm-down-pct">Доля первоначального взноса, %</label><input id="sm-down-pct" type="text" inputmode="decimal" placeholder="По программе" autocomplete="off"></div>
         </div>
-        <span class="sm-hint">Введите сумму или процент. Пустое поле — взнос по условиям каждой программы.</span>
+        <span class="sm-hint" id="sm-down-basis">Введите сумму или процент. Пустое поле — взнос по условиям каждой программы.</span>
       </div>
       <div class="sm-field">
         <label for="sm-rooms">Квартира</label>
@@ -57,10 +61,15 @@
       </div>
       <div class="sm-row2">
       <div class="sm-field"><label for="sm-date">Дата сделки</label><input id="sm-date" type="date"></div>
-      <div class="sm-field">
+      <div class="sm-field" id="sm-extra-field">
         <label for="sm-extra">Доп. скидка</label>
         <div class="sm-suffix"><input id="sm-extra" type="text" inputmode="decimal" autocomplete="off" placeholder="0"><span aria-hidden="true">%</span></div>
       </div>
+      </div>
+      <div class="sm-field" id="sm-promotions-field" hidden>
+        <span class="sm-label">Дополнительные акции</span>
+        <div id="sm-promotions"></div>
+        <span class="sm-hint">Выбранные акции применяются только к совместимым программам.</span>
       </div>
     <div id="sm-program-options"></div>
   </section>
@@ -96,11 +105,11 @@
 
 <script src="assets/data.js?v=20261114-da"></script>
 <script src="assets/installments-loader.js?v=20261114-da"></script>
-<script src="assets/tools-model.js?v=tools-modal-20261114"></script>
-<script src="assets/tools-loader.js?v=tools-modal-20261114"></script>
-<script src="assets/engine.js?v=20261112-down"></script>
-<script src="assets/common.js?v=20261106-tools"></script>
-<script src="assets/flats.js?v=20261106-switch"></script>
-<script src="assets/rassrochka.js?v=20261114-da"></script>
+<script src="assets/tools-model.js?v=tools13-20261118"></script>
+<script src="assets/tools-loader.js?v=tools13-20261118"></script>
+<script src="assets/engine.js?v=tools13-20261118"></script>
+<script src="assets/common.js?v=tools13-20261118"></script>
+<script src="assets/flats.js?v=tools13-20261118"></script>
+<script src="assets/rassrochka.js?v=tools13-20261118"></script>
 </body>
 </html>

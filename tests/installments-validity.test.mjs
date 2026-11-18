@@ -31,13 +31,13 @@ for (const project of ['ДА — 1 очередь', 'ДА — 2 очередь']
 }
 const dnk={...input,project:'ДНК — 2 очередь'},date=new Date(2026,10,10);
 const half=SMCalc.installments(D,dnk,date).find(c=>c.name==='Рассрочка 50/50');
-for(const [share,discount,total,down] of [[.5,.12,8800000,4400000],[.7,.14,8600000,6020000],[.5,.12,8800000,4400000]]){
+for(const [share,discount,total,down] of [[.5,.1,9000000,4500000],[.7,.1,9000000,6300000],[.71,.13,8700000,6177000],[.5,.1,9000000,4500000]]){
  const c=SMCalc.installments(D,{...dnk,pv:{[half.id]:share}},date).find(c=>c.id===half.id);
  assert.ok(Math.abs(c.disc-discount)<1e-10);assert.equal(c.total,total);assert.equal(c.rows[0].amount,down);assert.equal(c.rows.reduce((s,r)=>s+r.amount,0),total);
 }
-for(const [share,discount] of [[.5,.1],[.7,.12]]){const c=SMCalc.installments(D,{...dnk,pv:{[half.id]:share}},new Date(2026,11,1)).find(c=>c.id===half.id);assert.equal(c.disc,discount);assert.equal(c.launchDisc,0);}
+for(const [share,discount] of [[.5,.1],[.7,.1],[.71,.13]]){const c=SMCalc.installments(D,{...dnk,pv:{[half.id]:share}},new Date(2026,11,1)).find(c=>c.id===half.id);assert.equal(c.disc,discount);assert.equal(c.launchDisc,0);}
 const future=SMCalc.installments(D,input,new Date(2027,3,1))[0];assert.match(future.error,/Срок погашения уже прошёл/);
-console.log('ПВ 50→70→50, окончание стартовой акции, четыре механики и ноябрьские условия: проверено.');
+console.log('ПВ 50→70→71→50, отмена старых скидок, четыре механики и сроки: проверено.');
 
 // Один и тот же бюджет проверяется по каждому проекту и механике без округления до кнопки ПВ.
 const dealDate=new Date(2026,10,12);
@@ -57,7 +57,7 @@ for(const project of ['ДА — 1 очередь','ДА — 2 очередь']){
 }
 assert.equal(manual('ДА — 1 очередь','Рассрочка от 30%',6000000,.02).total,9020000);
 assert.match(manual('ДА — 1 очередь','Рассрочка от 30%',11000000).error,/превышает/);
-assert.equal(manual('ДНК — 2 очередь','Рассрочка 50/50',6020000).total,8600000);
-assert.match(manual('ДНК — 2 очередь','Рассрочка 50/50',5500000).error,/50%/);
+assert.equal(manual('ДНК — 2 очередь','Рассрочка 50/50',6020000).total,9000000);
+assert.ok(!manual('ДНК — 2 очередь','Рассрочка 50/50',5500000).error);
 assert.ok(!manual('ДНК — 2 очередь','Без первоначального взноса',0).error);
-assert.match(manual('ДНК — 2 очередь','Рассрочка 4/25',3000000).error,/25%/);
+assert.ok(!manual('ДНК — 2 очередь','Рассрочка 4/25',3000000).error);

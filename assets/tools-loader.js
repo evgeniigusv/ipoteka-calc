@@ -42,7 +42,7 @@
       var data=window.SMToolsModel.validate(await response.json()),calc=window.SMToolsModel.calcData(data);
       if(!Number.isFinite(Date.parse(data.checked_at)))throw new Error('Не указана дата проверки справочника');
       window.SM_TOOLS_DATA=data;window.SM_TOOLS_STATUS={fallback:false,checkedAt:Date.parse(data.checked_at),local:local};
-      if(window.SM_DATA){window.SM_DATA.mortgage=calc.mortgage;window.SM_DATA.installments=calc.installments;window.SM_DATA.tranche=calc.tranche;window.SM_DATA.chpv=calc.chpv;window.SM_DATA.cashDiscounts=calc.cashDiscounts;}
+      if(window.SM_DATA){window.SM_DATA.mortgage=calc.mortgage;window.SM_DATA.installments=calc.installments;window.SM_DATA.tranche=calc.tranche;window.SM_DATA.chpv=calc.chpv;window.SM_DATA.cashDiscounts=calc.cashDiscounts;window.SM_DATA.settings=calc.settings;window.SM_DATA.promotions=calc.promotions;}
       var byProject={};
       Object.entries(window.SMToolsModel.projects).forEach(function(pair){
         byProject[pair[1]]=mortgageStatus(data,pair[0]);
