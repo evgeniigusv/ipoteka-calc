@@ -5,7 +5,7 @@
   const owner = 'http://127.0.0.1:8795';
   const $ = id => document.getElementById(id);
   const embedded = location.origin === owner && window.parent !== window;
-  const sendParent = type => window.parent.postMessage({type}, site);
+  const sendParent = (type, details = {}) => window.parent.postMessage({type, ...details}, site);
   let openAction;
 
   if (embedded) {
@@ -28,6 +28,7 @@
     window.addEventListener('message', event => {
       if (event.origin === site && event.source === window.parent && event.data?.type === 'tools:open' && openAction) {
         if (document.querySelector('dialog[open]') || window.SMProposals?.isTransitioning()) return;
+        window.SMTheme?.set(event.data.theme);
         openAction(event.data.action);
       }
     });
@@ -53,7 +54,7 @@
     frame.title = 'Личный редактор инструментов';
     frame.allow = 'microphone; local-network-access; loopback-network';
     visibility(frame, false);
-    frame.src = owner + '/tools.html?theme=' + document.documentElement.dataset.theme;
+    frame.src = owner + '/tools.html?theme=' + document.documentElement.dataset.theme + '&open=' + Date.now();
     visibility($('owner-connection'), true);
     dialog.append(frame);
     report('Подключаем личный редактор на вашем Маке…', false);
@@ -61,15 +62,10 @@
   }
   function showFrame() {
     if (!dialog.open || delivered) return;
-    const frameUrl = new URL(frame.src);
-    if (frameUrl.searchParams.get('theme') !== document.documentElement.dataset.theme) {
-      start();
-      return;
-    }
     visibility(frame, true);
     visibility($('owner-connection'), false);
     delivered = true;
-    frame.contentWindow.postMessage({type:'tools:open', action}, owner);
+    frame.contentWindow.postMessage({type:'tools:open', action, theme:document.documentElement.dataset.theme}, owner);
     frame.focus();
   }
   window.addEventListener('message', event => {
@@ -91,7 +87,7 @@
         delivered = false;
         visibility(frame, false);
         visibility($('owner-connection'), true);
-        report('Личный редактор открылся, но не смог загрузить каталог. Проверьте соединение и повторите.', true);
+        report('Не удалось загрузить каталог. '+(typeof event.data.reason==='string'?event.data.reason.slice(0,300)+' ':'')+'Нажмите «Повторить», чтобы загрузить редактор заново.', true);
         break;
       case 'tools:close':
         dialog.close();
@@ -105,7 +101,7 @@
   window.SMOwnerWindow = {
     embedded,
     ready(handler) { if (embedded) { openAction = handler; sendParent('tools:ready'); } },
-    failed() { if (embedded) sendParent('tools:failed'); },
+    failed(reason) { if (embedded) sendParent('tools:failed', {reason}); },
     close() { if (embedded) sendParent('tools:close'); },
     open(next, title) {
       if (dialog.open) { if (ready) frame?.focus(); return; }
@@ -114,6 +110,7 @@
       $('owner-action-title').textContent = title;
       const url = new URL('/tools.html', owner);
       url.searchParams.set('theme', document.documentElement.dataset.theme);
+      if(['flats','compensation'].includes(next.kind))url.searchParams.set('view',next.kind);
       if (next.project !== 'all') url.searchParams.set('project', next.project);
       if (next.section !== 'all') url.searchParams.set('section', next.section);
       if (next.id) url.searchParams.set(next.kind === 'add-project' ? 'template' : 'edit', next.id);

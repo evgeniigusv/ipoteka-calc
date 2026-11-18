@@ -16,6 +16,108 @@ ROW = next(r for r in DATA['records'] if r['kind']=='installment')
 
 
 class ConditionsTest(unittest.TestCase):
+    def interpret_patch(self, text, edits, old=None, source=True):
+        old = copy.deepcopy(old or self.payment_record())
+        draft = dict(copy.deepcopy(old), description=text)
+        answer = {'question':'','edits':[dict(field=k,value_json=json.dumps(v),quote=text) for k,v in edits]}
+        with patch.object(ai,'generate',return_value=answer):
+            return ai.interpret(old,draft,[],source_text=text if source else None)
+
+    def test_pv_and_discount_numbers_are_bound_to_their_fields(self):
+        old = self.payment_record()
+        old['params'].update(minPv=.2,disc=.1)
+        old['params'].pop('discFromPv',None)
+        text = 'ПВ теперь 30%, скидка 5%.'
+        result = self.interpret_patch(text,[('minPv',.3),('disc',.05)],old)
+        self.assertEqual(result['params'],dict(old['params'],minPv=.3,disc=.05))
+        for edits in ([('minPv',.05),('disc',.3)], [('disc',.3)], [('minPv',.3)], []):
+            with self.subTest(edits=edits), self.assertRaises(ValueError):
+                self.interpret_patch(text,edits,old)
+        # A scalar from another clause cannot justify an unrelated percentage field.
+        with self.assertRaises(ValueError):
+            self.interpret_patch('ПВ теперь 30%.',[('minPv',.3),('disc',.3)],old)
+
+    def test_do_not_change_discount_overrides_a_plausible_model_number(self):
+        old = self.payment_record()
+        old['params'].update(minPv=.2,disc=.1)
+        for text in ('ПВ теперь 30%. Скидку не менять.', 'Не меняй скидку. ПВ теперь 30%.',
+                     'ПВ теперь 30%. Не трогай скидку.', 'Скидку оставь без изменений, ПВ 30%.'):
+            with self.subTest(text=text):
+                result = self.interpret_patch(text,[('minPv',.3)],old)
+                self.assertEqual(result['params'],dict(old['params'],minPv=.3))
+                for key,value in [('disc',.3),('discFromPv',.3),('pvFromBase',False),('disc',None)]:
+                    with self.subTest(key=key,value=value),self.assertRaises(ValueError):
+                        self.interpret_patch(text,[('minPv',.3),(key,value)],old)
+        with self.assertRaises(ValueError):
+            self.interpret_patch('Скидка 5%, ПВ не менять.',[('disc',.05),('minPv',.05)],old)
+
+    def test_existing_discount_basis_is_preserved_or_clarified(self):
+        old=self.payment_record()
+        self.assertNotIn('disc',old['params'])
+        result=self.interpret_patch('Скидка теперь 5%.',[('discFromPv',.05)],old)
+        self.assertEqual(result['params'],dict(old['params'],discFromPv=.05))
+        with self.assertRaises(ValueError):self.interpret_patch('Скидка теперь 5%.',[('disc',.05)],old)
+        old['params']['disc']=.1
+        with self.assertRaisesRegex(ValueError,'Уточните скидку'):
+            self.interpret_patch('Скидка теперь 5%.',[('disc',.05)],old)
+        old['params'].pop('discFromPv');old['params']['pvFromBase']=False
+        result=self.interpret_patch('Скидка от ПВ 16%.',[('discFromPv',.16),('pvFromBase',True)],old)
+        self.assertEqual(result['params'],dict(old['params'],discFromPv=.16,pvFromBase=True))
+
+    def test_room_labels_control_amount_order_and_partial_updates(self):
+        old = self.payment_record()
+        for text in ('Платёж для студии 30 тысяч, для 2к 60 тысяч, для 3к 90 тысяч рублей.',
+                     'Для трёхкомнатной платёж 90 тысяч, для двухкомнатной 60 тысяч, для студии 30 тысяч.',
+                     'Платежи: студия / 1к 30, 2к 60, 3к 90 тысяч рублей.'):
+            edits = [('pay.1',30000),('pay.2',60000),('pay.3',90000)]
+            with self.subTest(text=text):
+                result = self.interpret_patch(text,edits,old)
+                self.assertEqual(result['params'],dict(old['params'],pay={'1':30000,'2':60000,'3':90000}))
+                for wrong in ([('pay.1',90000),('pay.2',30000),('pay.3',60000)], edits[:2], []):
+                    with self.subTest(wrong=wrong),self.assertRaises(ValueError):
+                        self.interpret_patch(text,wrong,old)
+        result = self.interpret_patch('Измени только платёж для 2к на 60 тысяч рублей.',[('pay.2',60000)],old)
+        self.assertEqual(result['params'],dict(old['params'],pay={'1':50000,'2':60000,'3':100000}))
+        for extra in [('pay.1',60000),('end','2028-01-01'),('months',12),('steps',[1]),('pvFromBase',False)]:
+            with self.subTest(extra=extra),self.assertRaises(ValueError):
+                self.interpret_patch('Измени только платёж для 2к на 60 тысяч рублей.',[('pay.2',60000),extra],old)
+
+    def test_short_replacement_still_checks_order(self):
+        text = 'Замени платежи 50–75–100 тысяч рублей на 30–60–90 тысяч рублей.'
+        self.assertEqual(self.interpret_patch(text,[('pay.1',30000),('pay.2',60000),('pay.3',90000)])['params']['pay'],
+                         {'1':30000,'2':60000,'3':90000})
+        with self.assertRaises(ValueError):
+            self.interpret_patch(text,[('pay.1',90000),('pay.2',60000),('pay.3',30000)])
+
+    def test_ambiguous_subject_or_units_never_guessed(self):
+        for text in ('ПВ теперь 30.', 'Измени ПВ.', 'Скидка от 5% до 10%.',
+                     'Платежи теперь 30–60–90 тысяч рублей.', 'Платёж для 2к теперь 60.',
+                     'Платёж для студии 30 тысяч, для 1к 40 тысяч рублей.',
+                     'Скидка 5%. Скидку не менять.'):
+            with self.subTest(text=text),patch.object(ai,'generate') as generate,self.assertRaises(ValueError):
+                old=self.payment_record()
+                ai.interpret(old,dict(copy.deepcopy(old),description=text),[],source_text=text)
+            generate.assert_not_called()
+
+    def test_editor_text_uses_same_guards_and_leaves_previous_record_intact(self):
+        old=self.payment_record();old['params'].update(minPv=.2,disc=.1)
+        snapshot=copy.deepcopy(old)
+        text='ПВ теперь 30%. Скидку не менять.'
+        result=self.interpret_patch(text,[('minPv',.3)],old,source=False)
+        self.assertEqual(result['params'],dict(old['params'],minPv=.3))
+        with self.assertRaises(ValueError):self.interpret_patch(text,[('disc',.3)],old,source=False)
+        self.assertEqual(old,snapshot)
+
+    def test_unchanged_description_clause_does_not_authorize_another_patch(self):
+        old=copy.deepcopy(next(r for r in DATA['records'] if r['kind']=='mortgage'))
+        old['description']='Ставка 6%. ПВ 20%.'
+        old['params'].update(rate=.06,minPv=.2)
+        text='Ставка 6%. ПВ 30%.'
+        result=self.interpret_patch(text,[('minPv',.3)],old,source=False)
+        self.assertEqual(result['params'],dict(old['params'],minPv=.3))
+        with self.assertRaisesRegex(ValueError,'не запрошено'):
+            self.interpret_patch(text,[('minPv',.3),('rate',.3)],old,source=False)
+
     def test_cash_discount_reference_uses_existing_context(self):
         text = 'Скидка на сумму ПВ как при полной оплате.'
         draft = dict(copy.deepcopy(ROW),description=text)

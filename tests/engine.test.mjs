@@ -21,6 +21,58 @@ test('buildData сохраняет настройки, каталог акций
   assert.equal(C.compensationLimit(data,'ДА — 2 очередь'),.2);assert.equal(C.compensationLimit(data,'ДНК — 2 очередь'),0);
   assert.equal(D.programs.length,53);assert.equal(D.installments.length,9);
 });
+test('отсутствие подключённого каталога сохраняет резервную скидку старых данных',()=>{
+  assert.equal(D.cashDiscountCatalogPresent,false);
+  assert.equal(C.cashDiscount(D,project),.13);
+  const data=C.buildData({defaultDiscount:.13,installments:[{name:'Старая',scheme:'deferred',minPv:.2,months:12,pvFromBase:true}]});
+  const card=C.installments(data,{project,base:10000000,downRub:7100000},new Date(2026,10,18))[0];
+  assert.ok(!card.error);assert.equal(card.disc,.13);assert.equal(card.total,8700000);
+});
+test('пустой каталог и отсутствие скидки конкретного проекта не возвращают резервные 13%',()=>{
+  for(const cashDiscounts of [{},{'ДА — 2 очередь':{percent:.2}}]){
+    const data=C.buildData({...raw,defaultDiscount:.13,cashDiscounts});
+    assert.equal(data.cashDiscountCatalogPresent,true);assert.equal(C.cashDiscount(data,project),0);
+    const r=C.mortgage(data,{...input,disc:C.cashDiscount(data,project)}).rows[0];
+    assert.equal(r.cashPrice,10000000);
+  }
+});
+test('без активного источника высокий ПВ блокируется явно, обычная рассрочка сохраняется',()=>{
+  for(const scheme of ['equal','monthly','deferred','scheduled']){
+    const data=C.buildData({defaultDiscount:.13,cashDiscounts:{},installments:[{
+      name:'Без cash-источника',scheme,months:12,minPv:.2,disc:.05,pvFromBase:true,pay:{1:50000},steps:[1]
+    }]});
+    for(const downRub of [7100000,9900000,10000000]){
+      const c=C.installments(data,{project,base:10000000,downRub,rooms:1},new Date(2026,10,18))[0];
+      assert.match(c.error,/нет действующих условий скидки при 100% оплате/);
+      assert.deepEqual(c.rows,[]);assert.equal(c.cashDiscountApplied,false);assert.notEqual(c.disc,.13);
+    }
+    const low=C.installments(data,{project,base:10000000,downRub:3000000,rooms:1},new Date(2026,10,18))[0];
+    assert.ok(!low.error);assert.equal(low.disc,.05);assert.equal(low.total,9500000);
+  }
+});
+test('архивация cash-записи проходит модель, но не включает резервную скидку; восстановление возвращает расчёт',()=>{
+  vm.runInThisContext(fs.readFileSync(new URL('../assets/tools-model.js',import.meta.url),'utf8'));
+  const snapshot=JSON.parse(fs.readFileSync(new URL('../assets/tools.json',import.meta.url),'utf8'));
+  const cash=snapshot.records.find(r=>r.kind==='discount'&&r.project==='da1'&&r.enabled);
+  assert.ok(cash);cash.enabled=false;
+  const build=()=>C.buildData({...SM_DATA,...SMToolsModel.calcData(snapshot)});
+  let data=build();assert.equal(C.cashDiscount(data,project),0);
+  const cards=C.installments(data,{project,base:10000000,downRub:7100000,rooms:1},new Date(2026,10,18));
+  assert.ok(cards.length);for(const c of cards){assert.match(c.error,/нет действующих условий скидки/);assert.deepEqual(c.rows,[]);}
+  cash.enabled=true;cash.params.percent=.11;delete cash.params.launchDiscount;
+  data=build();assert.equal(C.cashDiscount(data,project),.11);
+  const restored=C.installments(data,{project,base:10000000,downRub:7100000,rooms:1},new Date(2026,10,18))[0];
+  assert.ok(!restored.error);assert.equal(restored.total,8900000);
+});
+test('активная нулевая скидка является источником, включая ключ проекта da1',()=>{
+  for(const key of [project,'da1']){
+    const data=C.buildData({defaultDiscount:.13,cashDiscounts:{[key]:{percent:0}},
+      installments:[{name:'Нулевая скидка',scheme:'deferred',minPv:.2,months:12,pvFromBase:true}]});
+    assert.equal(C.cashDiscount(data,project),0);
+    const c=C.installments(data,{project,base:10000000,downRub:7100000},new Date(2026,10,18))[0];
+    assert.ok(!c.error);assert.equal(c.disc,0);assert.equal(c.total,10000000);assert.equal(c.cashDiscountApplied,true);
+  }
+});
 test('выключенная компенсация: аналитическое решение от окончательного ДДУ − ПВ',()=>{
   const r=calc();assert.equal(r.cashPrice,10000000);assert.equal(r.price,12000000);
   assert.equal(r.pv,2000000);assert.equal(r.loan,10000000);assert.equal(r.subsidy,2000000);

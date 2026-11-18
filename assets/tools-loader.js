@@ -36,9 +36,9 @@
     await Promise.all([window.SM_MORTGAGE_READY,window.SM_INSTALLMENTS_READY]);
     var local=location.hostname==='127.0.0.1'&&location.port==='8795',controller=new AbortController(),timer=setTimeout(function(){controller.abort();},local?120000:15000);
     try{
-      if(local){var session=await fetch('/api/session',{cache:'no-store',signal:controller.signal});if(!session.ok)throw new Error('Личный редактор недоступен');window.SM_TOOLS_SESSION=await session.json();}
+      if(local){var session=await fetch('/api/session',{cache:'no-store',signal:controller.signal});if(!session.ok)throw new Error('Сессия редактора недоступна (HTTP '+session.status+').');window.SM_TOOLS_SESSION=await session.json();}
       var response=await fetch(local?'/api/tools':'assets/tools.json',{headers:local?{'X-Editor-Session':window.SM_TOOLS_SESSION.csrf}:{},cache:'no-store',signal:controller.signal});
-      if(!response.ok)throw new Error('Источник не ответил');
+      if(!response.ok)throw new Error('Каталог не ответил (HTTP '+response.status+'). '+(response.status===401?'Сессия устарела. Откройте редактор заново.':''));
       var data=window.SMToolsModel.validate(await response.json()),calc=window.SMToolsModel.calcData(data);
       if(!Number.isFinite(Date.parse(data.checked_at)))throw new Error('Не указана дата проверки справочника');
       window.SM_TOOLS_DATA=data;window.SM_TOOLS_STATUS={fallback:false,checkedAt:Date.parse(data.checked_at),local:local};

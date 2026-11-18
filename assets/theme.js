@@ -34,6 +34,12 @@
         link.href = target.href;
       }
     }
+    window.SMTheme={set(theme){
+      if(!valid(theme))return;
+      update(theme);
+      const current=new URL(location.href);current.searchParams.set('theme',theme);
+      history.replaceState(history.state,'',current);
+    }};
     update(initial);
     group.hidden = false;
     group.addEventListener('click', event => {

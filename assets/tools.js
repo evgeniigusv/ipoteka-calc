@@ -2,7 +2,7 @@
 'use strict';
 var M=SMToolsModel,U=SMUi,esc=U.esc,$=function(id){return document.getElementById(id);},local=location.hostname==='127.0.0.1'&&location.port==='8795';
 var data,baseline,revision,csrf,project='all',category='all',collapsed={},changes=new Map(),editing=null,busy=false,pendingPublish=false;
-var settingsEditor=null;
+var settingsEditor=null,view='catalog',needsRefresh=false;
 var names={da1:'ДА1',da2:'ДА2',dnk2:'ДНК-2'},kindNames={mortgage:'Ипотечная программа',installment:'Рассрочка',tranche:'Траншевая ипотека',chpv:'Дофинансирование ПВ',discount:'Скидка за полную оплату',info:'Информационный инструмент'};
 function icon(n){return '<img src="assets/icons/'+n+'.svg" alt="">';}
 function alert(message){$('tools-error').textContent=message||'';$('tools-error').hidden=!message;}
@@ -187,7 +187,7 @@ function render(){if(!data)return;$('tools-head').innerHTML=compactHeader();$('t
  });
  var empty=archive?'В архиве нет записей по выбранным условиям.':'По выбранным условиям инструментов нет.';
  $('tools-rows').innerHTML=html||'<tr><td colspan="'+n+'" class="tools-empty">'+empty+'</td></tr>';
- $('tools-savebar').hidden=!local;
+ $('tools-savebar').hidden=!local||view!=='catalog';
  $('tools-change-count').textContent=busy?'Подождите…':changes.size?'Записей в черновике: '+changes.size+'. Нажмите «Сохранить и опубликовать».':pendingPublish?'Изменения сохранены. Публикация ожидает повтора.':'Несохранённых изменений нет';
  $('tools-save').disabled=$('tools-reset').disabled=!changes.size||busy;
  $('tools-reload').disabled=$('tools-add').disabled=$('tools-ai').disabled=busy;
@@ -433,10 +433,16 @@ $('tools-rows').onclick=function(e){var b=e.target.closest('button');if(!b||busy
  return;
 }if(b.dataset.edit){if(local)editRecord(b.dataset.edit);else ownerAction('edit',b.dataset.edit);}if(b.dataset.category){collapsed[b.dataset.category]=!collapsed[b.dataset.category];render();}};
 $('tools-reset').onclick=function(){if(confirm('Отменить несохранённые изменения?')){data=M.clone(baseline);changes.clear();alert('');render();}};
-async function api(path,body){var res=await fetch(path,{method:body?'POST':'GET',headers:body?{'Content-Type':'application/json','X-CSRF-Token':csrf,'X-Editor-Session':csrf}:{'X-Editor-Session':csrf},body:body?JSON.stringify(body):undefined,cache:'no-store'}),j=await res.json();if(!res.ok)throw Error(j.error||'Не удалось выполнить запрос.');return j;}
-function accepted(d){M.validate(d);data=M.clone(d);baseline=M.clone(d);revision=d.revision;changes.clear();status();render();}
+async function api(path,body){
+ if(body&&needsRefresh)throw Error('Изменения уже сохранены, но версию каталога не удалось проверить. Нажмите «Обновить», прежде чем отправлять следующую правку.');
+ var res=await fetch(path,{method:body?'POST':'GET',headers:body?{'Content-Type':'application/json','X-CSRF-Token':csrf,'X-Editor-Session':csrf}:{'X-Editor-Session':csrf},body:body?JSON.stringify(body):undefined,cache:'no-store'}),j=await res.json();
+ if(!res.ok)throw Error(j.error||'Не удалось выполнить запрос.');
+ if(j.refreshRequired){needsRefresh=true;pendingPublish=!j.published;throw Error('Изменения сохранены. '+(j.error||'Нажмите «Обновить», чтобы перечитать каталог.'));}
+ return j;
+}
+function accepted(d){M.validate(d);needsRefresh=false;data=M.clone(d);baseline=M.clone(d);revision=d.revision;changes.clear();status();render();}
 $('tools-reload').onclick=async function(){if(changes.size&&!confirm('Обновить каталог и отменить несохранённые изменения?'))return;try{busy=true;render();accepted(await api('/api/tools'));alert('');}catch(e){alert(e.message);}finally{busy=false;render();}};
-async function save(publishOnly){if(busy)return;busy=true;render();alert('');try{var res=await api(publishOnly?'/api/publish':'/api/events/tools-changed',publishOnly?{}:{revision:revision,changes:Array.from(changes.values())});accepted(res.data);pendingPublish=!res.published;alert(res.published?'Сохранено. Публичный сайт обновится после сборки GitHub Pages, обычно за 1–2 минуты.':'Изменения сохранены. Публикация не завершена. '+res.error);}catch(e){alert(e.message);}finally{busy=false;render();}}
+async function save(publishOnly){if(busy)return;busy=true;render();alert('');try{var res=await api(publishOnly?'/api/publish':'/api/events/tools-changed',publishOnly?{}:{revision:revision,changes:Array.from(changes.values())});accepted(res.data);pendingPublish=!res.published;alert(res.published?'Сохранено. Публичный сайт обновится после сборки GitHub Pages, обычно за 1–2 минуты.'+(res.error?' '+res.error:''):'Изменения сохранены. Публикация не завершена. '+res.error);}catch(e){alert(e.message);}finally{busy=false;render();}}
 $('tools-save').onclick=function(){save(false);};$('tools-publish').onclick=function(){save(true);};
 window.addEventListener('beforeunload',function(e){if(changes.size){e.preventDefault();e.returnValue='';}});
 function pdfChunks(g){var records=Object.values(g.cells).flat(),max=Math.max(1,...records.map(function(r){return Math.ceil(r.description.length/550);})),out=[];for(var i=0;i<max;i++){var copy={name:g.name+(i?' · продолжение':''),category:g.category,cells:{}};Object.keys(g.cells).forEach(function(p){copy.cells[p]=g.cells[p].filter(function(r){return i===0||r.description.length>i*550;}).map(function(r){var c=M.clone(r);c.description=r.description.slice(i*550,(i+1)*550);if(i){c.kind='info';c.combination='';}return c;});});out.push(copy);}return out;}
@@ -468,14 +474,14 @@ if(Object.hasOwn(names,params.get('project')))selectProject(params.get('project'
 if(Object.hasOwn(M.categories,params.get('section')))category=$('tools-category').value=params.get('section');
 function ownerAction(kind,id,targetProject){
  const record=id&&data?.records.find(r=>r.id===id);
- const titles={'add-project':'Добавить условия · '+names[targetProject],manage:'Управление инструментами',new:'Добавить инструмент',ai:'Добавить с ИИ',edit:record?.name||'Редактировать инструмент'};
+ const titles={'add-project':'Добавить условия · '+names[targetProject],manage:'Управление инструментами',flats:'Квартиры',compensation:'Компенсация субсидии',new:'Добавить инструмент',ai:'Добавить с ИИ',edit:record?.name||'Редактировать инструмент'};
  SMOwnerWindow.open({kind,id,project:targetProject||record?.project||project,section:record?M.section(record):category},titles[kind]);
 }
 $('tools-owner-link').onclick=()=>ownerAction('manage');
 $('tools-owner-new').onclick=()=>ownerAction('new');
 $('tools-owner-ai').onclick=()=>ownerAction('ai');
 await window.SM_TOOLS_READY;
-if(!window.SM_TOOLS_DATA){SMOwnerWindow.failed();alert('Справочник не загрузился. Обновите страницу.');$('tools-status').textContent='Источник недоступен';$('tools-pdf').disabled=true;$('tools-rows').innerHTML='';return;}
+if(!window.SM_TOOLS_DATA){SMOwnerWindow.failed(window.SM_TOOLS_STATUS?.error);alert('Справочник не загрузился. '+(window.SM_TOOLS_STATUS?.error||'Обновите страницу.'));$('tools-status').textContent='Источник недоступен';$('tools-pdf').disabled=true;$('tools-rows').innerHTML='';return;}
 if(local){
  window.SMProposals.setup({api:function(path,body){
    if(path==='/api/ai/propose'){
@@ -488,7 +494,7 @@ if(local){
  applied:function(res){
    var pending=Array.from(changes.values());accepted(res.data);
    pending.forEach(function(r){var i=data.records.findIndex(function(x){return x.id===r.id;});if(i<0)data.records.push(r);else data.records[i]=r;changes.set(r.id,data.records.find(item=>item.id===r.id));});
-   pendingPublish=!res.published;render();alert(res.published?'Выбранные предложения сохранены. Сайт обновится после сборки.':'Изменения сохранены. Публикация не завершена. '+res.error);
+   pendingPublish=!res.published;render();alert(res.published?'Выбранные предложения сохранены. Сайт обновится после сборки.'+(res.error?' '+res.error:''):'Изменения сохранены. Публикация не завершена. '+res.error);
  },pending:function(){return Array.from(changes.keys());}});
  $('tools-editor').addEventListener('close',function(){proposalEdit=null;});
  var session=window.SM_TOOLS_SESSION;csrf=session.csrf;$('tools-add').hidden=false;$('tools-owner').hidden=true;$('tools-inactive-label').hidden=false;}
@@ -497,21 +503,44 @@ const showLinkedType=category==='mortgage'&&Object.hasOwn(M.mortgageTypes,linked
  &&!params.has('edit')&&!location.hash;
 if(showLinkedType)expandedMortgages.add(linkedType);
 accepted(window.SM_TOOLS_DATA);
-if(local){
- settingsEditor=SMToolsSettings.setup({
-   getData:()=>data, api, canSave:()=>!busy&&!changes.size,
-   onSaved:res=>{accepted(res.data);pendingPublish=!res.published;render();}
+settingsEditor=SMToolsSettings.setup({
+ getData:()=>data, mount:$('tools-settings-panel'), readOnly:!local,
+ api:local?api:async()=>({revision:data.checked_at,settings:data.settings}),
+ canSave:()=>!busy&&!changes.size,
+ onSaved:res=>{accepted(res.data);pendingPublish=!res.published;render();}
+});
+function selectView(next){
+ view=['flats','compensation'].includes(next)?next:'catalog';
+ const title={catalog:'Инструменты',flats:'Квартиры',compensation:'Компенсация субсидии'}[view];
+ document.querySelector('.tools-mast h1').textContent=title;document.title=title+' — Свобода мысли';
+ $('tools-catalog-panel').hidden=view!=='catalog';$('tools-settings-panel').hidden=view==='catalog';
+ $('tools-settings-owner').hidden=local||view==='catalog';
+ document.querySelectorAll('[data-tools-view]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.toolsView===view)));
+ document.querySelectorAll('.sm-navigation a').forEach(link=>{
+   const target=new URL(link.href);
+   if(target.pathname.endsWith('/tools.html')){
+     const active=(target.searchParams.get('view')==='flats')===(view==='flats');
+     if(active)link.setAttribute('aria-current','page');else link.removeAttribute('aria-current');
+   }
  });
+ if(view!=='catalog')settingsEditor.show(view);
+ const url=new URL(location.href);if(view==='catalog')url.searchParams.delete('view');else url.searchParams.set('view',view);
+ history.replaceState(null,'',url);render();
 }
+document.querySelector('.tools-view-tabs').onclick=e=>{const button=e.target.closest('[data-tools-view]');if(button)selectView(button.dataset.toolsView);};
+$('tools-settings-edit').onclick=()=>ownerAction(view);
+selectView(params.get('view'));
+
 
 if(showLinkedType)requestAnimationFrame(()=>$('mortgage-type-'+linkedType)?.scrollIntoView({block:'start'}));
 SMOwnerWindow.ready(function(action){
- if(!action||!['manage','new','edit','ai','add-project'].includes(action.kind))return;
+ if(!action||!['manage','new','edit','ai','add-project','flats','compensation'].includes(action.kind))return;
  selectProject(Object.hasOwn(names,action.project)?action.project:'all');
  category=$('tools-category').value=Object.hasOwn(M.categories,action.section)?action.section:'all';
  $('tools-search').value='';
  $('tools-inactive').value='active';
  render();
+ selectView(['flats','compensation'].includes(action.kind)?action.kind:'catalog');
  if(action.kind==='add-project')addProjectConditions(action.id,action.project);
  if(action.kind==='edit')editRecord(action.id);
  if(action.kind==='new')openEditor();

@@ -112,6 +112,23 @@ def sources(period):
     return snapshot(conf, allow_partial=True)
 
 
+def default_name(params):
+    return ' · '.join([params['bank'], params.get('kids') or params['type'], str(params['term']) + ' лет'])
+
+
+def has_local_metadata(record):
+    """Без истории правок любой текст сверх генерируемых значений считаем локальным.
+
+    Даже пустой note может означать, что владелец явно убрал примечание.
+    Не переносим такие условия между неразличимыми вариантами по догадке.
+    """
+    params = record['params']
+    return bool(params.get('compatiblePromotions') or record['mode'] != 'additive' or not record['enabled']
+                or record['name'] != default_name(params) or record['description']
+                or record['combination'] != 'По условиям банка'
+                or any(key in params for key in ('note', 'noExtra', 'extraSequential')))
+
+
 def project_cards(programs, labels, old):
     cards = []
     for item in programs:
@@ -125,7 +142,7 @@ def project_cards(programs, labels, old):
             project = PROJECT[label]
             row = old.get((project, identity(p)))
             if row is None:
-                name = ' · '.join([p['bank'], p.get('kids') or p['type'], str(p['term'])+' лет'])
+                name = default_name(p)
                 peers = [r for (proj, ident), r in old.items() if proj == project and ident[:-1] == identity(p)[:-1]]
                 fresh_peers = [v for v in programs if v['projects'] == labels and identity(v)[:-1] == identity(p)[:-1]]
                 row = peers[0] if len(peers) == 1 and len(fresh_peers) == 1 else None
@@ -176,8 +193,10 @@ def with_subsidies(data, source=None):
                     try:
                         fresh_ids = {r['id'] for r in cards}
                         for prior in (r for r in data['records'] if r['project'] == project and bank_row(r)):
-                            overlay = prior['params'].get('compatiblePromotions') or prior['mode'] != 'additive' or not prior['enabled']
-                            if overlay and prior['id'] not in fresh_ids and any(bank_key(r) == bank_key(prior) for r in cards):
+                            if has_local_metadata(prior) and prior['id'] not in fresh_ids and any(bank_key(r) == bank_key(prior) for r in cards):
+                                # При отсутствии дат старый публичный резерв может не содержать локальный текст.
+                                previous_rows = [r for r in data['records'] if r['project'] == project]
+                                backup = [r for r in previous_rows if bank_row(r)]
                                 raise ValueError('Невозможно однозначно перенести локальные условия между вариантами ставки; сохранён прежний снимок.')
                         cards = without_claimed(cards, claims)
                     except ValueError as exc:

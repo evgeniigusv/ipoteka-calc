@@ -49,7 +49,8 @@
 
   function cashDiscount(D, project, today) {
     var p = D.cashDiscounts[project] || D.cashDiscounts[PROJECT_KEYS[project]];
-    if (!p) return D.defaultDiscount;
+    // Пустой актуальный каталог означает отсутствие активной скидки, а не сбой загрузки.
+    if (!p) return D.cashDiscountCatalogPresent ? 0 : D.defaultDiscount;
     var launch = toDate(p.launchUntil);
     return (p.percent || 0) + (launch && startOfDay(today || new Date()) <= launch ? (p.launchDiscount || 0) : 0);
   }
@@ -112,6 +113,7 @@
       projects: raw.projects || [],
       types: raw.types || uniq(programs.map(function (p) { return p.type; })),
       defaultDiscount: raw.defaultDiscount || 0, cashDiscounts: raw.cashDiscounts || {},
+      cashDiscountCatalogPresent: raw.cashDiscounts != null,
       settings: raw.settings || {}, promotions: raw.promotions || []
     };
   }
@@ -265,6 +267,7 @@
       var extras=[manualExtra].concat(actions.map(function(a){return a.percent||0;}));
       var extra=combinedDiscount(extras,p.extraSequential), factor=p.extraSequential?1-extra:1;
       var cashDisc=cashDiscount(D,inp.project,today);
+      var missingCashDiscount=D.cashDiscountCatalogPresent && !D.cashDiscounts[inp.project] && !D.cashDiscounts[PROJECT_KEYS[inp.project]];
       function high(v){return v>=.71-1e-12;}
       function priceAt(v){
         if(high(v))return Math.round(inp.base*(1-combinedDiscount([cashDisc].concat(extras),p.extraSequential)));
@@ -293,15 +296,15 @@
       var end=p.end || addMonths(today,p.months);
       var card={id:p.id,name:p.name,kind:p.kind,note:p.note,disc:own,baseDisc:own,launchDisc:0,extra:extra,total:total,saved:inp.base-total,end:end,
         termMonths:monthsBetween(today,end),share:share,pvFromBase:p.pvFromBase,extraSequential:p.extraSequential,
-        cashDiscountApplied:high(share),promotions:actions,
+        cashDiscountApplied:high(share)&&!missingCashDiscount,promotions:actions,
         warning:p.validUntil && today>p.validUntil?'Срок действия условий в источнике истёк '+dmy(p.validUntil)+'. Расчёт справочный; подтвердите условия.':'',
         pvOptions:opts.length>1?opts.map(function(v){return {share:v,disc:discount(v)};}):null,
         rows:[{when:'в день сделки',label:'Первый взнос',sub:pct1(share)+(p.pvFromBase?' прайса':' стоимости'),amount:pv}]};
       function fail(message){card.error=message;card.rows=[];return card;}
       if(end<=today)return fail('Срок погашения уже прошёл. Программа не рассчитывается.');
       if(pvError)return fail(pvError);
-      if(pv>total)return fail('Введённый взнос превышает цену в договоре '+rub(total)+'.');
-      if(!(total>0) || !Number.isFinite(total) || rest<0)return fail('Скидка и взнос несовместимы: взнос превышает стоимость или стоимость не положительна.');
+      if(high(share)&&missingCashDiscount)return fail('В каталоге нет действующих условий скидки при 100% оплате для этого проекта. Расчёт при ПВ от 71% недоступен.');
+      if(!(total>0) || !Number.isFinite(total))return fail('Скидка и взнос несовместимы: стоимость не положительна.');
       if(rest===0){card.fullPayment=true;card.rows[0].sub='100% стоимости договора';return card;}
       // Ежемесячная схема может включать отдельные этапы; equal/deferred их игнорируют.
       var milestones=(p.kind==='scheduled'||p.kind==='monthly')?p.milestones.map(function(m){
@@ -312,7 +315,35 @@
       if(milestones.some(function(m){return !m.date || m.date<=today || m.date>end;}))return fail('Дата промежуточного платежа не входит в срок рассрочки. Уточните индивидуальный график.');
       if(milestones.some(function(m){return !Number.isSafeInteger(m.amount) || m.amount<0;}))return fail('Укажите корректную сумму каждого этапа.');
       var reserved=milestones.reduce(function(sum,m){return sum+m.amount;},0);
-      if(reserved>rest)return fail('Промежуточные платежи превышают остаток.');
+      var monthly=p.kind==='monthly'?(p.pay[inp.rooms]||p.pay[1]||0):0;
+      var cnt=monthly>0?Math.max((end.getFullYear()-today.getFullYear())*12+end.getMonth()-today.getMonth()-1,0):0;
+      if(!Number.isSafeInteger(monthly)||monthly<0)return fail('Укажите корректную сумму ежемесячного платежа.');
+      if(reserved+monthly*cnt>0){
+        // Обязательный график не сокращается при увеличении ПВ. Максимум ищем
+        // отдельно до/после порога 71%: цена и процентные этапы меняются вместе.
+        var cashPrice=priceAt(1), numerator=inp.base*(p.extraSequential?(1-p.disc)*factor:1-p.disc-extra);
+        var threshold=Math.ceil((.71-1e-12)*(p.pvFromBase?inp.base:cashPrice));
+        function priceForAmount(amount,isHigh){return isHigh?cashPrice:Math.round(numerator-amount*p.discFromPv*factor);}
+        function obligations(price){
+          return monthly*cnt+p.milestones.reduce(function(sum,m){return sum+(m.amount!=null?m.amount:Math.round(price*m.share));},0);
+        }
+        function maxDown(lo,hi,isHigh){
+          function fits(amount){var price=priceForAmount(amount,isHigh);return price>0 && amount+obligations(price)<=price;}
+          if(hi<lo || !fits(lo))return -1;
+          while(lo<hi){var mid=lo+Math.ceil((hi-lo)/2);if(fits(mid))lo=mid;else hi=mid-1;}
+          var price=priceForAmount(lo,isHigh), ratio=lo/(p.pvFromBase?inp.base:price);
+          return ratio>=p.minPv-1e-9 && high(ratio)===isHigh?lo:-1;
+        }
+        var lowMax=maxDown(0,Math.max(-1,threshold-1),false);
+        var highMax=missingCashDiscount?-1:maxDown(Math.max(0,threshold),Math.max(0,cashPrice),true);
+        card.maxPvRub=Math.max(lowMax,highMax);
+        if(card.maxPvRub<0)return fail('При этой цене обязательные платежи графика не оставляют места для допустимого первоначального взноса. Уточните условия программы.');
+        var maxPrice=priceForAmount(card.maxPvRub,highMax>=lowMax);
+        card.maxPvShare=card.maxPvRub/(p.pvFromBase?inp.base:maxPrice);
+        card.pvLimit='Максимальный первоначальный взнос для рассрочки — '+rub(card.maxPvRub)+' ('+pct1(card.maxPvShare)+(p.pvFromBase?' прайса':' стоимости договора')+'). Обязательные платежи графика сохраняются. При полной оплате 100% график не требуется.';
+        if(reserved+monthly*cnt>rest)return fail(card.pvLimit+' Уменьшите первоначальный взнос.');
+      }
+      if(pv>total)return fail('Введённый взнос превышает цену в договоре '+rub(total)+'.');
       if(p.kind==='equal'){
         var step=inp.step && p.steps.indexOf(inp.step[p.id])>=0?inp.step[p.id]:p.steps[0];
         // Один платёж на период; остаток округления погашается последним платежом.
@@ -323,9 +354,6 @@
         card.rows.push({when:'до '+dmy(end),label:'Последний платёж',sub:'с учётом округления',amount:finalPay,final:true});
       }else{
         if(p.kind==='monthly'){
-          var monthly=p.pay[inp.rooms]||p.pay[1]||0;
-          var cnt=Math.max((end.getFullYear()-today.getFullYear())*12+end.getMonth()-today.getMonth()-1,0);
-          cnt=monthly>0?Math.min(cnt,Math.floor((rest-reserved)/monthly)):0;
           card.payment=cnt?monthly:0;
           if(cnt)card.rows.push({when:'ежемесячно',label:'Платежи',sub:rub(monthly)+' × '+months(cnt)+'; со следующего месяца, до месяца погашения',amount:monthly*cnt});
           rest-=monthly*cnt;

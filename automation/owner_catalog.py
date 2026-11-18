@@ -275,7 +275,7 @@ def backups():
 
 def import_bank_snapshot(incoming, report_errors=False):
     """Из опубликованного снимка принимаются только свежие банковские строки, никогда настройки."""
-    from subsidy_catalog import bank_row, bank_key, without_claimed
+    from subsidy_catalog import bank_row, bank_key, without_claimed, has_local_metadata
     from collections import defaultdict
     source.validate(source.public_snapshot(incoming))
     for attempt in range(3):
@@ -311,7 +311,7 @@ def import_bank_snapshot(incoming, report_errors=False):
             newbykey = defaultdict(list)
             for r in rows: newbykey[bank_key(r)].append(r)
             incoming_ids = {r['id'] for r in rows}
-            ambiguous = any((r['params'].get('compatiblePromotions') or r['mode'] != 'additive' or not r['enabled'])
+            ambiguous = any(has_local_metadata(r)
                             and r['id'] not in incoming_ids and newbykey[bank_key(r)]
                             and (len(bykey[bank_key(r)]) != 1 or len(newbykey[bank_key(r)]) != 1) for r in old)
             if ambiguous:

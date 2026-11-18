@@ -100,7 +100,15 @@ def publication_response(current):
     try:
         result = publish(current)
     except Exception as exc:
-        return {'saved': True, 'published': False, 'data': current, 'error': str(exc) + (' ' + error if error else '')}
+        message = str(exc) + (' ' + error if error else '')
+        try:
+            # Публикация могла уже принять банковский импорт и изменить ревизию SQLite.
+            current = read_catalog()
+        except Exception:
+            # Не выдаём старую ревизию за актуальную, если повторное чтение недоступно.
+            return {'saved': True, 'published': False, 'data': None, 'refreshRequired': True,
+                    'error': message + ' Не удалось перечитать каталог. Обновите данные перед следующей правкой.'}
+        return {'saved': True, 'published': False, 'data': current, 'error': message}
     if isinstance(result, dict):
         result = dict(result, saved=True)
         result.setdefault('data', current)

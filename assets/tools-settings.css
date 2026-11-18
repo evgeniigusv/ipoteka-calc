@@ -31,3 +31,11 @@
   .tools-settings-actions .t-btn { flex: 1 1 auto; white-space: normal; }
 }
 @media print { .tools-settings { display: none !important; } }
+
+.tools-settings-tab > summary { display:none; }
+.tools-settings [hidden], #tools-settings-panel[hidden], #tools-catalog-panel[hidden], #tools-settings-owner[hidden] { display:none !important; }
+.tools-view-tabs { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:24px; }
+.tools-view-tabs [aria-pressed="true"] { background:var(--sky);color:var(--white);border-color:var(--sky); }
+#tools-settings-owner { margin-bottom:16px; }
+
+[data-theme="sm"] .tools-view-tabs [aria-pressed="true"] { background:var(--blue);border-color:var(--blue);color:var(--black); }

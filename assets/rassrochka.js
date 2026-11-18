@@ -6,28 +6,12 @@
   var D = C.buildData(window.SM_DATA), $ = function (id) { return document.getElementById(id); };
   var el = {project:$('sm-project'),flat:$('sm-flat'),price:$('sm-price'),rooms:$('sm-rooms'),extra:$('sm-extra'),date:$('sm-date'),
     detail:$('sm-detail'),options:$('sm-program-options'),thead:$('sm-thead'),tbody:$('sm-tbody'),tip:$('sm-tip'),promotions:$('sm-promotions')};
-  var state = {project:D.projects[0],pv:{},step:{},picks:{},promotionIds:[]}, last = null;
+  var state = {project:D.projects[0],step:{},picks:{},promotionIds:[]}, last = null;
 
-  var downUnit=null, downRub=$('sm-down-rub'), downPct=$('sm-down-pct');
-  function manualDown(){
-    if(downUnit==='rub'){
-      var entered=U.parseMoney(downRub.value);
-      if(entered==null)return NaN;
-      return entered;
-    }
-    return null;
-  }
-  function changeDown(unit){
-    var input=unit==='rub'?downRub:downPct;
-    downUnit=input.value.trim()?unit:null;
-    if(!downUnit){downRub.value='';downPct.value='';}
-    render();
-  }
+  var downRub=$('sm-down-rub');
   function readInputs() {
-    var base=U.parseMoney(el.price.value)||0;
-    var raw=downPct.value.trim().replace(',','.');
-    return {project:state.project,downRub:manualDown(),downShare:downUnit==='pct'?(/^\d+(?:\.\d*)?$/.test(raw)?Number(raw)/100:NaN):null,
-      base:base,rooms:+el.rooms.value,extra:U.parsePct(el.extra.value),pv:state.pv,step:state.step,promotionIds:state.promotionIds};
+    return {project:state.project,downRub:downRub.value.trim()?U.parseMoney(downRub.value):null,
+      base:U.parseMoney(el.price.value)||0,rooms:+el.rooms.value,extra:U.parsePct(el.extra.value),step:state.step,promotionIds:state.promotionIds};
   }
   function dealDate() {
     if (!el.date.value || !el.date.validity.valid) return null;
@@ -48,10 +32,9 @@
   }
   function optionsHtml(c) {
     var html='';
-    if(c.pvOptions)html+=choice(c.pvFromBase?'Первый взнос от прайса':'Первый взнос', 'pv', c.pvOptions.map(function(o){return {value:o.share,label:(o.share===1?'Полная оплата':F.pct1(o.share))+' · скидка '+F.pct0(o.disc)};}),c.share);
     if(c.steps)html+=choice('Периодичность платежей','step',c.steps.map(function(s){return {value:s.step,label:s.name};}),c.step);
     var program=D.installments.find(function(p){return p.id===c.id;});
-    if(c.pvOptions && program.discFromPv>0)html+='<p class="sm-hint">До ПВ 71% скидка применяется к сумме взноса; указан её размер от прайса.</p>';
+    if(program.discFromPv>0)html+='<p class="sm-hint">До ПВ 71% скидка применяется к сумме взноса; указан её размер от прайса.</p>';
     html+='<p class="sm-hint">При ПВ от 71% включительно действует скидка при полной оплате. Отображаемые проценты округлены, суммы рассчитаны без округления скидки.</p>';
     return html?'<div class="sm-program-options"><div class="sm-options-name">'+esc(c.name)+'</div>'+html+'</div>':'';
   }
@@ -69,6 +52,7 @@
     if(c.note)html+='<p class="sm-desc sm-program-note">'+esc(c.note)+'</p>';
     if(c.promotions.length)html+='<p class="sm-note">Применённые акции: '+c.promotions.map(function(a){return esc(a.name);}).join(', ')+'.</p>';
     if(c.cashDiscountApplied)html+='<p class="sm-note">Применена актуальная скидка при 100% оплате.</p>';
+    if(c.pvLimit)html+='<p class="sm-note">'+esc(c.pvLimit)+'</p>';
     if(c.warning)html+='<p class="sm-note">'+esc(c.warning)+'</p>';
     return html;
   }
@@ -91,25 +75,21 @@
     $('sm-promotions-field').hidden=!available.length;
     $('sm-extra-field').hidden=programs.every(function(p){return Array.isArray(p.compatiblePromotions);});
     var status=window.SM_INSTALLMENTS_STATUS||{fallback:true};
-    $('sm-updated').textContent=status.catalog?'Справочник: проверено '+new Date(status.checkedAt).toLocaleString('ru-RU',{timeZone:'Asia/Yekaterinburg',dateStyle:'short',timeStyle:'short'})+' · Екатеринбург. Обновление по понедельникам в 06:00.'+(status.stale?' Проверка задерживается; подтвердите условия.':''):state.project==='ДНК — 2 очередь'?'ДНК: сверено вручную '+window.SM_DATA.updated+'.':
+    $('sm-updated').textContent=status.catalog?'Справочник: проверено '+new Date(status.checkedAt).toLocaleString('ru-RU',{timeZone:'Asia/Yekaterinburg',dateStyle:'short',timeStyle:'short'})+' · Екатеринбург. Условия из раздела «Инструменты».'+(status.stale?' Проверка задерживается; подтвердите условия.':''):state.project==='ДНК — 2 очередь'?'ДНК: сверено вручную '+window.SM_DATA.updated+'.':
       status.fallback?'ДА: резервная копия от '+(window.SM_DATA.daInstallmentsUpdated||window.SM_DATA.updated)+'. Обновлённые условия загрузить не удалось.':
       'ДА: проверено '+new Date(status.checkedAt).toLocaleString('ru-RU',{timeZone:'Asia/Yekaterinburg',dateStyle:'short',timeStyle:'short'})+
-      ' (Екатеринбург). Обновление по понедельникам в 06:00.'+(status.stale?' Проверка задерживается; подтвердите условия.':'');
+      ' (Екатеринбург). Условия из раздела «Инструменты».'+(status.stale?' Проверка задерживается; подтвердите условия.':'');
     var inp=readInputs(),date=dealDate();
     if(!date)return empty('Укажите корректную дату сделки.');
     if(flats.isPif())return empty('Для квартиры ПИФ условия рассрочки нужно уточнить.');
-    if(inp.downRub!=null&&(!Number.isSafeInteger(inp.downRub)||inp.downRub<0))return empty('Укажите корректный первоначальный взнос.');
-    if(inp.downShare!=null&&(!Number.isFinite(inp.downShare)||inp.downShare<0||inp.downShare>1))return empty('Укажите долю первоначального взноса от 0 до 100%.');
+    if(inp.downRub==null)return empty('Введите сумму первоначального взноса клиента.');
+    if(!Number.isSafeInteger(inp.downRub)||inp.downRub<0)return empty('Укажите корректный первоначальный взнос.');
     if(!inp.base)return empty('Укажите стоимость квартиры.');
     var cards=C.installments(D,inp,date);
     if(!cards.length)return empty('Условия рассрочки для этого проекта готовятся.');
     var selected=cards.find(function(c){return c.id===state.picks[state.project];})||cards.find(function(c){return !c.error;})||cards[0];
     last=selected;
-    if(!selected.error){
-      if(downUnit==='pct')downRub.value=F.int(selected.rows[0].amount);
-      if(downUnit==='rub')downPct.value=(selected.share*100).toLocaleString('ru-RU',{maximumFractionDigits:4});
-    }
-    $('sm-down-basis').textContent='Процент выбранной программы считается '+(selected.pvFromBase?'от прайса':'от цены в договоре')+'. 100% — полная оплата цены договора. Пустое поле — взнос по программе.';
+    $('sm-down-basis').textContent='Взнос берётся из указанной суммы. Процент выбранной программы считается '+(selected.pvFromBase?'от прайса':'от цены в договоре')+'.';
     el.detail.innerHTML=detailHtml(selected);el.options.innerHTML=optionsHtml(selected);
     el.thead.innerHTML='<tr>'+cols.map(function(c){return '<th>'+c+'</th>';}).join('')+'</tr>';
     el.tbody.innerHTML=cards.map(function(c){return rowHtml(c,c.id===selected.id);}).join('');
@@ -128,10 +108,9 @@
   el.price.value=F.int(10000000);
   U.onPill(el.project,'v',function(v,btn){state.project=v;flats.setProject(v);Array.prototype.forEach.call(el.project.children,function(b){b.setAttribute('aria-pressed',String(b===btn));});render();});
   el.tbody.addEventListener('click',function(e){var row=e.target.closest('tr[data-id]');if(!row)return;state.picks[state.project]=+row.dataset.id;render();el.tbody.querySelector('tr.sm-sel button').focus({preventScroll:true});});
-  el.options.addEventListener('click',function(e){var b=e.target.closest('button[data-v]');if(!b||!last)return;var key=b.parentNode.hasAttribute('data-pv')?'pv':'step';var value=b.getAttribute('data-v');state[key][last.id]=+value;if(key==='pv'){state.picks[state.project]=last.id;downUnit=null;downRub.value='';downPct.value='';}render();el.options.querySelector('[data-'+key+'] button[data-v="'+value+'"]').focus({preventScroll:true});});
+  el.options.addEventListener('click',function(e){var b=e.target.closest('[data-step] button[data-v]');if(!b||!last)return;var value=b.getAttribute('data-v');state.step[last.id]=+value;render();el.options.querySelector('[data-step] button[data-v="'+value+'"]').focus({preventScroll:true});});
   el.promotions.addEventListener('change',function(e){var id=e.target.getAttribute('data-promotion');if(!id)return;state.promotionIds=state.promotionIds.filter(function(v){return v!==id;});if(e.target.checked)state.promotionIds.push(id);render();});
-  downRub.addEventListener('input',function(){changeDown('rub');});
-  U.pctInput(downPct,function(){changeDown('pct');});
+  U.moneyInput(downRub,render);
   U.moneyInput(el.price,render);U.pctInput(el.extra,render);el.rooms.addEventListener('change',render);el.date.addEventListener('input',render);
   $('sm-print').addEventListener('click',function(){window.print();});U.saveButton($('sm-save'),$('sm-msg'),createPdf);
   window.SMRassrochka={createPdf:createPdf,data:D};render();

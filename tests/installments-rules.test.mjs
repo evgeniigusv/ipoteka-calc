@@ -83,11 +83,74 @@ test('ежемесячная рассрочка сочетает платежи,
   }
 });
 test('ежемесячные платежи резервируют деньги под фиксированные и процентные этапы',()=>{
-  const c=calc({scheme:'monthly',disc:0,pay:{1:1000000},milestones:[
-    {amount:2500000,date:'2027-06-12'},{share:.05,months:2}]});balance(c);
-  assert.deepEqual(c.rows.map(r=>r.amount),[2000000,5000000,500000,2500000]);
-  const allReserved=calc({scheme:'monthly',disc:0,pay:{1:50000},milestones:[{amount:8000000,months:6}]});
-  balance(allReserved);assert.equal(allReserved.payment,0);assert.deepEqual(allReserved.rows.map(r=>r.amount),[2000000,8000000]);
+  const params={scheme:'monthly',disc:0,pay:{1:400000},milestones:[
+    {amount:2500000,date:'2027-06-12'},{share:.05,months:2}]};
+  const c=calc(params);balance(c);
+  assert.deepEqual(c.rows.map(r=>r.amount),[2000000,4400000,500000,2500000,600000]);
+  assert.equal(c.maxPvRub,2600000);
+  const limit=calc(params,{downRub:c.maxPvRub});balance(limit);
+  assert.equal(limit.rows[1].amount,4400000);assert.equal(limit.rows.at(-1).amount,2500000);
+  assert.match(calc(params,{downRub:c.maxPvRub+1}).error,/Максимальный первоначальный взнос/);
+  const impossible=calc({scheme:'monthly',disc:0,pay:{1:1000000},milestones:[
+    {amount:2500000,date:'2027-06-12'},{share:.05,months:2}]});
+  assert.match(impossible.error,/обязательные платежи графика/);assert.deepEqual(impossible.rows,[]);
+  const allReserved=calc({scheme:'monthly',minPv:0,disc:0,pay:{1:50000},milestones:[{amount:8000000,months:6}]},{downRub:2000000});
+  assert.equal(allReserved.maxPvRub,1450000);assert.match(allReserved.error,/Максимальный первоначальный взнос/);
+});
+test('граница ПВ учитывает скидку от взноса, обе базы процента и совместимые акции',()=>{
+  for(const pvFromBase of [true,false])for(const combinationMode of ['sum','sequential']){
+    const params={scheme:'scheduled',disc:0,discFromPv:.3,pvFromBase,combinationMode,compatiblePromotions:['extra'],
+      milestones:[{amount:1234567,months:3},{share:.4,months:6}]};
+    const raw={promotions:[{id:'extra',scope:'promotion',percent:.07}]},inp={downRub:2000000,promotionIds:['extra']};
+    const c=calc(params,inp,raw);balance(c);
+    const factor=combinationMode==='sequential'?.93:1;
+    assert.equal(c.total,Math.round(base*.93-inp.downRub*.3*factor));
+    const max=calc(params,{...inp,downRub:c.maxPvRub},raw);balance(max);
+    assert.equal(max.total,Math.round(base*.93-max.rows[0].amount*.3*factor));
+    assert.equal(max.share,max.rows[0].amount/(pvFromBase?base:max.total));
+    const shareInput=calc(params,{downShare:max.share,promotionIds:['extra']},raw);balance(shareInput);
+    assert.equal(shareInput.total,max.total);assert.equal(shareInput.rows[0].amount,max.rows[0].amount);
+    assert.match(calc(params,{...inp,downRub:c.maxPvRub+1},raw).error,/Максимальный первоначальный взнос/);
+  }
+});
+test('100% оплаты отменяет график, а неполная оплата сохраняет обязательства',()=>{
+  for(const scheme of ['scheduled','monthly'])for(const pvFromBase of [true,false]){
+    const params={scheme,pvFromBase,pay:{1:50000},milestones:[{share:.25,months:6},{share:.25,months:9}]};
+    for(const inp of [{downRub:8100000},{downShare:1}]){
+      const full=calc(params,inp);balance(full);assert.ok(full.fullPayment);
+      assert.deepEqual(full.rows.map(r=>r.amount),[8100000]);assert.equal(full.maxPvRub,undefined);
+    }
+    assert.match(calc(params,{downRub:8099999}).error,/Максимальный первоначальный взнос/);
+  }
+});
+test('реальный каталог: 4/25 при 5 751 000 из 10 млн ограничивает ПВ, сохраняя этапы',()=>{
+  vm.runInThisContext(fs.readFileSync(new URL('../assets/tools-model.js',import.meta.url),'utf8'));
+  const snapshot=JSON.parse(fs.readFileSync(new URL('../assets/tools.json',import.meta.url),'utf8'));
+  const D=C.buildData(SMToolsModel.calcData(snapshot));
+  const card=(name,downRub)=>C.installments(D,{project:'ДНК — 2 очередь',base,rooms:1,downRub},date).find(c=>c.name===name);
+  const name='Рассрочка 4/25',bad=card(name,5751000);
+  assert.equal(bad.share,.71);assert.equal(bad.total,8100000);
+  assert.equal(bad.maxPvRub,4650000);assert.equal(bad.maxPvShare,.5);
+  assert.match(bad.error,/4\s650\s000/);assert.match(bad.error,/50% стоимости договора/);assert.deepEqual(bad.rows,[]);
+  const atMax=card(name,bad.maxPvRub);balance(atMax);assert.equal(atMax.total,9300000);
+  assert.deepEqual(atMax.rows.map(r=>r.amount),[4650000,2325000,2325000]);
+  assert.match(card(name,bad.maxPvRub+1).error,/Максимальный первоначальный взнос/);
+  const normal=card(name,3000000);balance(normal);
+  assert.deepEqual(normal.rows.map(r=>r.amount),[3000000,2325000,2325000,1650000]);
+  const full=card(name,8100000);balance(full);assert.ok(full.fullPayment);assert.equal(full.rows.length,1);
+
+  const monthly='Рассрочка 20/20',valid=card(monthly,7100000);balance(valid);
+  assert.deepEqual(valid.rows.map(r=>r.amount),[7100000,500000,405000,95000]);
+  assert.equal(valid.maxPvRub,7195000);
+  const monthlyMax=card(monthly,7195000);balance(monthlyMax);
+  assert.deepEqual(monthlyMax.rows.map(r=>r.amount),[7195000,500000,405000]);
+  assert.match(card(monthly,7195001).error,/Максимальный первоначальный взнос/);
+  assert.ok(card(monthly,8100000).fullPayment);
+
+  const noPv='Без первоначального взноса',noPvLimit=card(noPv,5751000);
+  assert.equal(noPvLimit.maxPvRub,5750999);assert.match(noPvLimit.error,/Максимальный первоначальный взнос/);
+  const below=card(noPv,5750999);balance(below);assert.equal(below.total,10000000);
+  assert.deepEqual(below.rows.map(r=>r.amount),[5750999,1250000,1000000,500000,1499001]);
 });
 test('этапы: точные даты и суммы рублей, порядок и остаток, без скрытой ежемесячной суммы',()=>{
   const c=calc({scheme:'scheduled',pay:{1:100000},steps:[2],milestones:[

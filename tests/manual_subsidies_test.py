@@ -85,4 +85,67 @@ class ManualSubsidiesTest(LocalCatalogTest):
         self.assertEqual([r for r in result['records'] if not bank.bank_row(r)],[r for r in previous['records'] if not bank.bank_row(r)])
 
 
+    def test_ambiguous_rate_changes_preserve_each_local_text_field_in_both_imports(self):
+        template = next(p for p in self.bank_source['programs'] if bank.identity(p) == bank.identity(self.row['params']))
+        programs = [dict(template, bank='Регрессионный банк', rate=rate) for rate in (.04, .05)]
+        initial_source = copy.deepcopy(self.bank_source)
+        initial_source['programs'].extend(programs)
+        initial_source['checked_at'] = '2026-11-18T11:00:00+00:00'
+        baseline = store.import_bank_snapshot(bank.with_subsidies(self.catalog, initial_source))
+        project = self.row['project']
+        pair = [r for r in baseline['records'] if r['project'] == project and r['params'].get('bank') == 'Регрессионный банк']
+        self.assertEqual(len(pair), 2)
+        self.assertTrue(all(not bank.has_local_metadata(r) for r in pair))
+        fresh_source = copy.deepcopy(initial_source)
+        fresh_source['checked_at'] = '2026-11-18T12:00:00+00:00'
+        for p in fresh_source['programs']:
+            if p['bank'] == 'Регрессионный банк': p['rate'] += .001
+        remote = source.public_snapshot(baseline)
+        remote['mortgageCheckedAt'] = dict.fromkeys(('da1','da2','dnk2'), fresh_source['checked_at'])
+        for r in remote['records']:
+            if r['params'].get('bank') == 'Регрессионный банк':
+                r['id'] += '-new'
+                r['params']['rate'] += .001
+        def selected(data):
+            return [r for r in data['records'] if r['project'] == project and r['params'].get('bank') == 'Регрессионный банк']
+        for field in ('name', 'description', 'note', 'combination', 'empty_note'):
+            with self.subTest(field=field):
+                changes = copy.deepcopy(pair)
+                for i, r in enumerate(changes):
+                    target = r['params'] if field in ('note','empty_note') else r
+                    target['note' if field == 'empty_note' else field] = '' if field == 'empty_note' else 'Локальный текст ' + str(i)
+                current = store.read(True)
+                current = store.save(current,current['revision'],changes,lambda _,rows:rows,'edit')
+                before = selected(current)
+                direct = bank.with_subsidies(current, fresh_source)
+                self.assertEqual(selected(direct), before)
+                self.assertIn('однозначно', direct['mortgageWarnings'][project])
+                self.assertEqual(direct['mortgageCheckedAt'][project], current['mortgageCheckedAt'][project])
+                imported = store.import_bank_snapshot(remote)
+                self.assertEqual(selected(imported), before)
+                self.assertIn('однозначно', imported['mortgageWarnings'][project])
+                self.assertEqual(imported['mortgageCheckedAt'][project], current['mortgageCheckedAt'][project])
+                self.assertEqual(imported['settings'],current['settings'])
+                # Старый публичный резерв без локальных текстов не должен вытеснить их и на первом импорте.
+                undated = dict(current)
+                undated.pop('mortgageCheckedAt')
+                stale = self.root/'stale-public.json'
+                stale.write_text(json.dumps(source.public_snapshot(baseline)))
+                with patch.object(bank,'PUBLISHED',stale):
+                    first_import = bank.with_subsidies(undated,fresh_source)
+                self.assertEqual(selected(first_import),before)
+                self.assertIn('однозначно',first_import['mortgageWarnings'][project])
+
+        # Контроль: если локального текста нет, новые варианты не задерживаются без причины.
+        current = store.read(True)
+        current = store.save(current,current['revision'],pair,lambda _,rows:rows,'edit')
+        direct = bank.with_subsidies(current,fresh_source)
+        self.assertNotIn(project,direct['mortgageWarnings'])
+        self.assertEqual(sorted(round(r['params']['rate'],6) for r in selected(direct)), [.041,.051])
+        imported = store.import_bank_snapshot(remote)
+        self.assertNotIn(project,imported['mortgageWarnings'])
+        self.assertEqual(sorted((r['params']['rate'],r['name'],r['description']) for r in selected(imported)),
+                         sorted((r['params']['rate'],r['name'],r['description']) for r in selected(direct)))
+
+
 if __name__=='__main__':unittest.main()

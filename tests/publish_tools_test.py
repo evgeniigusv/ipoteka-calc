@@ -7,6 +7,8 @@ from owner_catalog_test import LocalCatalogTest
 import owner_catalog as store
 import tools_source as source
 import publish_tools as publisher
+import tools_editor as editor
+import subsidy_catalog as bank
 
 
 class PublishTest(LocalCatalogTest):
@@ -66,6 +68,40 @@ class PublishTest(LocalCatalogTest):
         self.assertNotIn('another-secret',json.dumps(clean))
         self.assertNotIn('internal-test',json.dumps(clean))
         self.assertEqual(next(r for r in clean['records'] if r['id']==row['id'])['params']['compatiblePromotions'],[])
+
+
+    def test_failed_put_after_bank_import_returns_current_sqlite_revision(self):
+        remote = source.public_snapshot(self.catalog)
+        remote['mortgageCheckedAt'] = dict.fromkeys(('da1','da2','dnk2'),'2026-11-18T12:00:00+00:00')
+        changed = next(r for r in remote['records'] if bank.bank_row(r))
+        changed['params']['subsidy'] = .1234
+        with patch.object(publisher,'remote_snapshot',return_value=('remote-sha',remote)), \
+             patch.object(publisher,'config',return_value=self.conf), \
+             patch.object(publisher,'publish_snapshot',side_effect=RuntimeError('GitHub PUT failed')), \
+             patch.object(editor,'publish',side_effect=publisher.publish_local), \
+             patch.object(store,'backups'):
+            response = editor.publication_response(self.catalog)
+        actual = store.read(True)
+        self.assertTrue(response['saved'])
+        self.assertFalse(response['published'])
+        self.assertIn('GitHub PUT failed',response['error'])
+        self.assertNotEqual(actual['revision'],self.catalog['revision'])
+        self.assertEqual(response['data'],actual)
+        self.assertEqual(next(r for r in actual['records'] if r['id']==changed['id'])['params']['subsidy'],.1234)
+        # Следующая правка из UI применима без искусственного конфликта старой ревизии.
+        updated = store.save(actual,response['data']['revision'],[dict(self.info,name='Следующая правка')],lambda _,rows:rows,'edit')
+        self.assertNotEqual(updated['revision'],actual['revision'])
+
+    def test_failed_reload_does_not_present_stale_revision_as_current(self):
+        with patch.object(editor,'publish',side_effect=RuntimeError('GitHub PUT failed')), \
+             patch.object(editor,'read_catalog',side_effect=RuntimeError('SQLite unavailable')), \
+             patch.object(store,'backups'):
+            response = editor.publication_response(self.catalog)
+        self.assertTrue(response['saved'])
+        self.assertFalse(response['published'])
+        self.assertIsNone(response['data'])
+        self.assertTrue(response['refreshRequired'])
+        self.assertIn('GitHub PUT failed',response['error'])
 
 
 if __name__=='__main__':unittest.main()

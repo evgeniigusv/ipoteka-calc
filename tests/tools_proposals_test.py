@@ -162,6 +162,55 @@ class BatchTest(unittest.TestCase):
         res = self.connection.getresponse()
         return res.status, json.loads(res.read())
 
+    def test_wrong_field_is_a_question_and_correct_partial_patch_can_be_accepted(self):
+        before=owner_catalog.read(True)
+        old=next(r for r in before['records'] if r['kind']=='installment')
+        text='ПВ теперь 40%. Скидку не менять.'
+        item=dict(ITEM,target=old['id'],name=old['name'],project=old['project'],terms=text,combination='',source_ids=[1,2])
+        for edits in ([('disc',.4)], [('minPv',.4),('discFromPv',.4)], []):
+            answer={'question':'','edits':[dict(field=k,value_json=json.dumps(v),quote=text) for k,v in edits]}
+            with self.subTest(edits=edits),patch.object(proposals,'structured',return_value={'items':[item],'questions':[]}), \
+                    patch.object(ai,'generate',return_value=answer):
+                status,result=self.post('propose',text=text)
+            self.assertEqual(status,200)
+            self.assertFalse(result['items'])
+            self.assertTrue(result['questions'])
+            self.assertEqual(owner_catalog.read(True),before)
+        self.publish.assert_not_called()
+        answer={'question':'','edits':[dict(field='minPv',value_json='0.4',quote=text)]}
+        with patch.object(proposals,'structured',return_value={'items':[item],'questions':[]}), \
+                patch.object(ai,'generate',return_value=answer):
+            status,result=self.post('propose',text=text)
+        self.assertEqual(status,200)
+        self.assertFalse(result['questions'])
+        candidate=result['items'][0]
+        self.assertEqual(candidate['record']['params'],dict(old['params'],minPv=.4))
+        self.assertEqual(owner_catalog.read(True),before)  # Preview never writes.
+        status,saved=self.post('accept',revision=result['revision'],items=[candidate])
+        self.assertEqual(status,200)
+        current=owner_catalog.read(True)
+        record=next(r for r in current['records'] if r['id']==old['id'])
+        expected=owner_catalog.retire_installment_fields([dict(old,params=dict(old['params'],minPv=.4))])[0]
+        self.assertEqual(record['params'],expected['params'])
+        self.assertTrue(saved['saved'])
+        self.publish.assert_called_once()
+        self.google.assert_not_called()
+
+    def test_signed_room_sequence_with_swapped_values_is_not_offered(self):
+        before=owner_catalog.read(True)
+        old=next(r for r in before['records'] if r['kind']=='installment')
+        text='Платёж для студии 30 тысяч, для 2к 60 тысяч, для 3к 90 тысяч рублей.'
+        item=dict(ITEM,target=old['id'],name=old['name'],project=old['project'],terms=text,combination='',source_ids=[1])
+        edits=[dict(field='pay.'+str(i),value_json=str(v),quote=text) for i,v in enumerate((90000,30000,60000),1)]
+        with patch.object(proposals,'structured',return_value={'items':[item],'questions':[]}), \
+                patch.object(ai,'generate',return_value={'question':'','edits':edits}):
+            status,result=self.post('propose',text=text)
+        self.assertEqual(status,200)
+        self.assertFalse(result['items'])
+        self.assertTrue(result['questions'])
+        self.assertEqual(owner_catalog.read(True),before)
+        self.publish.assert_not_called()
+
     def test_review_then_one_batch_and_retry(self):
         rev = self.data['revision']
         first = dict(id='test-a', group='test', project='da1', kind='installment', category='installment',

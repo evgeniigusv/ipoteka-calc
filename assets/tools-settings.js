@@ -1,4 +1,4 @@
-/* Личные настройки. setup вызывается только после авторизации локального редактора.
+/* Настройки: публичный просмотр или редактирование после локальной авторизации.
    API: GET /api/settings → {revision, settings}; POST {revision, settings}
    → {data, published, error}. refresh() можно вызывать из render основного редактора. */
 (function (root) {
@@ -31,7 +31,7 @@
     var host = element('details', 'tools-settings');
     host.setAttribute('aria-label', 'Настройки продаж');
     host.append(element('summary', '', 'Настройки продаж'));
-    toolbar.before(host);
+    if(options.mount)options.mount.append(host);else toolbar.before(host);
     var saveButtons = [], resetButtons = [], inputs = {};
     var status = element('p', 'tools-settings-status');
     status.setAttribute('role', 'status');
@@ -85,19 +85,20 @@
       });
       resetButtons.push(reset); bar.append(save, reset); return bar;
     }
-    host.append(status, guard, capSection, flatSection, actionBar());
+    const actions=actionBar();actions.hidden=!!options.readOnly;
+    host.append(status, guard, capSection, flatSection, actions);
     function allowed() { return !options.canSave || options.canSave(); }
     function message(text, error) { status.textContent = text; status.classList.toggle('tools-settings-error', !!error); }
     function controls() {
       var canSave = allowed();
       guard.hidden = canSave;
       saveButtons.forEach(function (button) {
-        button.disabled = busy || !canSave || (settingsReady && !dirty);
+        button.disabled = options.readOnly || busy || !canSave || (settingsReady && !dirty);
         button.textContent = busy ? 'Сохранение…' : settingsReady ? 'Сохранить настройки' : 'Загрузить настройки';
       });
       resetButtons.forEach(function (button) { button.disabled = busy || !dirty; });
-      Object.values(inputs).forEach(function (input) { input.disabled = busy || !settingsReady; });
-      list.querySelectorAll('input').forEach(function (input) { input.disabled = busy || !settingsReady; });
+      Object.values(inputs).forEach(function (input) { input.disabled = options.readOnly || busy || !settingsReady; });
+      list.querySelectorAll('input').forEach(function (input) { input.disabled = options.readOnly || busy || !settingsReady; });
     }
     function fill() {
       Object.keys(inputs).forEach(function (project) {
@@ -171,7 +172,7 @@
       finally { busy = false; controls(); }
     }
     async function saveSettings() {
-      if (busy || destroyed) return;
+      if (options.readOnly || busy || destroyed) return;
       if (!allowed()) { message('Сначала сохраните или отмените изменения инструментов.', true); return; }
       if (!settingsReady) { await loadSettings(); return; }
       if (!dirty) return;
@@ -191,8 +192,8 @@
         if (root.SM_DATA) root.SM_DATA.settings = copy(baseline);
         root.dispatchEvent(new Event('sm-settings-changed'));
         fill(); renderFlats();
-        message((result.published ? 'Настройки сохранены. Публикация запущена.' : 'Настройки сохранены. Публикация не завершена. ' + (result.error || 'Повторите публикацию в основном редакторе.')) +
-          (canAccept ? '' : ' Черновики инструментов сохранены на экране; перед их отправкой требуется сверить версию каталога.'), !result.published);
+        message((result.published ? 'Настройки сохранены. Публикация запущена.' + (result.error ? ' ' + result.error : '') : 'Настройки сохранены. Публикация не завершена. ' + (result.error || 'Повторите публикацию в основном редакторе.')) +
+          (canAccept ? '' : ' Черновики инструментов сохранены на экране; перед их отправкой требуется сверить версию каталога.'), !result.published || !!result.error);
       } catch (e) { message(e.message, true); }
       finally { busy = false; controls(); }
     }
@@ -211,7 +212,13 @@
     flatSection.addEventListener('toggle', function () { if (flatSection.open) loadFlats(); });
     retry.addEventListener('click', loadFlats);
     root.addEventListener('beforeunload', beforeUnload);
-    instance = { refresh: refresh, isDirty: function () { return dirty; }, isBusy: function () { return busy; }, destroy: function () {
+    function show(view){
+      host.open=true;host.classList.toggle('tools-settings-tab',true);
+      capSection.hidden=view==='flats';flatSection.hidden=view!=='flats';
+      capSection.open=true;flatSection.open=view==='flats';
+      if(view==='flats')loadFlats();
+    }
+    instance = { show:show, refresh: refresh, isDirty: function () { return dirty; }, isBusy: function () { return busy; }, destroy: function () {
       destroyed = true; root.removeEventListener('beforeunload', beforeUnload); host.remove(); instance = null;
     } };
     fill(); loadSettings();
