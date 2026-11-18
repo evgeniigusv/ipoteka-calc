@@ -10,9 +10,9 @@
     </div></div></div>
 <section id="public-catalog" class="tools-body" aria-label="Каталог инструментов">
 <nav class="tools-view-tabs" aria-label="Разделы управления">
-<button type="button" class="t-btn" data-tools-view="catalog" aria-pressed="true">Инструменты</button>
-<button type="button" class="t-btn" data-tools-view="flats" aria-pressed="false">Квартиры</button>
-<button type="button" class="t-btn" data-tools-view="compensation" aria-pressed="false">Дополнительные условия</button>
+<button type="button" class="t-btn" disabled data-tools-view="catalog" aria-pressed="true">Инструменты</button>
+<button type="button" class="t-btn" disabled data-tools-view="flats" aria-pressed="false">Квартиры</button>
+<button type="button" class="t-btn" disabled data-tools-view="compensation" aria-pressed="false">Дополнительные условия</button>
 </nav>
 <div id="tools-settings-panel" hidden><div id="tools-settings-owner" hidden><p>Изменения доступны в личном редакторе на Маке владельца.</p><button type="button" class="t-btn t-primary" id="tools-settings-edit">Редактировать условия</button></div></div>
 <div id="tools-catalog-panel"><div class="tools-toolbar">
@@ -53,4 +53,4 @@ const entryParams = new URLSearchParams(location.search);
 window.SM_TOOLS_PARTNER_VIEW = window.parent === window &&
   !['edit', 'template'].some(key => entryParams.has(key)) &&
   entryParams.get('mode') !== 'edit' && !['#new', '#ai'].includes(location.hash);
-</script><script src="assets/tools-loader.js?v=shared-conditions-nav-1"></script><script src="assets/tools-proposals.js?v=ux-review-20261118"></script><script src="assets/tools-window.js?v=interaction-motion-1"></script><script src="assets/tools-form.js?v=project-cost-1"></script><script src="assets/tools-settings.js?v=macro-projects-1"></script><script src="assets/tools.js?v=catalog-disclosure-4"></script></body></html>
+</script><script src="assets/tools-loader.js?v=shared-conditions-nav-1"></script><script src="assets/tools-proposals.js?v=ux-review-20261118"></script><script src="assets/tools-window.js?v=interaction-motion-1"></script><script src="assets/tools-form.js?v=project-cost-1"></script><script src="assets/tools-settings.js?v=macro-projects-1"></script><script src="assets/tools.js?v=catalog-views-ready-1"></script></body></html>

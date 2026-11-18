@@ -661,6 +661,7 @@ document.querySelector('.tools-view-tabs').onclick=e=>{const button=e.target.clo
 $('tools-settings-edit').onclick=()=>ownerAction(view);
 window.addEventListener('popstate',()=>selectView(new URL(location.href).searchParams.get('view')));
 selectView(params.get('view'));
+document.querySelectorAll('[data-tools-view]').forEach(button => { button.disabled = false; });
 
 
 if(showLinkedType)requestAnimationFrame(()=>$('mortgage-type-'+linkedType)?.scrollIntoView({block:'start'}));
