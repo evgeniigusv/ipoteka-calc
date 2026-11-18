@@ -446,13 +446,13 @@ html, body { margin: 0; padding: 0; background: var(--bg); }
   @container sm-note-field (min-width: 25rem) {
     :is(#sm-rate-hint, #sm-date2-hint) { min-block-size: 1lh; }
   }
-  @container sm-note-field (max-width: 30rem) {
+  @container sm-note-field (width < 30.2rem) {
     #sm-program-info { min-block-size: 3lh; }
   }
   @container sm-note-field (max-width: 21rem) {
     #sm-program-info { min-block-size: 4lh; }
   }
-  @container sm-note-field (max-width: 17rem) {
+  @container sm-note-field (width < 17.25rem) {
     :is(#sm-flat-info, #sm-company-hint) { min-block-size: 3lh; }
     #sm-program-info { min-block-size: 5lh; }
   }
