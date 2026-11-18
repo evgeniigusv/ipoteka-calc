@@ -10,6 +10,7 @@
 <script async data-tools-preload src="assets/tools-loader.js?v=shared-conditions-nav-1"></script>
 <link rel="stylesheet" href="assets/style.css?v=quiet-calc-2">
 <link rel="stylesheet" href="assets/themes.css?v=section-transition-1">
+<link rel="expect" blocking="render" href="#sm-theme-switch">
 <script src="assets/theme.js?v=section-transition-1"></script>
 <style>
 .sm .sm-check { display:flex; align-items:center; gap:10px; color:var(--ink); }
@@ -26,7 +27,7 @@
 <main class="sm" id="sm-ipoteka">
   <header class="sm-head"><h1>Ипотечный калькулятор</h1><a class="sm-logo" href="https://da-dom.life/" target="_blank" rel="noopener"><img src="assets/logo-svoboda-dark.svg" width="106" height="56" alt="Свобода мысли"></a></header>
   <div class="sm-nav-row"><nav class="sm-navigation" aria-label="Калькуляторы"><a class="sm-nav" href="./" aria-current="page">Ипотека</a><a class="sm-nav" href="rassrochka.html">Рассрочка</a><a class="sm-nav" href="chpv.html">ЧПВ</a><a class="sm-nav" href="transh.html" aria-label="Траншевая ипотека"><span class="sm-nav-full">Траншевая ипотека</span><span class="sm-nav-short" aria-hidden="true">Транш</span></a><a class="sm-nav" href="tools.html">Инструменты</a></nav><script>SMNavigation.mount(document.currentScript.previousElementSibling)</script>
-    <div class="sm-theme-switch" role="group" aria-label="Тема оформления" hidden>
+    <div id="sm-theme-switch" class="sm-theme-switch" role="group" aria-label="Тема оформления" hidden>
       <span>Тема</span>
       <button type="button" data-theme-choice="classic">Классика</button>
       <button type="button" data-theme-choice="sm">Свобода мысли</button>

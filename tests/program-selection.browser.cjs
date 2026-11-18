@@ -47,7 +47,7 @@ const base='https://evgeniigusv.github.io/ipoteka-calc/';
   const finalHeight = (await result.boundingBox()).height;
   assert(loadingHeight >= finalHeight * 0.8, 'При загрузке ставок карточка расчёта схлопнулась');
   for(const name of ['index','rassrochka','chpv','transh']){
-   await p.goto(base+name+'.html?theme='+theme);await p.waitForFunction(()=>window.SM_TOOLS_DATA && document.querySelector('#sm-project button'));
+   await p.goto(base+name+'.html?theme='+theme,{waitUntil:'domcontentloaded'});await p.waitForFunction(()=>window.SM_TOOLS_DATA && document.querySelector('#sm-project button'));
    if(name==='index'||name==='rassrochka'){
     if(name==='rassrochka')await p.locator('#sm-down-rub').fill('4500000');
     const rows=p.locator('#sm-tbody tr.sm-pick');
