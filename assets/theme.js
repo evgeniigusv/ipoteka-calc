@@ -40,11 +40,9 @@
     };
   }
   const navTripKey = 'ipoteka-calc.section-click';
-  let sectionLink = null;
-  let arrivingSnapshot = null;
   motionAllowed.addEventListener('change', () => {
     if (motionAllowed.matches) return;
-    const ids = ['sm-button-release', 'sm-section-indicator', 'sm-section-ink', 'sm-section-content'];
+    const ids = ['sm-button-release', 'sm-section-indicator', 'sm-section-ink'];
     for (const effect of document.getAnimations()) {
       if (ids.includes(effect.id)) effect.cancel();
     }
@@ -58,23 +56,6 @@
     button.animate([{transform}, {transform:'none'}],
       {id:'sm-button-release', ...motionTiming('press', 'enter', 120)});
   }, true);
-  window.addEventListener('pageswap', event => {
-    if (!sectionLink || sectionLink.href !== event.activation?.entry?.url) event.viewTransition?.skipTransition();
-    sectionLink = null;
-  });
-  window.addEventListener('pagereveal', event => {
-    const snapshot = event.viewTransition;
-    if (!snapshot) return;
-    arrivingSnapshot = snapshot;
-    snapshot.ready.catch(() => {}); // Быстрая загрузка может завершиться до создания снимка.
-    // Готовые разделы сменяют друг друга за один кадр. При медленной сети показываем загрузку.
-    const showPage = () => snapshot.skipTransition();
-    const timer = setTimeout(showPage, 450);
-    snapshot.finished.then(() => clearTimeout(timer));
-    const whenParsed = () => Promise.resolve(window.SM_TOOLS_READY).then(showPage, showPage);
-    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', whenParsed, {once:true});
-    else whenParsed();
-  });
   // Вызывается сразу после разметки навигации, до загрузки скриптов расчёта.
   window.SMNavigation = {
     mount(nav) {
@@ -92,43 +73,74 @@
       pill.setAttribute('aria-hidden', 'true');
       active.prepend(pill);
 
+      let pending = null;
+      let travel = null;
+      let ink = null;
+      const now = () => performance.timeOrigin + performance.now();
+
+      // Положение выражено в долях ширины меню, чтобы продолжить движение в новом документе.
+      function position(rect) {
+        const box = nav.getBoundingClientRect();
+        return {x:(rect.left - box.left) / box.width, width:rect.width / box.width};
+      }
+      function glide(target, trip) {
+        travel?.cancel();
+        ink?.cancel();
+        nav.dataset.travelling = '';
+        nav.querySelector('[data-destination]')?.removeAttribute('data-destination');
+        target.dataset.destination = '';
+        target.prepend(pill);
+        const timing = motionTiming('navigation', 'navigation', 200);
+        const elapsed = Math.max(0, now() - trip.started);
+        if (!motionAllowed.matches || elapsed >= timing.duration) return;
+        const box = nav.getBoundingClientRect(), end = target.getBoundingClientRect();
+        if (!box.width || !end.width) return;
+        const dx = box.left + trip.x * box.width - end.left;
+        const scale = trip.width * box.width / end.width;
+        travel = pill.animate([
+          {transform:'translateX(' + dx + 'px) scaleX(' + scale + ')'},
+          {transform:'none'}
+        ], {id:'sm-section-indicator', ...timing});
+        // Пока плашка ещё в пути, подпись цели остаётся читаемой на светлом фоне.
+        ink = target.animate([{color:'var(--grey)'}, {color:'var(--grey)', offset:.55}, {}],
+          {id:'sm-section-ink', ...timing});
+        travel.currentTime = ink.currentTime = elapsed;
+      }
+      function restore() {
+        pending = null;
+        travel?.cancel();
+        ink?.cancel();
+        travel = null;
+        delete nav.dataset.travelling;
+        nav.querySelector('[data-destination]')?.removeAttribute('data-destination');
+        active.prepend(pill);
+        try { sessionStorage.removeItem(navTripKey); } catch {}
+      }
+
       let trip;
       try {
         trip = JSON.parse(sessionStorage.getItem(navTripKey));
         sessionStorage.removeItem(navTripKey);
-      } catch { /* Навигация работает и без хранилища. */ }
-      if (trip?.to === location.href && links[trip.from] && motionAllowed.matches &&
+      } catch {}
+      if (trip?.to === location.href && Number.isFinite(trip.x) && trip.width > 0 &&
+          now() - trip.started < 15000 && motionAllowed.matches &&
           performance.getEntriesByType('navigation')[0]?.type === 'navigate') {
-        const start = links[trip.from].getBoundingClientRect(), end = active.getBoundingClientRect();
-        if (start.width && end.width) {
-          const timing = {...motionTiming('navigation', 'navigation', 320), fill:'backwards'};
-          const travel = pill.animate([
-            {transform:'translateX(' + (start.left-end.left) + 'px) scaleX(' + start.width/end.width + ')',backgroundColor:'color-mix(in srgb, var(--blue, var(--sky)) 40%, white)'},
-            {transform:'none'}
-          ], {...timing,id:'sm-section-indicator'});
-          const ink = active.animate([{color:'var(--grey)'},{color:'var(--grey)',offset:.55},{}], {...timing,id:'sm-section-ink'});
-          travel.pause(); ink.pause();
-          const reveal = () => {
-            if (!motionAllowed.matches) { travel.cancel(); ink.cancel(); return; }
-            travel.play(); ink.play();
-            const panel = document.querySelector('main.sm > .sm-grid, #public-catalog');
-            panel?.animate([{opacity:.48},{opacity:1}], {id:'sm-section-content', ...motionTiming('page', 'out', 270)});
-          };
-          // Первый кадр готов после разбора разметки; фоновые ресурсы могут грузиться дольше.
-          const onPaint = () => requestAnimationFrame(() => {
-            if (arrivingSnapshot) arrivingSnapshot.finished.then(reveal);
-            else reveal();
-          });
-          if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', onPaint, {once:true});
-          else onPaint();
-        }
+        root.classList.add('sm-arriving');
+        glide(active, trip);
+        const settle = () => {
+          if (!pending) {
+            delete nav.dataset.travelling;
+            delete active.dataset.destination;
+          }
+        };
+        if (travel) travel.finished.then(settle, () => {});
+        else settle();
       }
-
-      let pending = null;
-      window.addEventListener('pageshow', () => { pending = null; });
+      window.addEventListener('pageshow', event => { if (event.persisted) restore(); });
       window.navigation?.addEventListener('navigate', event => {
-        if (pending?.href === event.destination.url) {
-          event.signal.addEventListener('abort', () => { pending = null; }, {once:true});
+        const link = pending;
+        if (link?.href === event.destination.url) {
+          event.signal.addEventListener('abort', () => { if (pending === link) restore(); }, {once:true});
         }
       });
       nav.addEventListener('click', event => {
@@ -137,6 +149,11 @@
             event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
         if (target === active) {
           event.preventDefault();
+          if (pending) {
+            window.stop();
+            restore();
+            return;
+          }
           // Верхняя ссылка «Инструменты» возвращает из подраздела в общий каталог.
           const catalog = document.querySelector('#public-catalog:not([hidden]) [data-tools-view="catalog"][aria-pressed="false"]');
           catalog?.click();
@@ -147,28 +164,52 @@
           return;
         }
         if (event.detail === 0 || !motionAllowed.matches) return;
-        sectionLink = pending = target;
-        try { sessionStorage.setItem(navTripKey, JSON.stringify({from:links.indexOf(active),to:target.href})); } catch {}
+        const journey = {...position(pill.getBoundingClientRect()), started:now(), to:target.href};
+        pending = target;
+        glide(target, journey);
+        try { sessionStorage.setItem(navTripKey, JSON.stringify(journey)); } catch {}
 
       });
-      // Прогреваем только публичную HTML-страницу, на которую нацелился пользователь.
+      // Читаем только публичную оболочку. Документ попадёт в обычный HTTP-кэш браузера,
+      // а ссылки из инертного шаблона позволят заранее получить оформление и код раздела.
       const prefetched = new Set();
       const publicSite = location.hostname === 'evgeniigusv.github.io';
-      function warm(event) {
-        const target = event.target.closest('a');
+      const assetBase = new URL('assets/', location.href);
+      async function warm(target) {
         if (!publicSite || !target || target === active || navigator.connection?.saveData) return;
-        const url = new URL(target.href);
-        url.searchParams.set('theme', root.dataset.theme);
-        if (prefetched.has(url.href)) return;
-        const hint = document.createElement('link');
-        hint.rel = 'prefetch';
-        hint.href = url.href;
-        document.head.append(hint);
-        prefetched.add(url.href);
+        const href = target.href;
+        if (prefetched.has(href)) return;
+        prefetched.add(href);
+        try {
+          const response = await fetch(href, {priority:'low'});
+          if (!response.ok) return;
+          const template = document.createElement('template');
+          template.innerHTML = await response.text();
+          for (const tag of template.content.querySelectorAll('link[rel="stylesheet"][href], script[src]')) {
+            const asset = new URL(tag.getAttribute('href') || tag.getAttribute('src'), href);
+            if (!asset.href.startsWith(assetBase.href) || prefetched.has(asset.href)) continue;
+            prefetched.add(asset.href);
+            const hint = document.createElement('link');
+            hint.rel = 'prefetch';
+            hint.as = tag.tagName === 'LINK' ? 'style' : 'script';
+            hint.href = asset.href;
+            document.head.append(hint);
+          }
+        } catch { /* Обычная ссылка работает и без предзагрузки. */ }
       }
-      nav.addEventListener('pointerover', warm);
-      nav.addEventListener('focusin', warm);
-      nav.addEventListener('pointerdown', warm, {passive: true});
+      const warmLink = event => warm(event.target.closest('a'));
+      nav.addEventListener('pointerover', warmLink);
+      nav.addEventListener('focusin', warmLink);
+      nav.addEventListener('pointerdown', warmLink, {passive:true});
+      // HTML публичных разделов невелик. Загрузить его заранее, пока менеджер работает.
+      if (publicSite) window.addEventListener('load', () => {
+        for (const asset of document.querySelectorAll('link[rel="stylesheet"][href], script[src]')) {
+          prefetched.add(asset.href || asset.src);
+        }
+        Promise.resolve(window.SM_TOOLS_READY).then(() => {
+          if (!document.hidden) links.forEach(warm);
+        });
+      }, {once:true});
     }
   };
 

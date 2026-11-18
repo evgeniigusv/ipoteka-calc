@@ -35,9 +35,54 @@
     root.addEventListener('sm-settings-changed', function () { updateWarning(); });
     function normalize(value) { return String(value || '').trim().replace(/^(?:кв\.?\s*)?№?\s*/i, '').toLowerCase(); }
     function current() { var i = Number(select.value); return i > 0 ? list[i - 1] : null; }
+    var areaFormat = new Intl.NumberFormat('ru-RU');
+    var choices = [];
+    const richPicker = root.CSS?.supports('appearance: base-select') && root.CSS.supports('selector(::picker(select))');
+    function flatChoice(row, index) {
+      const number = '№ ' + row.num + (row.house_id === 10899161 ? ' · ПИФ' : '');
+      const details = 'этаж ' + (row.floor || '—') + ' · ' + areaFormat.format(Number(row.area)) + ' м²';
+      const label = [number, details, row.status].filter(Boolean).join(' · ');
+      return {row, index, value:String(index + 1), number, details, label};
+    }
+    function rowContent(choice) {
+      const content = document.createElement('span');
+      content.className = 'sm-flat-row';
+      const number = document.createElement('span');
+      number.className = 'sm-flat-row__number';
+      number.textContent = choice.number;
+      const details = document.createElement('span');
+      details.className = 'sm-flat-row__details';
+      details.textContent = choice.details;
+      // Сохраняем исходный текст option и при копировании, и в закрытом поле.
+      const separator = document.createElement('span');
+      separator.hidden = true;
+      separator.textContent = ' · ';
+      const identity = document.createElement('span');
+      identity.className = 'sm-flat-row__identity';
+      identity.append(number, separator, details);
+      content.append(identity);
+      if (choice.row.status) {
+        const status = document.createElement('span');
+        status.className = 'sm-flat-row__status';
+        status.textContent = choice.row.status;
+        content.append(separator.cloneNode(true), status);
+      }
+      return content;
+    }
+    function nativeOption(choice) {
+      if (!choice.option) {
+        const option = new Option(choice.label, choice.value);
+        if (richPicker) {
+          option.setAttribute('aria-label', choice.label);
+          option.replaceChildren(rowContent(choice));
+        }
+        choice.option = option;
+      }
+      return choice.option;
+    }
     function matches() {
       var query = normalize(search.value);
-      return list.map(function (row, i) { return { row: row, index: i }; }).filter(function (item) {
+      return choices.filter(function (item) {
         return (houses[project] || []).indexOf(item.row.house_id) >= 0 && (!query || normalize(item.row.num).indexOf(query) >= 0);
       });
     }
@@ -46,12 +91,10 @@
       if (!loaded) return 'Загрузка квартир из Macro…';
       return 'Обновление Macro: ' + updated + ' (время сервера). Наличие и цену уточняйте в Macro.';
     }
-    function title(row) {
-      return '№ ' + row.num + (row.house_id === 10899161 ? ' · ПИФ' : '') +
-        ' · этаж ' + (row.floor || '—') + ' · ' + Number(row.area).toLocaleString('ru-RU') + ' м²' + (row.status ? ' · ' + row.status : '');
-    }
     var combo = root.SMFlatSearch?.setup(search, {
-      choices: () => matches().map(item => ({value: String(item.index + 1), label: title(item.row)})),
+      choices: matches,
+      rowContent,
+      selectedValue: () => select.value,
       emptyMessage: () => failed ? 'Список недоступен. Цену можно ввести вручную.'
         : !loaded ? 'Загрузка квартир из Macro…' : 'Совпадений нет. Цену можно ввести вручную.',
       choose: value => {
@@ -62,10 +105,8 @@
     function refresh() {
       var found = matches(), query = normalize(search.value), exact = found.filter(function (it) { return normalize(it.row.num) === query; });
       select.replaceChildren(new Option(query ? 'Выберите квартиру или введите цену' : 'Выбрать из списка', ''));
-      found.forEach(function (item) {
-        select.add(new Option(title(item.row), String(item.index + 1)));
-      });
-      combo?.refresh();
+      select.append(...found.map(nativeOption));
+      select.value = '';
       let issue = '';
       if (failed) issue = 'Список квартир недоступен. Укажите номер и цену вручную.';
       else if (loaded && query && !found.length) issue = 'Квартира не найдена в остатке Macro. Цену можно ввести вручную.';
@@ -143,6 +184,7 @@
       selectedCash = null;
       var exact = refresh();
       if (loaded) applyExact(exact);
+      combo?.refresh();
       if (document.activeElement === search) combo?.open();
       options.onChange();
     }
@@ -177,10 +219,11 @@
       if (!r.ok) throw new Error('no data'); return r.json();
     }).then(function (data) {
       if (!Array.isArray(data.rows) || !data.updated) throw new Error('invalid data');
-      list = data.rows; updated = data.updated; loaded = true;
+      list = data.rows; choices = list.map(flatChoice); updated = data.updated; loaded = true;
       var exact = refresh();
       if (!composing && !manualAfterQuery && applyExact(exact)) options.onChange();
-    }).catch(function () { failed = true; refresh(); });
+      combo?.refresh();
+    }).catch(function () { failed = true; refresh(); combo?.refresh(); });
     return {
       setProject: setProject,
       cashPrice: function(){return current() && options.discount && options.price.value===selectedPrice && options.discount.value===selectedDiscount ? selectedCash : null;},

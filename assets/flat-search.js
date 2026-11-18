@@ -1,7 +1,7 @@
 /* Редактируемый поиск квартиры. Фокус и текст всегда принадлежат исходному полю. */
 (function (root) {
   'use strict';
-  function setup(input, { choices, emptyMessage, choose }) {
+  function setup(input, { choices, rowContent, selectedValue = () => '', emptyMessage, choose }) {
     const field = input.parentElement;
     field.classList.add('sm-flat-search');
     const popup = document.createElement('div');
@@ -21,6 +21,7 @@
     input.setAttribute('aria-controls', list.id);
     let active = -1, expanded = false, transition = 0;
 
+    let rendered = [];
     function highlight(index) {
       const previous = list.children[active], next = list.children[index];
       if (previous) previous.setAttribute('aria-selected', 'false');
@@ -43,24 +44,40 @@
       const rect = field.getBoundingClientRect();
       const below = top + (viewport?.height || root.innerHeight) - rect.bottom - 8;
       const above = rect.top - top - 8;
-      const flip = below < 180 && above > below;
+      // У границы экранной клавиатуры небольшое изменение высоты не переворачивает открытый список.
+      const margin = popup.hasAttribute('data-open') ? 20 : 0;
+      const bias = popup.classList.contains('sm-flat-search__popup--above') ? margin : -margin;
+      const flip = below < 180 + bias && above + bias > below;
       popup.classList.toggle('sm-flat-search__popup--above', flip);
       popup.style.setProperty('--sm-flat-space', Math.max(0, flip ? above : below) + 'px');
+    }
+    function markCurrent(current) {
+      const previous = list.querySelector('[aria-current]');
+      if (previous) previous.removeAttribute('aria-current');
+      const selected = current && document.getElementById(list.id + '-' + current);
+      if (selected) selected.setAttribute('aria-current', 'true');
     }
     function refresh() {
       if (!expanded) return;
       highlight(-1);
       const items = choices();
-      list.replaceChildren(...items.map(({ value, label }) => {
-        const option = document.createElement('div');
-        option.className = 'sm-flat-search__option';
-        option.setAttribute('role', 'option');
-        option.setAttribute('aria-selected', 'false');
-        option.id = list.id + '-' + value;
-        option.dataset.value = value;
-        option.textContent = label;
-        return option;
-      }));
+      const current = selectedValue();
+      if (items.length !== rendered.length || items.some((item, i) => item !== rendered[i])) {
+        list.replaceChildren(...items.map(item => {
+          const option = document.createElement('div');
+          option.className = 'sm-flat-search__option';
+          option.setAttribute('role', 'option');
+          option.setAttribute('aria-label', item.label);
+          option.setAttribute('aria-selected', 'false');
+          option.id = list.id + '-' + item.value;
+          option.dataset.value = item.value;
+          if (rowContent) option.append(rowContent(item));
+          else option.textContent = item.label;
+          return option;
+        }));
+        rendered = items;
+      }
+      markCurrent(current);
       status.className = items.length ? 'sm-flat-search__sr' : 'sm-flat-search__message';
       status.textContent = items.length ? 'Найдено квартир: ' + items.length : emptyMessage();
       popup.scrollTop = 0;
@@ -81,7 +98,7 @@
       if (!expanded && !immediate) return;
       expanded = false;
       const closing = ++transition;
-      highlight(-1);
+      input.removeAttribute('aria-activedescendant');
       input.setAttribute('aria-expanded', 'false');
       popup.inert = true;
       popup.setAttribute('aria-hidden', 'true');
@@ -93,6 +110,8 @@
       });
     }
     function commit(option) {
+      if (list.children[active] !== option) highlight(-1);
+      markCurrent(option.dataset.value);
       close();
       choose(option.dataset.value);
     }

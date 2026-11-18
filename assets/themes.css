@@ -3,8 +3,8 @@
   --sm-motion-color: 150ms;
   --sm-motion-result: 195ms;
   --sm-motion-result-accent: 380ms;
-  --sm-motion-navigation: 320ms;
-  --sm-motion-page: 270ms;
+  --sm-motion-navigation: 200ms;
+  --sm-motion-page: 150ms;
   --sm-motion-list: 260ms;
   --sm-motion-popup: 180ms;
   --sm-motion-dialog: 190ms;
@@ -172,7 +172,7 @@
   }
   .sm:not(.sm-pdf) .sm-navigation a[aria-current] { color: white; }
   [data-theme="sm"] .sm:not(.sm-pdf) .sm-navigation a[aria-current] { color: var(--graphite); }
-  .sm-nav-indicator, .sm-navigation a[aria-current]:not(:has(.sm-nav-indicator))::before {
+  .sm-nav-indicator, .sm-navigation:not([data-travelling]) a[aria-current]:not(:has(.sm-nav-indicator))::before {
     position: absolute;
     inset: 0;
     z-index: -1;
@@ -182,6 +182,9 @@
     transform-origin: left center;
     pointer-events: none;
   }
+  .sm:not(.sm-pdf) .sm-navigation[data-travelling] a[aria-current]:not([data-destination]) { color: var(--grey); }
+  .sm:not(.sm-pdf) .sm-navigation a[data-destination] { color: var(--white); }
+  [data-theme="sm"] .sm:not(.sm-pdf) .sm-navigation a[data-destination] { color: var(--graphite); }
   .sm-navigation a:focus-visible { outline: 2px solid var(--sky); outline-offset: -3px; }
 }
 @media screen and (hover: hover) and (pointer: fine) {
@@ -219,13 +222,10 @@
 }
 
 @media screen and (prefers-reduced-motion: no-preference) {
-  @view-transition { navigation: auto; }
-  /* Браузер держит неподвижный снимок до готовности следующего раздела. */
-  ::view-transition-group(root) { animation: none; }
-  ::view-transition-old(root), ::view-transition-new(root) {
-    animation-play-state: paused;
+  .sm-arriving :is(main.sm > .sm-grid, #public-catalog) {
+    animation: sm-section-content var(--sm-motion-page) var(--sm-ease-enter);
   }
-  ::view-transition-new(root) { visibility: hidden; }
+  @keyframes sm-section-content { from { opacity: .86; } to { opacity: 1; } }
 }
 
 @media screen and (prefers-reduced-motion: no-preference) {

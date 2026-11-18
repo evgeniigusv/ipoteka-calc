@@ -34,7 +34,10 @@
     });
     return checked;
   }
+  if(window.SM_INSTALLMENTS_READY)return;
   window.SM_INSTALLMENTS_READY=(async function(){
+    // Без общего загрузчика (в том числе при ошибке его скрипта) снимок читается сразу.
+    if(window.SM_TOOLS_PRIMARY_READY && await window.SM_TOOLS_PRIMARY_READY)return;
     var controller=new AbortController(),timer=setTimeout(function(){controller.abort();},12000);
     try {
       var response=await fetch('assets/installments.json',{cache:'no-store',signal:controller.signal});

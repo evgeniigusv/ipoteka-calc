@@ -52,7 +52,7 @@ async function check(browser, width, entry = partner) {
       }
       const base = [partner,owner].find(base=>request.url().startsWith(base));
       if (!base) return route.abort();
-      const file = path.join(root,decodeURIComponent(url.pathname.slice(new URL(base).pathname.length)));
+      const file = path.join(root,decodeURIComponent(url.pathname.slice(new URL(base).pathname.length)) || 'index.html');
       return route.fulfill({path:file});
     });
     const page = await context.newPage();

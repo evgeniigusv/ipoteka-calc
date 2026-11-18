@@ -93,3 +93,79 @@ for(const ok of [true,false]){
   assert.equal(p.window.SM_TOOLS_STATUS.fallback,!ok);
   if(!ok)assert.deepEqual(p.window.SM_DATA.mortgage,['legacy']);
 }
+
+// Настоящие скрипты в порядке defer: публичный каталог, затем резерв этой страницы.
+const tick=()=>new Promise(resolve=>setImmediate(resolve));
+function gate(){
+  let resolve;
+  const promise=new Promise(done=>{resolve=done;});
+  return {resolve,promise};
+}
+for(const [kind,readyKey,statusKey] of [
+  ['mortgage','SM_MORTGAGE_READY','SM_MORTGAGE_STATUS'],
+  ['installments','SM_INSTALLMENTS_READY','SM_INSTALLMENTS_STATUS']
+]){
+  const loader=fs.readFileSync('assets/'+kind+'-loader.js','utf8');
+  const updated=new Date().toISOString(),old='2020-01-01T00:00:00Z';
+  const catalogData={...data,checked_at:updated,full_checked_at:old,
+    mortgageCheckedAt:{da1:old,da2:updated,dnk2:updated},mortgageWarnings:{da1:'Ошибка источника'}};
+  const backup=JSON.parse(fs.readFileSync('assets/'+kind+'.json','utf8'));
+  backup.checked_at=old;
+  for(const scenario of ['catalog','invalid','offline-before-backup-script']){
+    const catalog=gate(),snapshot=gate(),events=new EventTarget(),calls=[];
+    const warning=[];
+    const window={SM_DATA:{mortgage:[],installments:[]},SMToolsModel:M,addEventListener:()=>{}};
+    const document={
+      readyState:'interactive',addEventListener:events.addEventListener.bind(events),
+      querySelector:()=>({appendChild:el=>warning.push(el.textContent)}),createElement:()=>({})
+    };
+    const ctx=vm.createContext({window,document,location:{hostname:'example.org',port:''},AbortController,Date,setTimeout,clearTimeout,
+      fetch:(url,options)=>{
+        calls.push([url,options.cache]);
+        if(url==='assets/tools.json')return catalog.promise;
+        assert.equal(url,'assets/'+kind+'.json');
+        return snapshot.promise;
+      }
+    });
+    vm.runInContext(source,ctx);
+    let ready=false;
+    window.SM_TOOLS_READY.then(()=>{ready=true;});
+    if(scenario==='offline-before-backup-script'){
+      catalog.resolve({ok:false,status:503});
+      await tick();
+      assert.equal(ready,false);
+    }
+    vm.runInContext(loader,ctx);
+    vm.runInContext(loader,ctx);
+    events.dispatchEvent(new Event('DOMContentLoaded'));
+    if(scenario!=='offline-before-backup-script'){
+      await tick();
+      assert.deepEqual(calls,[['assets/tools.json','no-cache']]);
+      catalog.resolve(reply(scenario==='invalid'?{}:catalogData));
+    }
+    await tick();
+    if(scenario==='catalog'){
+      assert.equal(ready,true);
+      await window[readyKey];
+      assert.equal(window.SM_TOOLS_STATUS.fallback,false);
+      assert.deepEqual(calls,[['assets/tools.json','no-cache']]);
+      assert.deepEqual(warning,[]);
+      const da1=window.SM_MORTGAGE_STATUS.byProject[M.projects.da1];
+      assert.equal(da1.stale,true);
+      assert.equal(da1.fallback,true);
+      assert.match(da1.message,/Ошибка источника/);
+      assert.equal(window.SM_MORTGAGE_STATUS.byProject[M.projects.da2].stale,false);
+      assert.equal(window.SM_INSTALLMENTS_STATUS.stale,true);
+    }else{
+      assert.equal(ready,false);
+      assert.deepEqual(calls,[['assets/tools.json','no-cache'],['assets/'+kind+'.json','no-store']]);
+      snapshot.resolve(reply(backup));
+      await Promise.all([window.SM_TOOLS_READY,window[readyKey]]);
+      assert.equal(window.SM_TOOLS_STATUS.fallback,true);
+      assert.equal(window[statusKey].stale,true);
+      assert.equal(window[statusKey].fallback,false);
+      assert.equal(window.SM_DATA[kind].length,backup.programs.length);
+      assert.match(warning.join(' '),/резервные условия/);
+    }
+  }
+}

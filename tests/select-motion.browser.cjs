@@ -1,5 +1,6 @@
 // CHROMIUM_BIN=/path/to/browser node tests/select-motion.browser.cjs [--live]
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
 const path = require('node:path');
 const os = require('node:os');
 const {chromium} = require(require.resolve('playwright-core', {paths: [
@@ -9,14 +10,18 @@ const base = 'https://evgeniigusv.github.io/ipoteka-calc/';
 const root = path.resolve(__dirname, '..');
 
 async function frames(field, count = 18) {
-  return field.evaluate(async (select, count) => {
-    const values = [];
+  const {values, tops} = await field.evaluate(async (select, count) => {
+    const values = [], tops = [];
     for (let i = 0; i < count; i++) {
       await new Promise(requestAnimationFrame);
-      values.push(Number(getComputedStyle(select, '::picker(select)').opacity));
+      const opacity = Number(getComputedStyle(select, '::picker(select)').opacity);
+      values.push(opacity);
+      if (opacity > 0) tops.push(select.options[0].getBoundingClientRect().top);
     }
-    return values;
+    return {values, tops};
   }, count);
+  if (tops.length) assert.ok(Math.max(...tops) - Math.min(...tops) < 1, 'Текст меню неподвижен во время перехода');
+  return values;
 }
 
 async function run(browser, width, theme, reduced) {
@@ -68,13 +73,61 @@ async function run(browser, width, theme, reduced) {
     assert(await page.locator('#sm-flat-search').inputValue());
     const price = await page.locator('#sm-price').inputValue();
     assert(Number(price.replace(/\D/g, '')) > 0);
+    const label = await field.evaluate(el => el.selectedOptions[0].label);
+    await field.click();
+    const selected = page.getByRole('option', {name:label, exact:true});
+    assert.equal(await selected.count(), 1);
+    const layout = await selected.evaluate(el => {
+      const bounds = part => el.querySelector(part).getBoundingClientRect();
+      return {
+        text: el.text, name:el.getAttribute('aria-label'),
+        twoLines:bounds('.sm-flat-row__details').top >= bounds('.sm-flat-row__number').bottom,
+        rendered:bounds('.sm-flat-row__number').height > 0
+      };
+    });
+    assert.deepEqual(layout, {text:label, name:label, twoLines:true, rendered:true});
+    await page.keyboard.press('Escape');
+    assert.equal(await field.evaluate(el => el.selectedOptions[0].label), label);
     assert.deepEqual(errors, []);
     console.log(theme, width, reduced ? 'уменьшенное движение' : 'обычное движение', '— границы, кадры, прокрутка, повторный клик, клавиатура и выбор квартиры проверены');
+  } finally { await page.close(); }
+}
+// Моделируем отсутствие оформляемого picker и проверяем настоящие текстовые option.
+async function nativeFallback(browser) {
+  const page = await browser.newPage();
+  try {
+    await page.addInitScript(() => {
+      const supports = CSS.supports.bind(CSS);
+      CSS.supports = (...args) => args[0] !== 'appearance: base-select' && supports(...args);
+    });
+    await page.route(base + '**', route => {
+      const file = new URL(route.request().url()).pathname.slice('/ipoteka-calc/'.length) || 'index.html';
+      if (file === 'assets/select.css') {
+        const sharedStyles = fs.readFileSync(path.join(root,file), 'utf8').split('@supports (appearance: base-select)')[0];
+        return route.fulfill({contentType:'text/css', body:sharedStyles});
+      }
+      return route.fulfill({path:path.join(root, file)});
+    });
+    await page.goto(base);
+    const field = page.locator('#sm-flat'), first = field.locator('option').nth(1);
+    await first.waitFor({state:'attached'});
+    const label = await first.textContent();
+    assert.match(label, /^№ .+ · этаж .+ · .+ м²/);
+    assert.equal(await first.locator('*').count(), 0);
+    await field.selectOption({label});
+    assert.equal(await field.evaluate(el => el.selectedOptions[0].label), label);
+    assert.ok(Number((await page.locator('#sm-price').inputValue()).replace(/\D/g,'')) > 0);
+    const search = page.locator('#sm-flat-search');
+    await search.focus();
+    const list = page.getByRole('listbox', {name:'Подсказки по номеру квартиры'});
+    assert.equal(await list.getByRole('option', {name:label,exact:true}).count(), 1);
+    console.log('Системный select — полная подпись, выбор, цена и отдельный поиск проверены');
   } finally { await page.close(); }
 }
 (async () => {
   const browser = await chromium.launch({executablePath: process.env.CHROMIUM_BIN});
   try {
-    for (const args of [[1280,'classic',false], [390,'sm',false], [320,'classic',true]]) await run(browser, ...args);
+    if (!process.argv.includes('--live')) await nativeFallback(browser);
+    for (const args of [[1280,'classic',false], [1280,'sm',false], [390,'classic',false], [390,'sm',false], [320,'classic',true]]) await run(browser, ...args);
   } finally { await browser.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });

@@ -17,19 +17,19 @@ const base='https://evgeniigusv.github.io/ipoteka-calc/';
   await p.addInitScript(() => {
     window.indicatorFrames = new Set();
     window.contentFrames = new Set();
-    addEventListener('DOMContentLoaded', () => {
+    (() => {
       const stop = performance.now() + 3000;
       function sample() {
         for (const a of document.getAnimations()) {
           if (a.playState !== 'running') continue;
           const el = a.effect.target;
           if (a.id === 'sm-section-indicator') window.indicatorFrames.add(getComputedStyle(el).transform);
-          if (a.id === 'sm-section-content') window.contentFrames.add(getComputedStyle(el).opacity);
+          if (a.animationName === 'sm-section-content') window.contentFrames.add(getComputedStyle(el).opacity);
         }
         if (performance.now() < stop) requestAnimationFrame(sample);
       }
       sample();
-    }, {once:true});
+    })();
     window.routeMovement = [];
     addEventListener('pagereveal', event => {
       const transition = event.viewTransition;
@@ -114,17 +114,28 @@ const base='https://evgeniigusv.github.io/ipoteka-calc/';
    }
    await checkCurrentSection();
   }
-  // Пока следующее HTML-окно в сети, текущий индикатор и расчёт должны оставаться вместе.
+  // Задерживаем следующий документ. Плашка должна двинуться ещё на прежней странице.
   await p.evaluate(() => {
-    document.addEventListener('click', () => {
-      setTimeout(() => {
-        const link = document.querySelector('.sm-navigation a[aria-current]');
-        const pill = link.querySelector('.sm-nav-indicator');
-        const aligned = !pill.getAnimations().length && Math.abs(pill.getBoundingClientRect().left - link.getBoundingClientRect().left) < 2;
-        sessionStorage.setItem('test-menu-aligned', String(aligned));
-      }, 60);
-    }, {once:true});
+    document.addEventListener('click', event => {
+      const target = event.target.closest('a');
+      const from = document.querySelector('.sm-navigation a[aria-current]').getBoundingClientRect().left;
+      let frames = 0;
+      const sample = () => {
+        const pill = document.querySelector('.sm-navigation .sm-nav-indicator');
+        if (target.contains(pill) && Math.abs(pill.getBoundingClientRect().left - from) > 1) {
+          sessionStorage.setItem('test-menu-moved', 'true');
+        } else if (++frames < 12) requestAnimationFrame(sample);
+      };
+      requestAnimationFrame(sample);
+    }, {capture:true, once:true});
   });
+  let allowCatalog;
+  const heldCatalog = new Promise(resolve => { allowCatalog = resolve; });
+  await p.route('**/assets/tools.json', async route => {
+    await heldCatalog;
+    if (process.argv.includes('--live')) await route.continue();
+    else await route.fulfill({path:path.join(root,'assets/tools.json')});
+  }, {times:1});
   await p.route('**/tools.html?*', async route => {
     if (!route.request().isNavigationRequest()) { await route.abort(); return; }
     await new Promise(resolve => setTimeout(resolve, 180));
@@ -132,9 +143,14 @@ const base='https://evgeniigusv.github.io/ipoteka-calc/';
     else await route.fulfill({path: path.join(root, 'tools.html')});
   });
   await p.locator('.sm-navigation a[href*="tools.html"]').click();
-  assert.equal(await p.evaluate(() => sessionStorage.getItem('test-menu-aligned')), 'true');
+  assert.equal(await p.evaluate(() => sessionStorage.getItem('test-menu-moved')), reduced ? null : 'true');
+  // Новый раздел уже нарисован, хотя ответ каталога всё ещё удерживается тестом.
+  await p.locator('#public-catalog').waitFor({state:'visible'});
+  assert.equal(await p.evaluate(() => !!window.SM_TOOLS_DATA), false);
+  assert.equal(await p.evaluate(() => document.getAnimations().some(a => a.effect.pseudoElement?.startsWith('::view-transition'))), false);
+  allowCatalog();
   await p.waitForFunction(() => window.SM_TOOLS_DATA);
-  if (!reduced) await p.waitForFunction(() => indicatorFrames.size > 1 && contentFrames.size > 1);
+  if (!reduced) await p.waitForFunction(() => contentFrames.size > 1);
   else assert.equal(await p.evaluate(() => indicatorFrames.size + contentFrames.size), 0);
   assert.deepEqual(await p.evaluate(() => window.routeMovement), []);
   await p.locator('[data-tools-view="flats"]').click();
@@ -149,7 +165,7 @@ const base='https://evgeniigusv.github.io/ipoteka-calc/';
   assert.equal(await p.locator('[data-tools-view="flats"]').getAttribute('aria-pressed'), 'true');
   await p.locator('.sm-navigation a[href*="rassrochka.html"]').click();
   await p.waitForFunction(() => window.SM_TOOLS_DATA);
-  if (!reduced) await p.waitForFunction(() => indicatorFrames.size > 1 && contentFrames.size > 1);
+  if (!reduced) await p.waitForFunction(() => contentFrames.size > 1);
   else assert.equal(await p.evaluate(() => indicatorFrames.size + contentFrames.size), 0);
   assert.deepEqual(await p.evaluate(() => window.routeMovement), []);
   assert.deepEqual(errors,[]);console.log(theme,width,'4 калькулятора: выбор, клавиатура, ввод, расчёт и фокус проверены');await ctx.close();

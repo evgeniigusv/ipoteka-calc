@@ -1,5 +1,54 @@
-/* Один настоящий select сохраняет форму, проверку ввода и клавиатуру браузера.
-   Там, где меню рисует браузер, оформляем тот же элемент в верхнем слое. */
+/* Общая поверхность меню и иерархия строки для обоих способов выбора квартиры. */
+:root {
+  --sm-menu-radius: calc(var(--r-md) * .6 + 7px);
+  --sm-menu-edge: color-mix(in srgb, var(--grey) 16%, transparent);
+  --sm-menu-shadow: 0 2px 5px rgb(27 33 47 / .06), 0 12px 32px -6px rgb(27 33 47 / .16);
+  --sm-menu-hover: color-mix(in srgb, var(--sky-soft) 54%, var(--white));
+  --sm-menu-enter: min(160ms, var(--sm-motion-popup, 180ms));
+  --sm-menu-exit: min(110ms, var(--sm-motion-exit, 125ms));
+  --sm-menu-ease: cubic-bezier(.2, .65, .35, 1);
+}
+.sm-flat-row {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 12px;
+  min-inline-size: 0;
+  text-align: start;
+  overflow-wrap: anywhere;
+  font-family: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.sm-flat-row__identity {
+  display: grid;
+  gap: 3px;
+  min-inline-size: 0;
+}
+.sm-flat-row__number {
+  color: inherit;
+  font-size: 16px;
+  font-weight: 670;
+  line-height: 1.2;
+}
+.sm-flat-row__details {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 450;
+  line-height: 1.35;
+}
+
+.sm-flat-row__status {
+  min-inline-size: 0;
+  max-inline-size: 100%;
+  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: 450;
+  line-height: 1.35;
+}
+
+/* В браузерах с обычным системным меню остаются исходные option с полной подписью. */
 @supports (appearance: base-select) and selector(::picker(select)) {
   @media screen {
     :is(.sm, .tools) select:not([multiple], [size]),
@@ -19,25 +68,25 @@
     :is(.sm, .tools) select::picker-icon {
       content: "";
       flex: none;
-      width: 7px;
-      height: 7px;
-      border: solid currentColor;
-      border-width: 0 1.6px 1.6px 0;
-      margin: -3px 2px 0 auto;
-      rotate: 45deg;
+      inline-size: 12px;
+      block-size: 8px;
+      margin-inline-start: auto;
+      background: currentColor;
+      color: var(--muted);
+      clip-path: polygon(0 18%, 10% 0, 50% 62%, 90% 0, 100% 18%, 50% 96%);
     }
-    :is(.sm, .tools) select:open::picker-icon { rotate: 225deg; }
+    :is(.sm, .tools) select:open::picker-icon { transform: scaleY(-1); }
     :is(.sm, .tools) select:disabled { cursor: default; color: var(--muted); }
     :is(.sm, .tools) select::picker(select) {
       box-sizing: border-box;
       inline-size: max(anchor-size(width), min(22rem, 100%));
       max-inline-size: 100%;
-      max-block-size: min(21rem, 100%);
-      margin-block: 4px;
-      padding: 4px;
-      border: 1px solid var(--field);
-      border-radius: var(--r-md);
-      box-shadow: 0 8px 26px rgb(35 33 45 / .15);
+      max-block-size: min(22rem, 100%);
+      margin-block: 5px;
+      padding: 5px;
+      border: 1px solid var(--sm-menu-edge);
+      border-radius: var(--sm-menu-radius);
+      box-shadow: var(--sm-menu-shadow);
       background: var(--white);
       color: var(--black);
       font: 500 15px/1.4 var(--text);
@@ -50,42 +99,54 @@
     :is(.sm, .tools) select:open::picker(select) { opacity: 1; }
     :is(.sm, .tools) select option {
       display: flex;
+      position: relative;
       align-items: center;
-      gap: 8px;
-      padding: 8px 10px;
-      min-block-size: 40px;
+      box-sizing: border-box;
+      min-block-size: 42px;
+      padding: 9px 34px 9px 12px;
       white-space: normal;
       overflow-wrap: anywhere;
-      border-radius: calc(var(--r-md) * .7);
+      border-radius: calc(var(--sm-menu-radius) - 5px);
       color: var(--black);
       cursor: pointer;
     }
     :is(.sm, .tools) select option:checked {
       color: var(--sky);
       background: var(--sky-soft);
-      font-weight: 650;
     }
+    #sm-flat option[value=""] { color: var(--muted); font-size: 14px; }
     :is(.sm, .tools) select option:focus-visible { outline: 2px solid var(--sky); outline-offset: -2px; }
-    :is(.sm, .tools) select option::checkmark { order: 1; margin-inline-start: auto; }
+    :root[data-sm-input="pointer"] :is(.sm, .tools) select option:focus-visible { outline: none; }
+    :is(.sm, .tools) select option::checkmark {
+      content: "";
+      position: absolute;
+      inset-inline-end: 14px;
+      inset-block-start: 50%;
+      inline-size: 5px;
+      block-size: 9px;
+      border: solid var(--sky);
+      border-width: 0 1.8px 1.8px 0;
+      transform: translateY(-60%) rotate(45deg);
+    }
     :is(.sm, .tools) select option:disabled { color: var(--muted); cursor: default; }
     @media (max-width: 640px) {
       :is(.sm, .tools) select::picker(select) { inline-size: anchor-size(width); }
       :is(.sm, .tools) select option { min-block-size: 44px; }
     }
-    @media (hover: hover) {
-      :is(.sm, .tools) select option:enabled:hover { background: var(--sky-soft); }
+    @media (hover: hover) and (pointer: fine) {
+      :is(.sm, .tools) select option:enabled:not(:checked):hover { background: var(--sm-menu-hover); }
     }
     @media (prefers-reduced-motion: no-preference) {
       :root[data-sm-input="pointer"] select::picker-icon {
-        transition: rotate var(--sm-motion-popup, 180ms) var(--sm-ease-out, ease-out);
+        transition: transform var(--sm-menu-enter) var(--sm-menu-ease);
       }
       :root[data-sm-input="pointer"] select::picker(select) {
-        --picker-time: var(--sm-motion-exit, 125ms);
-        transition: opacity var(--picker-time) var(--sm-ease-out, ease-out),
+        --picker-time: var(--sm-menu-exit);
+        transition: opacity var(--picker-time) var(--sm-menu-ease),
           display var(--picker-time) allow-discrete, overlay var(--picker-time) allow-discrete;
       }
       :root[data-sm-input="pointer"] select:open::picker(select) {
-        --picker-time: var(--sm-motion-popup, 180ms);
+        --picker-time: var(--sm-menu-enter);
         @starting-style { opacity: 0; }
       }
     }

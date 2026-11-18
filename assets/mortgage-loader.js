@@ -16,7 +16,10 @@
     if(projects.some(function(project){return !data.programs.some(function(p){return p.projects.includes(project);});}))throw new Error('Отсутствует проект');
     return checked;
   }
+  if(window.SM_MORTGAGE_READY)return;
   window.SM_MORTGAGE_READY=(async function(){
+    // Без общего загрузчика (в том числе при ошибке его скрипта) снимок читается сразу.
+    if(window.SM_TOOLS_PRIMARY_READY && await window.SM_TOOLS_PRIMARY_READY)return;
     var controller=new AbortController(),timer=setTimeout(function(){controller.abort();},12000);
     try {
       var response=await fetch('assets/mortgage.json',{cache:'no-store',signal:controller.signal});

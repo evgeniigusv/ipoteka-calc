@@ -44,6 +44,7 @@
     }
     return;
   }
+  if(window.SM_TOOLS_READY)return;
   window.SMToolsMortgageNotices=function(getData){
     var status=document.getElementById('tools-status'),notice=document.createElement('details');
     notice.className='tools-alert';
@@ -63,15 +64,26 @@
     // После сохранения и перечитывания редактор обновляет текст статуса каталога.
     new MutationObserver(update).observe(status,{childList:true});
   };
-  window.SM_TOOLS_READY=(async function(){
+  function snapshotLoaders(){
+    return [window.SM_MORTGAGE_READY,window.SM_INSTALLMENTS_READY].filter(Boolean);
+  }
+  // При отказе каталога ждём в том числе резервный скрипт, стоящий ниже в HTML.
+  // Подписываемся до запроса, чтобы не пропустить DOMContentLoaded во время загрузки.
+  const parsed=document.readyState==='loading' || document.readyState==='interactive'
+    ? new Promise(resolve=>{
+        document.addEventListener('DOMContentLoaded',resolve,{once:true});
+        window.addEventListener('load',resolve,{once:true});
+      })
+    : undefined;
+  window.SM_TOOLS_PRIMARY_READY=(async function(){
     const local=editorOrigin&&!window.SM_TOOLS_PARTNER_VIEW;
     const request=(!editorOrigin&&window.SM_PUBLIC_TOOLS_REQUEST)||fetchCatalog(local);
     delete window.SM_PUBLIC_TOOLS_REQUEST;
-    // Запросы идут параллельно. Резервные загрузчики заканчивают запись до применения каталога.
-    const results=await Promise.allSettled([request,window.SM_MORTGAGE_READY,window.SM_INSTALLMENTS_READY]);
+    // Старый автономный загрузчик уже пишет в SM_DATA. Его запись должна закончиться первой.
+    const [catalog]=await Promise.allSettled([request,...snapshotLoaders()]);
     try{
-      for(const result of results)if(result.status==='rejected')throw result.reason;
-      var data=window.SMToolsModel.validate(results[0].value),calc=window.SMToolsModel.calcData(data);
+      if(catalog.status==='rejected')throw catalog.reason;
+      var data=window.SMToolsModel.validate(catalog.value),calc=window.SMToolsModel.calcData(data);
       if(!Number.isFinite(Date.parse(data.checked_at)))throw new Error('Не указана дата проверки справочника');
       window.SM_TOOLS_DATA=data;window.SM_TOOLS_STATUS={fallback:false,checkedAt:Date.parse(data.checked_at),local:local};
       if(window.SM_DATA){window.SM_DATA.mortgage=calc.mortgage;window.SM_DATA.installments=calc.installments;window.SM_DATA.tranche=calc.tranche;window.SM_DATA.chpv=calc.chpv;window.SM_DATA.cashDiscounts=calc.cashDiscounts;window.SM_DATA.settings=calc.settings;window.SM_DATA.promotions=calc.promotions;}
@@ -81,6 +93,22 @@
       });
       window.SM_MORTGAGE_STATUS={byProject:byProject,checkedAt:Date.parse(data.checked_at),stale:Date.now()-Date.parse(data.checked_at)>12*3600000,fallback:false};
       window.SM_INSTALLMENTS_STATUS={checkedAt:Date.parse(data.full_checked_at||data.checked_at),stale:Date.now()-Date.parse(data.full_checked_at||data.checked_at)>8*86400000,fallback:false,catalog:true};
-    }catch(e){window.SM_TOOLS_STATUS={fallback:true,error:e.message};var legal=document.querySelector('.sm-foot .sm-legal');if(legal){var warning=document.createElement('span');warning.className='sm-why';warning.textContent=' Единый справочник недоступен. Используются резервные условия; подтвердите их перед оформлением.';legal.appendChild(warning);}}
+      return true;
+    }catch(e){
+      window.SM_TOOLS_STATUS={fallback:true,error:e.message};
+      const legal=document.querySelector('.sm-foot .sm-legal');
+      if(legal){
+        const warning=document.createElement('span');
+        warning.className='sm-why';
+        warning.textContent=' Единый справочник недоступен. Используются резервные условия; подтвердите их перед оформлением.';
+        legal.appendChild(warning);
+      }
+      return false;
+    }
+  })();
+  window.SM_TOOLS_READY=(async function(){
+    if(await window.SM_TOOLS_PRIMARY_READY)return;
+    await parsed;
+    await Promise.allSettled(snapshotLoaders());
   })();
 })();

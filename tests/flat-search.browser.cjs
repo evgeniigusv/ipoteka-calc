@@ -58,7 +58,7 @@ async function motion(page, reduced) {
   assert.ok(frames.active);
 }
 
-async function check(browser, file, width, reduced) {
+async function check(browser, file, width, reduced, theme) {
   const mobile = width < 600;
   const page = await browser.newPage({viewport:{width,height:mobile ? 780 : 900},
     isMobile:mobile, hasTouch:mobile, reducedMotion:reduced ? 'reduce' : 'no-preference'});
@@ -78,7 +78,7 @@ async function check(browser, file, width, reduced) {
       }
       return route.fulfill({path:path.join(root, url.pathname)});
     });
-    await page.goto(base + file + '?theme=' + (mobile ? 'sm' : 'classic'), {waitUntil:'domcontentloaded'});
+    await page.goto(base + file + '?theme=' + theme, {waitUntil:'domcontentloaded'});
     assert.ok((await page.title()).length > 0);
     const input = page.getByRole('combobox', {name:'Номер квартиры', exact:true});
     const select = page.locator('#sm-flat'), price = page.locator('#sm-price');
@@ -115,6 +115,18 @@ async function check(browser, file, width, reduced) {
 
     // Размеры и перенос проверяем на настоящем длинном названии в узком поле.
     const long = options.nth(1);
+    const label = '№ 420 · этаж 3 · 52,3 м² · ' + rows[1].status;
+    assert.equal(await long.getAttribute('aria-label'), label);
+    assert.equal(await long.getByText('№ 420', {exact:true}).count(), 1);
+    assert.equal(await long.locator('.sm-flat-row__status').textContent(), rows[1].status);
+    const sizes = await long.evaluate(el => {
+      const num = el.querySelector('.sm-flat-row__number'), details = el.querySelector('.sm-flat-row__details');
+      return {
+        number:parseFloat(getComputedStyle(num).fontSize), detail:parseFloat(getComputedStyle(details).fontSize),
+        nextLine:details.getBoundingClientRect().top >= num.getBoundingClientRect().bottom
+      };
+    });
+    assert.ok(sizes.nextLine && sizes.number > sizes.detail);
     const geometry = await long.evaluate(el => {
       const box = el.getBoundingClientRect();
       return {left:box.left, right:box.right, height:box.height, overflow:el.scrollWidth > el.clientWidth};
@@ -125,17 +137,20 @@ async function check(browser, file, width, reduced) {
       const previousSize = page.viewportSize();
       await page.setViewportSize({width,height:400});
       for (const [block, above] of [['end',true],['start',false]]) {
-        await input.evaluate((el, position) => el.scrollIntoView({block:position, behavior:'instant'}), block);
+        await input.evaluate(async (el, position) => {
+          el.scrollIntoView({block:position, behavior:'instant'});
+          await new Promise(requestAnimationFrame);
+        }, block);
         await page.waitForFunction(expected => document.querySelector('.sm-flat-search__popup')
           .classList.contains('sm-flat-search__popup--above') === expected, above);
         const bounds = await popup.boundingBox(), field = await input.boundingBox();
-        assert.ok(bounds.y >= -1 && bounds.y + bounds.height <= 401);
+        assert.ok(bounds.y >= -1 && bounds.y + bounds.height <= 401, JSON.stringify({width, theme, block, bounds, field}));
         assert.ok(above ? bounds.y + bounds.height < field.y : bounds.y >= field.y + field.height);
       }
       await page.setViewportSize(previousSize);
       await input.evaluate(el => el.scrollIntoView({block:'center',behavior:'instant'}));
       await motion(page, reduced);
-      if (process.env.FLAT_QA_DIR) await page.screenshot({path:path.join(process.env.FLAT_QA_DIR, 'flat-search-' + width + '.png')});
+      if (process.env.FLAT_QA_DIR) await page.screenshot({path:path.join(process.env.FLAT_QA_DIR, 'flat-search-' + theme + '-' + width + '.png')});
       // После повторного открытия активна первая подсказка.
       await input.press('ArrowDown');
     }
@@ -146,6 +161,7 @@ async function check(browser, file, width, reduced) {
     if (mobile) await long.tap(); else await input.press('Enter');
     assert.equal(await input.inputValue(), '420');
     assert.equal(await select.inputValue(), '2');
+    assert.equal(await select.evaluate(el => el.selectedOptions[0].label), label);
     assert.equal(number(await price.inputValue()), rows[1].price);
     assert.ok(await focused(input));
     const [value, atChange] = await page.evaluate(() => window.atSelection);
@@ -215,15 +231,17 @@ async function check(browser, file, width, reduced) {
       assert.equal(await price.inputValue(), '', 'Цена выбранной квартиры не становится ручной');
     }
     assert.deepEqual(errors, []);
-    console.log(file, width, '— ввод, выбор, клавиатура, фокус и поздняя загрузка проверены');
+    console.log(file, theme, width, '— ввод, выбор, клавиатура, фокус и поздняя загрузка проверены');
   } finally { releaseMacro(); await page.close(); }
 }
 (async () => {
   const browser = await chromium.launch({executablePath:process.env.CHROMIUM_BIN});
   try {
     for (const width of [1280,390,320]) {
-      for (const file of ['index.html','rassrochka.html','chpv.html','transh.html'])
-        await check(browser, file, width, width === 320);
+      for (const file of ['index.html','rassrochka.html','chpv.html','transh.html']) {
+        const themes = file === 'index.html' ? ['classic','sm'] : [width === 1280 ? 'classic' : 'sm'];
+        for (const theme of themes) await check(browser, file, width, width === 320, theme);
+      }
     }
   } finally { await browser.close(); }
 })().catch(e => { console.error(e); process.exitCode = 1; });
