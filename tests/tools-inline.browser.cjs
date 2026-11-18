@@ -13,13 +13,25 @@ const partner = 'https://evgeniigusv.github.io/ipoteka-calc/';
 const owner = 'http://127.0.0.1:8795/';
 const live = process.argv.includes('--live');
 async function check(browser, width, entry = partner) {
-  const context = await browser.newContext({viewport:{width,height:width===390?844:960}});
+  const keyboard = entry === owner;
+  const reduced = width === 390;
+  const context = await browser.newContext({
+    viewport:{width,height:reduced?844:960}, hasTouch:width === 390,
+    reducedMotion:reduced?'reduce':'no-preference'
+  });
+  function activate(button, byKey = keyboard) {
+    if (byKey) return button.press('Enter');
+    return width === 390 ? button.tap() : button.click();
+  }
+  const animation = element => element.evaluate(node=>getComputedStyle(node).animationName);
+  const focused = element => element.evaluate(node=>node === document.activeElement);
+  const expectedMotion = name => keyboard || reduced ? 'none' : name;
   try {
     await context.grantPermissions(['local-network-access'], {origin:new URL(partner).origin});
     const catalog = JSON.parse(fs.readFileSync(path.join(root,'assets/tools.json')));
     const privateName = 'Проверка закрытой записи';
     const example = catalog.records.find(r=>r.enabled && r.kind==='info' && r.category==='installment' && r.project==='da1');
-    const personal = {...example, id:'qa-private', group:'qa-private', name:privateName, params:{...example.params,ownerOnly:true}};
+    const personal = {...example, id:'qa-private', group:'qa-private', name:privateName, combination:'', params:{...example.params,ownerOnly:true}};
     let deny = !live && width===1280 && entry===partner, sessions = 0;
     const errors = [];
     await context.route('**/*', async route => {
@@ -55,10 +67,11 @@ async function check(browser, width, entry = partner) {
     await page.locator('.tool-entry').first().waitFor();
     await page.locator('#tools-search').fill('рассроч');
     const placement = await page.locator('.tools-view-tabs').boundingBox();
-    await edit.click();
+    await activate(edit);
     if (deny) {
       await page.locator('#owner-recovery').waitFor();
       assert.match(await page.locator('#owner-progress').innerText(),/401/);
+      assert.ok(await focused(page.locator('#owner-cancel')));
       deny=false;
       await page.locator('#owner-retry').click();
     }
@@ -80,27 +93,73 @@ async function check(browser, width, entry = partner) {
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
     if (!live && entry===partner) await page.screenshot({path:path.join(os.tmpdir(),'tools-inline-'+width+'.png')});
     const record = frame.locator('.tool-entry').first();
-    await record.locator('[data-edit]').click();
-    await frame.locator('#tools-editor[open]').waitFor();
+    const editRecord = record.locator('[data-edit]');
+    const dialog = frame.locator('#tools-editor');
+    assert.ok(await focused(frame.locator('#owner-return')));
+    if (!live) assert.equal(await animation(page.locator('#owner-window iframe')),expectedMotion('tools-mode-entry'));
+
+    // Проверяем форму в том же событии, в котором нажали кнопку правки.
+    await sessionFrame.evaluate(() => document.addEventListener('click', event => {
+      if (!event.target.closest('[data-edit]')) return;
+      const dialog = document.getElementById('tools-editor');
+      window.formOpenedOnClick = dialog.open && dialog.contains(document.activeElement) &&
+        !!dialog.querySelector('[name=name]').value;
+    }, {once:true}));
+    await activate(editRecord);
+    assert.ok(await sessionFrame.evaluate(()=>window.formOpenedOnClick));
+    if (!live) assert.equal(await animation(dialog),expectedMotion('tools-form-entry'));
+    const name = dialog.locator('[name=name]');
+    await name.fill('Несохранённый текст формы');
+    await page.locator('[data-theme-choice=classic]').click();
+    await frame.locator('html[data-theme=classic]').waitFor();
+    assert.equal(await name.inputValue(),'Несохранённый текст формы');
+    await dialog.press('Escape');
+    await dialog.waitFor({state:'hidden'});
+    assert.ok(await focused(editRecord));
+
+    const add = frame.locator('#tools-add'), ai = frame.locator('#tools-ai');
+    await activate(add, true);
+    assert.ok(await dialog.isVisible());
+    if (!live) assert.equal(await animation(dialog),'none');
     await frame.locator('#tools-cancel').click();
+    assert.ok(await focused(add));
+    await activate(ai);
+    const suggestions = frame.locator('#ai-dialog');
+    assert.ok(await suggestions.isVisible());
+    if (!live) assert.equal(await animation(suggestions),expectedMotion('tools-form-entry'));
+    await suggestions.press('Escape');
+    assert.ok(await focused(ai));
     await record.locator('summary').click();
     await record.locator('[data-toggle]').click(); // Только черновик в памяти.
     assert.match(await frame.locator('#tools-change-count').innerText(),/черновике: 1/);
     await frame.locator('#tools-search').fill(live?'':privateName);
-    if (!live) await frame.locator('[data-record="qa-private"]').waitFor();
-    await page.locator('[data-theme-choice=classic]').click();
-    await frame.locator('html[data-theme=classic]').waitFor();
-    await frame.locator('#owner-return').click();
+    if (!live) {
+      const privateEdit = frame.locator('[data-edit="qa-private"]');
+      await activate(privateEdit);
+      await dialog.locator('.tools-form-more > summary').click();
+      await dialog.locator('[name=validUntil]').fill('2030-12-31');
+      await dialog.locator('[type=submit]').click();
+      await dialog.waitFor({state:'hidden'});
+      await privateEdit.and(frame.locator(':focus')).waitFor({timeout:2000});
+    }
+    await activate(frame.locator('#owner-return'));
     await edit.waitFor();
+    assert.ok(await focused(edit));
+    if (!live) assert.equal(await animation(page.locator('#public-catalog')),expectedMotion('tools-mode-entry'));
     assert.equal(await page.locator('#tools-search').inputValue(),'рассроч');
     assert.equal(await page.locator('.tools-private').count(),0);
     assert.equal(await page.locator('body').innerText().then(t=>t.includes(privateName)),false);
-    await edit.click();
+    await activate(edit, true);
     await frame.locator('#owner-return').waitFor();
+    if (!live) assert.equal(await animation(page.locator('#owner-window iframe')),'none');
     assert.equal(await frame.locator('#tools-search').inputValue(),live?'':privateName);
-    assert.equal(await frame.locator('#tools-change-count').innerText().then(t=>t.includes('черновике: 1')),true);
+    assert.match(await frame.locator('#tools-change-count').innerText(),live?/черновике: 1/:/черновике: 2/);
     assert.equal(sessionFrame,page.frames().find(f=>f.parentFrame()===page.mainFrame() && f.url().startsWith(owner)));
     if (!live) assert.equal(sessions,width===1280 && entry===partner?2:1);
+    await frame.locator('#owner-return').press('Escape');
+    await edit.waitFor();
+    assert.ok(await focused(edit));
+    if (!live) assert.equal(await animation(page.locator('#public-catalog')),'none');
     assert.deepEqual(errors,[]);
     console.log(new URL(entry).hostname+' · '+width+' px — вход, фильтры, форма, черновик, тема и возврат проверены.');
   } finally { await context.close(); }

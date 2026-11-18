@@ -114,6 +114,19 @@
 .tools-embedded .tools-shell { padding:0; max-width:none; }
 .tools-embedded #owner-return { margin-left:auto; white-space:normal; }
 
+/* Закрытый экран скрывается сразу. Появляется только уже доступный экран. */
+@media screen and (prefers-reduced-motion: no-preference) {
+  #public-catalog[data-owner-entry="pointer"],
+  #owner-window[data-owner-entry="pointer"] > :is(iframe, #owner-connection):not([hidden]) {
+    animation: tools-mode-entry 140ms var(--ease);
+  }
+  :is(#tools-editor, #ai-dialog)[data-owner-entry="pointer"][open] {
+    animation: tools-form-entry 160ms var(--ease);
+  }
+  @keyframes tools-mode-entry { from { opacity: .8; } }
+  @keyframes tools-form-entry { from { opacity: .7; transform: translateY(4px); } }
+}
+
 .tools-type-action{flex:none;white-space:nowrap;font-size:12px;font-weight:400;color:var(--sky)}
 
 .tools-mortgage-general>td{color:var(--muted);font-size:13px}

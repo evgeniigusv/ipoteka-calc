@@ -7,13 +7,40 @@
   const embedded = location.origin === owner && window.parent !== window;
   const theme = () => document.documentElement.dataset.theme;
 
+  const pointerInput = () => document.documentElement.dataset.smInput === 'pointer';
+  function markEntrance(element, pointer) {
+    element.dataset.ownerEntry = pointer ? 'pointer' : 'instant';
+  }
+
+  // Некоторые браузеры оставляют фокус в поиске при нажатии кнопки мышью.
+  $('public-catalog').addEventListener('click', event => {
+    const trigger = event.target.closest('#tools-owner-link, #tools-settings-edit, #tools-add, #tools-ai, [data-edit], [data-copy], [data-new-project]');
+    if (trigger && trigger !== document.activeElement) trigger.focus({preventScroll:true});
+  }, true);
+
+  const editor = $('tools-editor');
+  let returnRecord;
+  for (const dialog of [editor, $('ai-dialog')]) {
+    dialog.addEventListener('beforetoggle', event => {
+      if (event.newState !== 'open') return;
+      markEntrance(dialog, pointerInput());
+      if (dialog === editor) returnRecord = document.activeElement.closest('[data-record]')?.dataset.record;
+    });
+  }
+  // После сохранения каталог заново создаёт строки, включая кнопку, открывшую форму.
+  editor.addEventListener('close', () => {
+    if (document.activeElement !== document.body || document.querySelector('dialog[open]') || window.SMProposals?.isTransitioning()) return;
+    const edit = returnRecord && document.querySelector('[data-edit="' + CSS.escape(returnRecord) + '"]');
+    (edit || $('tools-add')).focus({preventScroll:true});
+  });
+
   if (embedded) {
     const send = (type, details = {}) => window.parent.postMessage({type, ...details}, site);
     document.body.classList.add('tools-embedded');
     const exit = $('owner-return');
     document.querySelector('.tools-view-tabs').append(exit);
     exit.hidden = false;
-    exit.onclick = () => send('tools:close');
+    exit.onclick = () => send('tools:close', {pointer:pointerInput()});
     document.addEventListener('keydown', event => {
       if (event.key === 'Escape' && !document.querySelector('dialog[open]')) send('tools:close');
     });
@@ -24,8 +51,9 @@
       if (message?.type === 'tools:theme') window.SMTheme?.set(message.theme);
       if (message?.type !== 'tools:open' || !openAction || document.querySelector('dialog[open]') || window.SMProposals?.isTransitioning()) return;
       window.SMTheme?.set(message.theme);
+      document.documentElement.dataset.smInput = message.pointer === true ? 'pointer' : 'keyboard';
+      exit.focus({preventScroll:true});
       openAction(message.action);
-      if (!document.querySelector('dialog[open]')) exit.focus({preventScroll:true});
     });
     window.SMOwnerWindow = {
       embedded,
@@ -53,24 +81,28 @@
     frame.allow = 'microphone; local-network-access; loopback-network';
     frame.hidden = true;
     frame.src = owner + '/tools.html?theme=' + theme() + '&open=' + Date.now() + (location.origin === owner ? '&parent=local' : '');
+    markEntrance(panel, pointerInput());
     $('owner-connection').hidden = false;
     panel.append(frame);
     report('Подключаем личный редактор на вашем Маке…', false);
+    $('owner-cancel').focus({preventScroll:true});
     timeout = setTimeout(() => report('Нет связи с личным редактором. Откройте каталог на Маке владельца и разрешите браузеру доступ к локальной сети, если он запросит разрешение.', true), 9000);
   }
   function showFrame() {
     if (panel.hidden || delivered) return;
+    markEntrance(panel, pointerInput());
     frame.hidden = false;
     $('owner-connection').hidden = true;
     delivered = true;
-    frame.contentWindow.postMessage({type:'tools:open', action, theme:theme()}, owner);
+    frame.contentWindow.postMessage({type:'tools:open', action, theme:theme(), pointer:pointerInput()}, owner);
     frame.focus({preventScroll:true});
   }
-  function close() {
+  function close(pointer) {
     if (panel.hidden) return;
     clearTimeout(timeout);
     panel.hidden = true;
     delivered = false;
+    markEntrance($('public-catalog'), pointer);
     $('public-catalog').hidden = false;
     document.querySelector('.tools-mast h1').textContent = publicTitle;
     trigger.focus({preventScroll:true});
@@ -104,7 +136,7 @@
         break;
       }
       case 'tools:close':
-        close();
+        close(event.data.pointer === true);
         break;
     }
   });
@@ -112,7 +144,10 @@
     if (delivered) frame.contentWindow.postMessage({type:'tools:theme', theme:theme()}, owner);
   }).observe(document.documentElement, {attributes:true, attributeFilter:['data-theme']});
   $('owner-retry').onclick = start;
-  $('owner-cancel').onclick = close;
+  $('owner-cancel').onclick = () => close(pointerInput());
+  panel.addEventListener('keydown', event => {
+    if (event.key === 'Escape') close(false);
+  });
   window.SMOwnerWindow = {
     embedded, ready() {}, failed() {},
     open(next, title) {
@@ -135,7 +170,7 @@
       $('public-catalog').hidden = true;
       panel.hidden = false;
       if (ready) showFrame();
-      else { start(); $('owner-cancel').focus({preventScroll:true}); }
+      else start();
     }
   };
 })();
