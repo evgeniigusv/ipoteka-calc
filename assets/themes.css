@@ -170,7 +170,20 @@
 @media screen and (prefers-reduced-motion: no-preference) {
   .sm-navigation a.sm-pill-arrive::before {
     transform-origin: left center;
-    animation: sm-pill-arrive 200ms var(--ease) backwards;
+    animation: sm-pill-arrive 200ms var(--ease) var(--pill-elapsed, 0ms) backwards;
+  }
+  .sm-navigation a[aria-current]::before {
+    transform-origin: left center;
+    transition: transform 200ms var(--ease);
+  }
+  .sm-navigation a.sm-pill-leave::before {
+    transform: translateX(var(--pill-to-x)) scaleX(var(--pill-to-scale));
+  }
+  .sm:not(.sm-pdf) .sm-navigation a.sm-pill-leave { color: var(--grey); }
+  .sm:not(.sm-pdf) .sm-navigation a.sm-nav-pending,
+  .sm:not(.sm-pdf) .sm-navigation a.sm-nav-pending:hover {
+    background: transparent;
+    color: var(--graphite, white);
   }
   @keyframes sm-pill-arrive {
     from { transform: translateX(var(--pill-from-x, 0px)) scaleX(var(--pill-from-scale, 1)); }

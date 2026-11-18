@@ -51,13 +51,35 @@
         if (from && from !== active) {
           active.style.setProperty('--pill-from-x', (from.offsetLeft - active.offsetLeft) + 'px');
           active.style.setProperty('--pill-from-scale', from.offsetWidth / active.offsetWidth);
+          active.style.setProperty('--pill-elapsed', (previous.time - Date.now()) + 'ms');
           active.classList.add('sm-pill-arrive');
         }
       }
+      let pending, resetTimer;
+      function resetTravel() {
+        clearTimeout(resetTimer);
+        active.classList.remove('sm-pill-leave');
+        pending?.classList.remove('sm-nav-pending');
+        pending = null;
+      }
+      window.addEventListener('pagehide', resetTravel);
+      window.navigation?.addEventListener('navigate', event => {
+        if (pending) event.signal.addEventListener('abort', resetTravel, {once:true});
+      });
       nav.addEventListener('click', event => {
         const target = event.target.closest('a');
-        if (!target || target === active || event.detail === 0 || event.button !== 0 ||
+        if (event.defaultPrevented || !target || target === active || event.detail === 0 || event.button !== 0 ||
             event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+        if (!reduced.matches) {
+          resetTravel();
+          pending = target;
+          active.style.setProperty('--pill-to-x', (target.offsetLeft - active.offsetLeft) + 'px');
+          active.style.setProperty('--pill-to-scale', target.offsetWidth / active.offsetWidth);
+          active.classList.remove('sm-pill-arrive');
+          active.classList.add('sm-pill-leave');
+          target.classList.add('sm-nav-pending');
+          resetTimer = setTimeout(resetTravel, 8000);
+        }
         try { sessionStorage.setItem(navKey, JSON.stringify({from: page(active), to: page(target), time: Date.now()})); } catch {}
       });
       // Прогреваем только публичную HTML-страницу, на которую нацелился пользователь.
