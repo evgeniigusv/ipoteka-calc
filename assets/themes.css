@@ -118,11 +118,11 @@
   #calc-result, #calc-programs { scroll-margin-top: 12px; }
 }
 
-/* Один овальный переключатель. На узком экране вся строка прокручивается. */
+/* У всех пяти документов одна сетка шапки, в том числе до загрузки шрифтов. */
 @media screen {
   .sm:not(.sm-pdf) .sm-nav-row .sm-navigation {
-    display: flex;
-    flex-flow: row nowrap;
+    display: grid;
+    grid-template-columns: 6.2em 7.1em 4.4em 11.5em 8.6em;
     position: relative;
     isolation: isolate;
     align-items: center;
@@ -144,7 +144,7 @@
     position: relative;
     justify-content: center;
     height: 42px;
-    padding: 0 clamp(11px, 1.35vw, 20px);
+    padding: 0;
     border: 0;
     border-radius: 999px;
     background: transparent;
@@ -154,13 +154,15 @@
   }
   .sm:not(.sm-pdf) .sm-navigation a[aria-current] { color: white; }
   [data-theme="sm"] .sm:not(.sm-pdf) .sm-navigation a[aria-current] { color: var(--graphite); }
-  .sm-navigation a[aria-current]::before {
+  .sm-nav-indicator, .sm-navigation a[aria-current]:not(:has(.sm-nav-indicator))::before {
     position: absolute;
     inset: 0;
     z-index: -1;
     border-radius: inherit;
     background: var(--blue, var(--sky));
     content: '';
+    transform-origin: left center;
+    pointer-events: none;
   }
   .sm-navigation a:focus-visible { outline: 2px solid var(--sky); outline-offset: -3px; }
 }
@@ -168,25 +170,11 @@
   .sm:not(.sm-pdf) .sm-navigation a:not([aria-current]):hover { background: var(--sky-soft); }
 }
 @media screen and (prefers-reduced-motion: no-preference) {
-  .sm-navigation a.sm-pill-arrive::before {
-    transform-origin: left center;
-    animation: sm-pill-arrive 200ms var(--ease) var(--pill-elapsed, 0ms) backwards;
-  }
-  .sm-navigation a[aria-current]::before {
-    transform-origin: left center;
-    transition: transform 200ms var(--ease);
-  }
-  .sm-navigation a.sm-pill-leave::before {
-    transform: translateX(var(--pill-to-x)) scaleX(var(--pill-to-scale));
-  }
   .sm:not(.sm-pdf) .sm-navigation a.sm-pill-leave { color: var(--grey); }
   .sm:not(.sm-pdf) .sm-navigation a.sm-nav-pending,
   .sm:not(.sm-pdf) .sm-navigation a.sm-nav-pending:hover {
     background: transparent;
     color: var(--graphite, white);
-  }
-  @keyframes sm-pill-arrive {
-    from { transform: translateX(var(--pill-from-x, 0px)) scaleX(var(--pill-from-scale, 1)); }
   }
   .sm-tools-switching #tools-catalog-panel:not([hidden]),
   .sm-tools-switching #tools-settings-panel:not([hidden]) { animation: sm-panel-in 120ms var(--ease); }
@@ -197,11 +185,32 @@
 @media screen and (max-width: 640px) {
   .sm-navigation .sm-nav-full { display: none; }
   .sm-navigation .sm-nav-short { display: inline; }
+  .sm:not(.sm-pdf) .sm-head h1 {
+    min-block-size: 2lh;
+    align-content: center;
+  }
+  .sm:not(.sm-pdf) .sm-nav-row .sm-navigation {
+    grid-template-columns: 1.08fr 1.3fr .62fr .85fr 1.7fr;
+  }
   .sm:not(.sm-pdf) .sm-navigation a.sm-nav {
-    flex: 1 0 auto;
-    padding-inline: clamp(4px, 1.1vw, 8px);
-    min-width: 42px;
+    min-width: 0;
     height: 44px;
+    padding: 0;
+  }
+}
+
+@media screen and (max-width: 370px) {
+  .sm:not(.sm-pdf) .sm-nav-row .sm-navigation { gap: 0; padding-inline: 2px; }
+  .sm:not(.sm-pdf) .sm-navigation a.sm-nav { font-size: 12px; }
+}
+
+/* Пока загружается адрес, слегка приглушаем только текущее содержимое.
+   Новая страница сразу видна. Шапка остаётся доступна для следующего клика. */
+@media screen and (prefers-reduced-motion: no-preference) {
+  [data-sm-nav-leaving] main.sm > .sm-nav-row ~ :not(script),
+  [data-sm-nav-leaving] .tools-shell > #public-catalog {
+    opacity: .94;
+    transition: opacity 100ms var(--ease);
   }
 }
 
@@ -216,10 +225,10 @@
 
 @media screen and (prefers-reduced-motion: no-preference) {
   .sm-program-enter {
-    animation: sm-program-enter 150ms var(--ease);
+    animation: sm-program-enter 120ms var(--ease);
   }
   @keyframes sm-program-enter {
-    from { opacity: .86; transform: translateY(2px); }
+    from { opacity: .92; }
   }
   [data-sm-input="pointer"] #sm-tbody .sm-pick td {
     transition: background-color 120ms var(--ease);

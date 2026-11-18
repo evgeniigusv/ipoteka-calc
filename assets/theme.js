@@ -42,50 +42,81 @@
         link.href = target.href;
       }
       const reduced = matchMedia('(prefers-reduced-motion: reduce)');
-      const page = link => new URL(link.href).pathname.replace(/index\.html$/, '');
-      let previous;
-      try {
-        previous = JSON.parse(sessionStorage.getItem(navKey));
-        sessionStorage.removeItem(navKey);
-      } catch {}
-      if (nav.scrollWidth > nav.clientWidth) {
-        nav.scrollLeft = active.offsetLeft - nav.clientWidth / 2 + active.offsetWidth / 2;
+      const pill = document.createElement('span');
+      pill.className = 'sm-nav-indicator';
+      pill.setAttribute('aria-hidden', 'true');
+      active.prepend(pill);
+
+      // Координаты относительно строки остаются общими для обеих HTML-страниц.
+      function bounds(element) {
+        const box = element.getBoundingClientRect();
+        return {left:box.left - nav.getBoundingClientRect().left, width:box.width};
       }
-      if (!reduced.matches && previous?.to === page(active) && Date.now() - previous.time < 10000) {
-        const from = links.find(link => page(link) === previous.from);
-        if (from && from !== active) {
-          active.style.setProperty('--pill-from-x', (from.offsetLeft - active.offsetLeft) + 'px');
-          active.style.setProperty('--pill-from-scale', from.offsetWidth / active.offsetWidth);
-          active.style.setProperty('--pill-elapsed', (previous.time - Date.now()) + 'ms');
-          active.classList.add('sm-pill-arrive');
-        }
+      const duration = 180;
+      let motion, pending;
+      function move(from, target, start) {
+        const base = bounds(active);
+        const transform = box => 'translateX(' + (box.left - base.left) + 'px) scaleX(' + box.width / base.width + ')';
+        const end = target === active ? 'none' : transform(bounds(target));
+        motion?.cancel();
+        pill.style.transform = end;
+        if (performance.timeOrigin + performance.now() - start >= duration) return;
+        motion = pill.animate([{transform:transform(from)}, {transform:end}], {
+          duration, easing:getComputedStyle(nav).getPropertyValue('--ease').trim()
+        });
+        // Оба документа используют одно время старта, включая быстрый повторный клик.
+        motion.startTime = start - performance.timeOrigin;
       }
-      let pending, resetTimer;
-      function resetTravel() {
-        clearTimeout(resetTimer);
+      function reset() {
+        motion?.cancel();
+        motion = null;
+        pill.style.transform = '';
+        delete root.dataset.smNavLeaving;
         active.classList.remove('sm-pill-leave');
         pending?.classList.remove('sm-nav-pending');
+        if (pending) {
+          try { sessionStorage.removeItem(navKey); } catch {}
+        }
         pending = null;
       }
-      window.addEventListener('pagehide', resetTravel);
+      try {
+        const trip = JSON.parse(sessionStorage.getItem(navKey));
+        sessionStorage.removeItem(navKey);
+        if (!reduced.matches && trip?.to === location.href && trip.width === nav.clientWidth &&
+            performance.getEntriesByType('navigation')[0]?.type === 'navigate' &&
+            Number.isFinite(trip.from?.left) && trip.from.width > 0) {
+          move(trip.from, active, trip.start);
+        }
+      } catch { /* Без хранилища выбранный раздел виден сразу. */ }
+
+      window.addEventListener('pagereveal', () => {
+        if (window.navigation?.activation?.navigationType === 'traverse') reset();
+      });
+      window.addEventListener('pageshow', event => { if (event.persisted) reset(); });
+      reduced.addEventListener('change', () => { if (reduced.matches) reset(); });
       window.navigation?.addEventListener('navigate', event => {
-        if (pending) event.signal.addEventListener('abort', resetTravel, {once:true});
+        if (pending?.href !== event.destination.url) return;
+        const departingMotion = motion;
+        event.signal.addEventListener('abort', () => {
+          if (motion === departingMotion) reset();
+        }, {once:true});
       });
       nav.addEventListener('click', event => {
         const target = event.target.closest('a');
-        if (event.defaultPrevented || !target || target === active || event.detail === 0 || event.button !== 0 ||
+        if (!target || event.defaultPrevented || event.button !== 0 ||
             event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
-        if (!reduced.matches) {
-          resetTravel();
-          pending = target;
-          active.style.setProperty('--pill-to-x', (target.offsetLeft - active.offsetLeft) + 'px');
-          active.style.setProperty('--pill-to-scale', target.offsetWidth / active.offsetWidth);
-          active.classList.remove('sm-pill-arrive');
-          active.classList.add('sm-pill-leave');
-          target.classList.add('sm-nav-pending');
-          resetTimer = setTimeout(resetTravel, 8000);
-        }
-        try { sessionStorage.setItem(navKey, JSON.stringify({from: page(active), to: page(target), time: Date.now()})); } catch {}
+        const from = bounds(pill);
+        reset();
+        if (target === active || event.detail === 0 || reduced.matches) return;
+        const start = performance.timeOrigin + performance.now();
+        pending = target;
+        root.dataset.smNavLeaving = '';
+        active.classList.add('sm-pill-leave');
+        target.classList.add('sm-nav-pending');
+        move(from, target, start);
+        try {
+          sessionStorage.setItem(navKey, JSON.stringify({from, start, to:target.href, width:nav.clientWidth}));
+        } catch {}
       });
       // Прогреваем только публичную HTML-страницу, на которую нацелился пользователь.
       const prefetched = new Set();
@@ -108,8 +139,7 @@
     }
   };
 
-  document.addEventListener('DOMContentLoaded', () => {
-    const group = document.querySelector('.sm-theme-switch');
+  function mountThemeSwitch(group) {
     const nav = document.querySelector('.sm-navigation');
     function update(theme) {
       apply(theme);
@@ -141,5 +171,26 @@
         try { const value = localStorage.getItem(key); if (valid(value)) update(value); } catch {}
       }
     });
+  }
+  // Переключатель занимает своё место до первого кадра, даже если скрипты расчёта ещё загружаются.
+  const switchObserver = new MutationObserver(() => {
+    const lastChoice = document.querySelector('.sm-theme-switch [data-theme-choice="sm"]');
+    if (!lastChoice) return;
+    switchObserver.disconnect();
+    mountThemeSwitch(lastChoice.closest('.sm-theme-switch'));
   });
+  switchObserver.observe(root, {childList:true, subtree:true});
 })();
+
+// Выбор общий для калькуляторов в этой вкладке. Восстанавливаем его до вывода полей.
+window.SMFieldNotes = function (checkbox) {
+  const key = 'ipoteka-calc.field-notes';
+  function restore() {
+    try { checkbox.checked = sessionStorage.getItem(key) === 'show'; } catch {}
+  }
+  restore();
+  checkbox.addEventListener('change', () => {
+    try { sessionStorage.setItem(key, checkbox.checked ? 'show' : 'hide'); } catch {}
+  });
+  window.addEventListener('pageshow', event => { if (event.persisted) restore(); });
+};
