@@ -9,6 +9,19 @@
   var state = {project:D.projects[0],step:{},picks:{},promotionIds:[]}, last = null;
 
   var downRub=$('sm-down-rub');
+  const downPct=$('sm-down-pct');
+  let downUnit='rub';
+  function syncDownPayment(base) {
+    if (downUnit==='rub') {
+      const amount=U.parseMoney(downRub.value);
+      downPct.value=base>0 && amount!=null ? (amount/base*100).toLocaleString('ru-RU',{maximumFractionDigits:2}) : '';
+      return;
+    }
+    const raw=downPct.value.trim().replace(/%$/, '').trim().replace(',', '.');
+    const valid=/^(?:\d+(?:\.\d*)?|\.\d+)$/.test(raw) && Number(raw)<=100;
+    downRub.value=valid && base>0 ? F.int(Math.round(base*Number(raw)/100)) : '';
+    return !valid && downPct.value.trim() ? 'Укажите долю взноса от 0 до 100%.' : '';
+  }
   function readInputs() {
     return {project:state.project,downRub:downRub.value.trim()?U.parseMoney(downRub.value):null,
       base:U.parseMoney(el.price.value)||0,rooms:+el.rooms.value,extra:U.parsePct(el.extra.value),step:state.step,promotionIds:state.promotionIds};
@@ -45,7 +58,7 @@
       '<div><div class="sm-k">Стоимость в договоре</div><div class="sm-v">'+F.rub(c.total)+'</div></div>'+
       (c.saved>0.5?'<div><div class="sm-k">Экономия от прайса</div><div class="sm-v sm-v2">'+F.rub(c.saved)+'</div></div>':'')+'</div></div>';
     html+='<dl><dt>Цена по прайсу</dt><dd>'+F.rub(readInputs().base)+'</dd><dt>Скидка</dt><dd>'+esc(discLabel(c).replace(/^Скидка /,''))+'</dd>'+
-      '<dt class="sm-strong">Первоначальный взнос</dt><dd class="sm-strong">'+F.rub(c.rows[0].amount)+'<span class="sm-sub">'+(c.fullPayment?'100% стоимости договора':F.pct1(c.share)+(c.pvFromBase?' прайса':' стоимости'))+'</span></dd>'+
+      '<dt class="sm-strong">Первоначальный взнос</dt><dd class="sm-strong">'+F.rub(c.rows[0].amount)+'<span class="sm-sub">'+(c.fullPayment?'100% стоимости договора':F.pct1(c.share)+(c.pvFromBase?' прайса':' цены в договоре'))+'</span></dd>'+
       '<dt>Срок рассрочки</dt><dd>'+F.months(c.termMonths)+'<span class="sm-sub">до '+F.dmy(c.end)+'</span></dd></dl>';
     html+='<div class="sm-schedule"><h3>График платежей</h3><table><thead><tr><th>Когда</th><th>Платёж</th><th>Сумма</th></tr></thead><tbody>'+
       c.rows.map(function(r){return '<tr><td>'+esc(r.when)+'</td><td>'+esc(r.label)+'<span class="sm-sub">'+esc(r.sub)+'</span></td><td>'+F.rub(r.amount)+'</td></tr>';}).join('')+'</tbody></table></div>';
@@ -60,7 +73,7 @@
   function rowHtml(c,selected) {
     var pay=c.fullPayment?'Полная оплата':c.payment?F.rub(c.payment)+(c.kind==='equal'?({1:' / месяц',2:' / 2 месяца',3:' / квартал',6:' / полгода',12:' / год'}[c.step]):' / месяц'):'По графику';
     var values=['<button type="button" class="sm-program-pick" aria-pressed="'+selected+'" aria-controls="sm-detail">'+esc(c.name)+'</button><span class="sm-sub'+(c.error?' sm-why':'')+'">'+esc(c.error||discLabel(c))+'</span>',
-      c.error?'—':F.rub(c.total),c.error?'—':F.rub(c.rows[0].amount)+'<span class="sm-sub">'+(c.fullPayment?'100% стоимости договора':F.pct1(c.share)+(c.pvFromBase?' прайса':' стоимости'))+'</span>',c.error?'—':pay,F.dmy(c.end)];
+      c.error?'—':F.rub(c.total),c.error?'—':F.rub(c.rows[0].amount)+'<span class="sm-sub">'+(c.fullPayment?'100% стоимости договора':F.pct1(c.share)+(c.pvFromBase?' прайса':' цены в договоре'))+'</span>',c.error?'—':pay,F.dmy(c.end)];
     return '<tr class="sm-pick'+(selected?' sm-sel':'')+(c.error?' sm-off':'')+'" data-id="'+c.id+'">'+values.map(function(v,i){return '<td data-l="'+cols[i]+'"><span>'+v+'</span></td>';}).join('')+'</tr>';
   }
   function empty(message) {
@@ -79,17 +92,18 @@
       status.fallback?'ДА: резервная копия от '+(window.SM_DATA.daInstallmentsUpdated||window.SM_DATA.updated)+'. Обновлённые условия загрузить не удалось.':
       'ДА: проверено '+new Date(status.checkedAt).toLocaleString('ru-RU',{timeZone:'Asia/Yekaterinburg',dateStyle:'short',timeStyle:'short'})+
       ' (Екатеринбург). Условия из раздела «Инструменты».'+(status.stale?' Проверка задерживается; подтвердите условия.':'');
+    const downError=syncDownPayment(U.parseMoney(el.price.value));
     var inp=readInputs(),date=dealDate();
     if(!date)return empty('Укажите корректную дату сделки.');
     if(flats.isPif())return empty('Для квартиры ПИФ условия рассрочки нужно уточнить.');
-    if(inp.downRub==null)return empty('Введите сумму первоначального взноса клиента.');
-    if(!Number.isSafeInteger(inp.downRub)||inp.downRub<0)return empty('Укажите корректный первоначальный взнос.');
     if(!inp.base)return empty('Укажите стоимость квартиры.');
+    if(downError)return empty(downError);
+    if(inp.downRub==null)return empty('Введите первоначальный взнос в рублях или процентах.');
+    if(!Number.isSafeInteger(inp.downRub)||inp.downRub<0)return empty('Укажите корректный первоначальный взнос.');
     var cards=C.installments(D,inp,date);
     if(!cards.length)return empty('Условия рассрочки для этого проекта готовятся.');
     var selected=cards.find(function(c){return c.id===state.picks[state.project];})||cards.find(function(c){return !c.error;})||cards[0];
     last=selected;
-    $('sm-down-basis').textContent='Взнос берётся из указанной суммы. Процент выбранной программы считается '+(selected.pvFromBase?'от прайса':'от цены в договоре')+'.';
     el.detail.innerHTML=detailHtml(selected);el.options.innerHTML=optionsHtml(selected);
     el.thead.innerHTML='<tr>'+cols.map(function(c){return '<th>'+c+'</th>';}).join('')+'</tr>';
     el.tbody.innerHTML=cards.map(function(c){return rowHtml(c,c.id===selected.id);}).join('');
@@ -110,7 +124,8 @@
   el.tbody.addEventListener('click',function(e){var row=e.target.closest('tr[data-id]');if(!row)return;state.picks[state.project]=+row.dataset.id;render();el.tbody.querySelector('tr.sm-sel button').focus({preventScroll:true});});
   el.options.addEventListener('click',function(e){var b=e.target.closest('[data-step] button[data-v]');if(!b||!last)return;var value=b.getAttribute('data-v');state.step[last.id]=+value;render();el.options.querySelector('[data-step] button[data-v="'+value+'"]').focus({preventScroll:true});});
   el.promotions.addEventListener('change',function(e){var id=e.target.getAttribute('data-promotion');if(!id)return;state.promotionIds=state.promotionIds.filter(function(v){return v!==id;});if(e.target.checked)state.promotionIds.push(id);render();});
-  U.moneyInput(downRub,render);
+  U.moneyInput(downRub,function(){downUnit='rub';render();});
+  downPct.addEventListener('input',function(){downUnit='pct';render();});
   U.moneyInput(el.price,render);U.pctInput(el.extra,render);el.rooms.addEventListener('change',render);el.date.addEventListener('input',render);
   $('sm-print').addEventListener('click',function(){window.print();});U.saveButton($('sm-save'),$('sm-msg'),createPdf);
   window.SMRassrochka={createPdf:createPdf,data:D};render();

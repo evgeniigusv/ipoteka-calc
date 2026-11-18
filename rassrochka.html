@@ -13,6 +13,7 @@
 <style>
 .sm .sm-check { display:flex; align-items:center; gap:10px; color:var(--ink); }
 .sm .sm-check input { width:18px; height:18px; padding:0; flex:0 0 18px; accent-color:var(--sky); }
+.sm-down-pair { display:grid; grid-template-columns:minmax(0, 3fr) minmax(0, 2fr); gap:12px; align-items:end; }
 </style>
 </head>
 <body>
@@ -45,9 +46,12 @@
         <input id="sm-price" type="text" inputmode="numeric" autocomplete="off">
       </div>
       <div class="sm-field">
-        <label for="sm-down-rub">Первоначальный взнос клиента, ₽</label>
-        <input id="sm-down-rub" type="text" inputmode="numeric" placeholder="Введите сумму" autocomplete="off">
-        <span class="sm-hint" id="sm-down-basis">Укажите сумму в рублях — доля взноса и скидка рассчитаются автоматически.</span>
+        <div class="sm-down-pair">
+          <div><label for="sm-down-rub">Первоначальный взнос, ₽</label>
+            <input id="sm-down-rub" type="text" inputmode="numeric" placeholder="Сумма" autocomplete="off"></div>
+          <div><label for="sm-down-pct">Доля от прайса, %</label>
+            <input id="sm-down-pct" type="text" inputmode="decimal" placeholder="Процент" autocomplete="off"></div>
+        </div>
       </div>
       <div class="sm-field">
         <label for="sm-rooms">Количество комнат</label>
@@ -109,6 +113,6 @@
 <script src="assets/engine.js?v=editor-flats-20261118-4"></script>
 <script src="assets/common.js?v=tools13-20261118"></script>
 <script src="assets/flats.js?v=tools13-20261118"></script>
-<script src="assets/rassrochka.js?v=ux-review-1"></script>
+<script src="assets/rassrochka.js?v=down-pair-1"></script>
 </body>
 </html>
