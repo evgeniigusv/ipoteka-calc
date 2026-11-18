@@ -475,7 +475,8 @@ if(Object.hasOwn(M.categories,params.get('section')))category=$('tools-category'
 function ownerAction(kind,id,targetProject){
  const record=id&&data?.records.find(r=>r.id===id);
  const titles={'add-project':'Добавить условия · '+names[targetProject],manage:'Управление инструментами',flats:'Квартиры',compensation:'Компенсация субсидии',new:'Добавить инструмент',ai:'Добавить с ИИ',edit:record?.name||'Редактировать инструмент'};
- SMOwnerWindow.open({kind,id,project:targetProject||record?.project||project,section:record?M.section(record):category},titles[kind]);
+ const flatFilter=kind==='flats'?settingsEditor.flatFilter():undefined;
+ SMOwnerWindow.open({kind,id,flatFilter,project:targetProject||record?.project||project,section:record?M.section(record):category},titles[kind]);
 }
 $('tools-owner-link').onclick=()=>ownerAction('manage');
 $('tools-owner-new').onclick=()=>ownerAction('new');
@@ -509,12 +510,13 @@ settingsEditor=SMToolsSettings.setup({
  canSave:()=>!busy&&!changes.size,
  onSaved:res=>{accepted(res.data);pendingPublish=!res.published;render();}
 });
-function selectView(next){
+function selectView(next, addHistory=false){
  view=['flats','compensation'].includes(next)?next:'catalog';
  const title={catalog:'Инструменты',flats:'Квартиры',compensation:'Компенсация субсидии'}[view];
  document.querySelector('.tools-mast h1').textContent=title;document.title=title+' — Свобода мысли';
  $('tools-catalog-panel').hidden=view!=='catalog';$('tools-settings-panel').hidden=view==='catalog';
  $('tools-settings-owner').hidden=local||view==='catalog';
+ $('tools-settings-edit').textContent=view==='flats'?'Редактировать условия квартир':'Редактировать лимиты';
  document.querySelectorAll('[data-tools-view]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.toolsView===view)));
  document.querySelectorAll('.sm-navigation a').forEach(link=>{
    const target=new URL(link.href);
@@ -525,10 +527,13 @@ function selectView(next){
  });
  if(view!=='catalog')settingsEditor.show(view);
  const url=new URL(location.href);if(view==='catalog')url.searchParams.delete('view');else url.searchParams.set('view',view);
- history.replaceState(null,'',url);render();
+ if(addHistory && url.href!==location.href)history.pushState(null,'',url);
+ else history.replaceState(null,'',url);
+ render();
 }
-document.querySelector('.tools-view-tabs').onclick=e=>{const button=e.target.closest('[data-tools-view]');if(button)selectView(button.dataset.toolsView);};
+document.querySelector('.tools-view-tabs').onclick=e=>{const button=e.target.closest('[data-tools-view]');if(button)selectView(button.dataset.toolsView,true);};
 $('tools-settings-edit').onclick=()=>ownerAction(view);
+window.addEventListener('popstate',()=>selectView(new URL(location.href).searchParams.get('view')));
 selectView(params.get('view'));
 
 
@@ -541,6 +546,7 @@ SMOwnerWindow.ready(function(action){
  $('tools-inactive').value='active';
  render();
  selectView(['flats','compensation'].includes(action.kind)?action.kind:'catalog');
+ if(action.kind==='flats' && action.flatFilter)settingsEditor.setFlatFilter(action.flatFilter);
  if(action.kind==='add-project')addProjectConditions(action.id,action.project);
  if(action.kind==='edit')editRecord(action.id);
  if(action.kind==='new')openEditor();

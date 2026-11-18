@@ -33,7 +33,7 @@
     var x = inputs();
     if(programs.length&&!Number.isFinite(x.cost)){els.result.innerHTML='<p class="sm-empty">Заполните «Стоимость денег» в настройках выбранного инструмента ЧПВ.</p>';return;}
     if(!programs.length){els.result.innerHTML='<p class="sm-empty">Активных программ ЧПВ нет.</p>';return;}
-    if (!x.base || !x.cash || x.client == null || !x.ddu) { els.result.innerHTML = '<p class="sm-empty">Укажите цену по прайсу, цену за наличные, средства клиента и цену ДДУ.</p>'; return; }
+    if (!x.base || !x.cash || x.client == null || !x.ddu) { els.result.innerHTML = '<p class="sm-empty">Укажите цену по прайсу, цену при 100% оплате, средства клиента и цену ДДУ.</p>'; return; }
     var r;try{r=calc.calculate(x);}catch(e){els.result.innerHTML='<p class="sm-empty">'+esc(e.message)+'</p>';return;}
     var rows=[];
     function add(k,v) { rows.push('<dt>' + k + '</dt><dd>' + v + '</dd>'); }
@@ -43,9 +43,10 @@
     add('Стоимость денег', F.rub(r.cost) + ' · ' + F.pct(x.cost)); add('Удорожание в ДДУ', F.rub(r.rise));
     add('Недополученная прибыль', F.rub(r.profit)); add('Сумма кредита', F.rub(r.loan)); add('Сверхлимит', F.rub(r.excess));
     add('Расчётная ставка', F.pct(r.rate)); add('Ежемесячный платёж', F.rub(r.payment)); add('Комиссия агента', F.rub(r.agent));
-    els.result.innerHTML = '<div class="sm-hero"><div class="sm-k">Вердикт по таблице</div><div class="sm-hero-name">' + esc(r.verdict) + '</div></div><dl>' + rows.join('') + '</dl>' +
-      (r.funded < 0 ? '<div class="sm-note">Средства клиента превышают рассчитанный ПВ: проверьте ввод.</div>' : '') +
-      (r.fundedPct > .5 ? '<div class="sm-note">Финансируется более 50% первоначального взноса. Проверьте допустимый предел: в активном листе таблицы этот предел не проверяется.</div>' : '') +
+    els.result.innerHTML = '<div class="sm-hero"><div class="sm-k">Результат подбора</div><div class="sm-hero-name">' + esc(r.verdict) + '</div></div>' +
+      (r.fundedPct > .5 ? '<p class="sm-note sm-why">Финансируется '+F.pct1(r.fundedPct)+' первоначального взноса. Уточните у брокера допустимую долю.</p>' : '') +
+      '<dl>' + rows.join('') + '</dl>' +
+      (r.funded < 0 ? '<div class="sm-note">Средства клиента превышают рассчитанный ПВ. Проверьте ввод.</div>' : '') +
       (r.excess > 0 ? '<div class="sm-note">Как в таблице, платёж для сверхлимита рассчитан по '+F.pct(x.overRate)+' на всю сумму. Реальные условия комбо-ипотеки уточните у брокера.</div>' : '') +
       '<div class="sm-note">Вердикт повторяет лист «Расчёт ЧПВ»; справочная ставка и применимость условий требуют подтверждения.</div>';
   }

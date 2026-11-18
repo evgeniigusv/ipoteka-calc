@@ -140,7 +140,8 @@
         checkbox.dataset.key = key(row);
         var description = element('span', 'tools-settings-flat-description');
         description.append(element('strong', '', '№ ' + row.num), element('span', '', projectName + ' · этаж ' + (row.floor || '—') + ' · ' + Number(row.area).toLocaleString('ru-RU') + ' м²'));
-        label.append(description, element('span', 'tools-settings-flat-label', 'Специальные условия'), checkbox); list.append(label);
+        var stateLabel = options.readOnly && !checkbox.checked ? 'Обычные условия' : 'Специальные условия';
+        label.append(description, element('span', 'tools-settings-flat-label', stateLabel), checkbox); list.append(label);
       });
       controls();
     }
@@ -218,7 +219,13 @@
       capSection.open=true;flatSection.open=view==='flats';
       if(view==='flats')loadFlats();
     }
-    instance = { show:show, refresh: refresh, isDirty: function () { return dirty; }, isBusy: function () { return busy; }, destroy: function () {
+    function flatFilter() { return { project: projectSelect.value, number: search.value }; }
+    function setFlatFilter(filter) {
+      projectSelect.value = Array.from(projectSelect.options).some(option => option.value === filter.project) ? filter.project : 'all';
+      search.value = typeof filter.number === 'string' ? filter.number : '';
+      renderFlats();
+    }
+    instance = { flatFilter, setFlatFilter, show:show, refresh: refresh, isDirty: function () { return dirty; }, isBusy: function () { return busy; }, destroy: function () {
       destroyed = true; root.removeEventListener('beforeunload', beforeUnload); host.remove(); instance = null;
     } };
     fill(); loadSettings();

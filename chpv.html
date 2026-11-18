@@ -8,7 +8,7 @@
 <meta name="theme-color" content="#355DB3">
 <meta name="robots" content="noindex, nofollow">
 <link rel="stylesheet" href="assets/style.css?v=tools13-20261118">
-<link rel="stylesheet" href="assets/themes.css?v=1">
+<link rel="stylesheet" href="assets/themes.css?v=ux-1">
 <script src="assets/theme.js?v=2"></script>
 </head>
 <body>
@@ -21,6 +21,7 @@
       <button type="button" data-theme-choice="sm">Свобода мысли</button>
     </div></div>
   <p class="sm-lede">Расчёт финансирования первоначального взноса по методике рабочего калькулятора. Ставки справочные; итоговые условия подтверждает ипотечный брокер.</p>
+  <nav class="sm-section-links" aria-label="Переходы внутри расчёта"><a href="#calc-result">К расчёту</a></nav>
   <div class="sm-grid">
     <section class="sm-card">
       <h2>Условия</h2>
@@ -32,7 +33,7 @@
       </div>
       <div class="sm-row2">
         <div class="sm-field"><label for="sm-price">Цена по прайсу, ₽</label><input id="sm-price" type="text" inputmode="numeric"></div>
-        <div class="sm-field"><label for="sm-cash">Цена за наличные, ₽</label><input id="sm-cash" type="text" inputmode="numeric"><span class="sm-hint">Цена при 100% оплате</span></div>
+        <div class="sm-field"><label for="sm-cash">Цена при 100% оплате, ₽</label><input id="sm-cash" type="text" inputmode="numeric"></div>
       </div>
       <div class="sm-field"><label for="sm-program">Программа ипотеки</label><select id="sm-program"></select><span class="sm-hint">Ставки и лимиты — справочные, из рабочего калькулятора</span></div>
       <div class="sm-row2">
@@ -41,12 +42,12 @@
       </div>
       <button type="button" class="sm-btn sm-btn2" id="sm-suggest">Подобрать цену ДДУ</button>
     </section>
-    <section class="sm-card" aria-live="polite"><h2>Расчёт ЧПВ</h2><div id="sm-result"></div></section>
+    <section class="sm-card" aria-live="polite" id="calc-result" tabindex="-1"><h2>Расчёт ЧПВ</h2><div id="sm-result"></div></section>
   </div>
   <footer class="sm-foot"><p class="sm-legal">Предварительный внутренний расчёт. Проверьте цену, наличие и условия с ипотечным брокером.</p><div class="sm-actions"><button type="button" class="sm-btn sm-btn2" id="sm-print">Распечатать</button></div></footer>
 </main>
 <script src="assets/data.js?v=20261114-da"></script><script src="assets/tools-model.js?v=tools13-20261118"></script>
 <script src="assets/tools-loader.js?v=editor-flats-20261118-4"></script>
-<script src="assets/engine.js?v=editor-flats-20261118-4"></script><script src="assets/common.js?v=tools13-20261118"></script><script src="assets/flats.js?v=tools13-20261118"></script><script src="assets/chpv-engine.js?v=20261106-audit"></script><script src="assets/promotion-picker.js?v=tools13-20261118"></script><script src="assets/chpv.js?v=tools13-20261118"></script>
+<script src="assets/engine.js?v=editor-flats-20261118-4"></script><script src="assets/common.js?v=tools13-20261118"></script><script src="assets/flats.js?v=tools13-20261118"></script><script src="assets/chpv-engine.js?v=20261106-audit"></script><script src="assets/promotion-picker.js?v=tools13-20261118"></script><script src="assets/chpv.js?v=ux-review-1"></script>
 </body>
 </html>

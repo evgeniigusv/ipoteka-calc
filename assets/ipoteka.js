@@ -63,7 +63,7 @@
     add('Срок кредита', F.years(r.term));
     add('Цена по прайсу', F.rub(inp.base));
     add('Акционная стоимость', F.rub(r.cashPrice));
-    if(r.sub>0){add('Компенсация компании', F.rub(r.companyCompensation));add('Доплата клиента за субсидию', F.rub(r.clientSubsidy));}
+    if(r.sub>0){add(inp.companyPays ? 'Компенсация компании' : 'Компенсация компании выключена', F.rub(r.companyCompensation));add('Доплата клиента за субсидию', F.rub(r.clientSubsidy));}
     if(r.promotions.length)add('Применённые акции',r.promotions.map(function(a){return esc(a.name);}).join(', '));
     add('Цена квартиры в договоре', F.rub(r.price), 'sm-strong');
     add('Скидка', F.rub(inp.base - r.price) + dim(F.pct1(r.disc)));
@@ -134,7 +134,9 @@
     el.tbody.innerHTML = res.rows.map(function (r) { return rowHtml(r, res.best && res.best.id); }).join('');
     el.tip.innerHTML = !res.best ? ''
       : state.pick != null ? 'Программа выбрана вручную · <button type="button" class="sm-link" id="sm-auto">вернуть автоподбор</button>'
-      : 'Показана программа с наименьшим платежом. Нажмите на строку, чтобы посмотреть другую';
+      : (inp.pv > 0
+          ? (res.best.pvRaised ? 'Взноса не хватает для доступных программ. Показан вариант с минимальным первым платежом после увеличения взноса.' : 'Минимальный первый платёж среди программ, для которых хватает вашего взноса.')
+          : 'Сначала отобраны программы с наименьшей долей взноса или в пределах 0,5 п. п. от неё. Из них показана программа с минимальным первым платежом.');
   }
 
   /* ---------- PDF: лист 1 — условия и расчёт, дальше — таблица программ по 12 строк ---------- */

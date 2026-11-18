@@ -8,7 +8,7 @@
 <meta name="theme-color" content="#355DB3">
 <meta name="robots" content="noindex, nofollow">
 <link rel="stylesheet" href="assets/style.css?v=tools13-20261118">
-<link rel="stylesheet" href="assets/themes.css?v=1">
+<link rel="stylesheet" href="assets/themes.css?v=ux-1">
 <script src="assets/theme.js?v=2"></script>
 <style>
 .sm .sm-check { display:flex; align-items:center; gap:10px; color:var(--ink); }
@@ -25,8 +25,9 @@
       <button type="button" data-theme-choice="classic">Классика</button>
       <button type="button" data-theme-choice="sm">Свобода мысли</button>
     </div></div>
-  <p class="sm-lede">Выберите квартиру и условия покупки. Сравните варианты рассрочки в таблице ниже — справа появится расчёт выбранной программы.</p>
+  <p class="sm-lede">Выберите квартиру и условия покупки. Сравните варианты рассрочки в таблице ниже — выбранная программа откроется в блоке «Расчёт по программе».</p>
 
+  <nav class="sm-section-links" aria-label="Переходы внутри расчёта"><a href="#calc-result">К расчёту</a><a href="#calc-programs">Сравнить программы</a></nav>
   <div class="sm-grid">
   <section class="sm-card">
     <h2>Условия</h2>
@@ -49,7 +50,7 @@
         <span class="sm-hint" id="sm-down-basis">Укажите сумму в рублях — доля взноса и скидка рассчитаются автоматически.</span>
       </div>
       <div class="sm-field">
-        <label for="sm-rooms">Квартира</label>
+        <label for="sm-rooms">Количество комнат</label>
         <select id="sm-rooms">
           <option value="1">Студия или 1-комнатная</option>
           <option value="2">2-комнатная</option>
@@ -71,13 +72,13 @@
     <div id="sm-program-options"></div>
   </section>
 
-  <section class="sm-card" aria-live="polite">
+  <section class="sm-card" aria-live="polite" id="calc-result" tabindex="-1">
     <h2>Расчёт по программе</h2>
     <div id="sm-detail"></div>
   </section>
   </div>
 
-  <section class="sm-card sm-tablecard">
+  <section class="sm-card sm-tablecard" id="calc-programs" tabindex="-1">
     <div class="sm-tablehead">
       <h2>Все варианты рассрочки</h2>
       <span class="sm-tip" id="sm-tip">Выберите строку, чтобы посмотреть расчёт</span>
@@ -88,6 +89,7 @@
         <tbody id="sm-tbody"></tbody>
       </table>
     </div>
+  <a class="sm-return-result" href="#calc-result">К расчёту выбранной программы</a>
   </section>
 
   <footer class="sm-foot">
@@ -107,6 +109,6 @@
 <script src="assets/engine.js?v=editor-flats-20261118-4"></script>
 <script src="assets/common.js?v=tools13-20261118"></script>
 <script src="assets/flats.js?v=tools13-20261118"></script>
-<script src="assets/rassrochka.js?v=manual-pv-20261118"></script>
+<script src="assets/rassrochka.js?v=ux-review-1"></script>
 </body>
 </html>

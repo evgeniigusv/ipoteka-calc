@@ -110,3 +110,10 @@
   .sm:not(.sm-pdf) .sm-actions { min-width: 0; max-width: 100%; }
   .sm:not(.sm-pdf) .sm-btn { padding: 0 12px; white-space: normal; }
 }
+
+.sm-section-links, .sm-return-result { display: none; }
+@media screen and (max-width: 900px) {
+  .sm-section-links { display: flex; flex-wrap: wrap; gap: 4px 20px; }
+  .sm-section-links a, .sm-return-result { display: inline-flex; align-items: center; min-height: 44px; color: var(--sky); font-weight: 600; }
+  #calc-result, #calc-programs { scroll-margin-top: 12px; }
+}

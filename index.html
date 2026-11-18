@@ -8,7 +8,7 @@
 <meta name="theme-color" content="#355DB3">
 <meta name="robots" content="noindex, nofollow">
 <link rel="stylesheet" href="assets/style.css?v=tools13-20261118">
-<link rel="stylesheet" href="assets/themes.css?v=1">
+<link rel="stylesheet" href="assets/themes.css?v=ux-1">
 <script src="assets/theme.js?v=2"></script>
 <style>
 .sm .sm-check { display:flex; align-items:center; gap:10px; color:var(--ink); }
@@ -25,8 +25,9 @@
       <button type="button" data-theme-choice="classic">Классика</button>
       <button type="button" data-theme-choice="sm">Свобода мысли</button>
     </div></div>
-  <p class="sm-lede">Выберите очередь и условия покупки. Калькулятор посчитает платёж по каждой программе и покажет ту, где он наименьший.</p>
+  <p class="sm-lede">Выберите очередь и условия покупки. Сравните ежемесячные платежи и взносы по доступным программам.</p>
 
+  <nav class="sm-section-links" aria-label="Переходы внутри расчёта"><a href="#calc-result">К расчёту</a><a href="#calc-programs">Сравнить программы</a></nav>
   <div class="sm-grid">
     <section class="sm-card">
       <h2>Условия</h2>
@@ -76,13 +77,13 @@
       </div>
     </section>
 
-    <section class="sm-card" aria-live="polite">
+    <section class="sm-card" aria-live="polite" id="calc-result" tabindex="-1">
       <h2>Расчёт по программе</h2>
       <div id="sm-detail"></div>
     </section>
   </div>
 
-  <section class="sm-card sm-tablecard">
+  <section class="sm-card sm-tablecard" id="calc-programs" tabindex="-1">
     <div class="sm-tablehead">
       <h2 id="sm-table-title">Все программы</h2>
       <span class="sm-tip" id="sm-tip"></span>
@@ -93,6 +94,7 @@
         <tbody id="sm-tbody"></tbody>
       </table>
     </div>
+  <a class="sm-return-result" href="#calc-result">К расчёту выбранной программы</a>
   </section>
 
   <footer class="sm-foot">
@@ -112,6 +114,6 @@
 <script src="assets/engine.js?v=editor-flats-20261118-4"></script>
 <script src="assets/common.js?v=tools13-20261118"></script>
 <script src="assets/flats.js?v=tools13-20261118"></script>
-<script src="assets/ipoteka.js?v=tools13-20261118"></script>
+<script src="assets/ipoteka.js?v=ux-review-1"></script>
 </body>
 </html>

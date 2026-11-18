@@ -65,7 +65,7 @@
   }
   function empty(message) {
     last=null;el.detail.innerHTML='<p class="sm-empty">'+esc(message)+'</p>';
-    el.options.innerHTML=el.thead.innerHTML=el.tbody.innerHTML='';el.tip.textContent='';$('sm-save').disabled=true;
+    el.options.innerHTML=el.thead.innerHTML=el.tbody.innerHTML='';el.tip.textContent=message;$('sm-save').disabled=true;
   }
   function render() {
     var programs=D.installments.filter(function(p){return !p.projects.length||p.projects.indexOf(state.project)>=0;});

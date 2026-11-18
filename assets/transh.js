@@ -108,7 +108,11 @@
       minFirst:p.minFirst||0,tranches:+p.tranches,firstRub:p.flexibleTranches?U.parseMoney($('sm-first-rub').value):p.firstRub,bank:el.bank.value.trim()};
   }
   function results(x,r){
-    var html='<div class="sm-hero"><div class="sm-hero-name">'+esc(x.bank||'Траншевая ипотека')+'</div><div class="sm-hero-flat">'+esc(project)+(flats.selectedNumber()?' · кв. '+esc(flats.selectedNumber()):'')+'</div><div class="sm-pay"><div><div class="sm-k">Платёж после первого транша</div><div class="sm-v">'+F.rub(r.stages[0].payment)+'</div></div></div></div>';
+    var payments = r.stages.map(function(stage, i){
+      var prefix = x.estimate ? '≈ ' : '';
+      return '<div><div class="sm-k">После '+(i+1)+'-го транша, в месяц</div><div class="sm-v">'+prefix+F.rub(stage.payment)+'</div><div>'+esc(stagePeriod(i))+'</div></div>';
+    });
+    var html='<div class="sm-hero"><div class="sm-hero-name">'+esc(x.bank||'Траншевая ипотека')+'</div><div class="sm-hero-flat">'+esc(project)+(flats.selectedNumber()?' · кв. '+esc(flats.selectedNumber()):'')+'</div><div class="sm-pay">'+payments.join('')+'</div></div>';
     html+='<dl><dt>Программа</dt><dd>'+esc(selected ? selected.name.replace('Сбербанк · ', '') : x.estimate?'По ориентиру 1 500 ₽':'По ставке банка')+'</dd><dt>'+(x.estimate?'Оценочная ставка и срок':'Ставка и срок')+'</dt><dd>'+(x.estimate?'≈ ':'')+F.pct(x.rate)+' · '+F.years(x.years)+'</dd><dt>Стоимость квартиры после скидки</dt><dd>'+F.rub(r.price)+'</dd><dt>Первоначальный взнос</dt><dd>'+F.rub(r.down)+'</dd><dt>Общий кредит</dt><dd>'+F.rub(r.total)+'</dd></dl>';
     function stagePeriod(i){
       var date=r.stages[i].date,next=r.stages[i+1];

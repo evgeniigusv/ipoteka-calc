@@ -11,7 +11,7 @@
   #sm-result dd { white-space: normal; overflow-wrap: anywhere; }
 }
 </style>
-<link rel="stylesheet" href="assets/themes.css?v=1">
+<link rel="stylesheet" href="assets/themes.css?v=ux-1">
 <script src="assets/theme.js?v=2"></script>
 </head>
 <body>
@@ -24,6 +24,7 @@
       <button type="button" data-theme-choice="sm">Свобода мысли</button>
     </div></div>
   <p class="sm-lede">Выберите квартиру и условия — покажем, как меняется платёж после выдачи каждого транша.</p>
+  <nav class="sm-section-links" aria-label="Переходы внутри расчёта"><a href="#calc-result">К расчёту</a></nav>
   <div class="sm-grid">
     <section class="sm-card">
       <h2>Условия сделки</h2>
@@ -41,11 +42,11 @@
       <div class="sm-field" id="sm-flexible" hidden><label for="sm-first-date">Дата первого транша</label><input id="sm-first-date" type="date"><div id="sm-draws"></div><button id="sm-add-draw" type="button" class="sm-btn sm-btn2">Добавить промежуточный транш</button></div>
       <div class="sm-date-grid"><div class="sm-field"><label for="sm-date2" id="sm-date2-label">Второй транш</label><input id="sm-date2" type="date"><span id="sm-date2-hint" class="sm-hint"></span></div><div class="sm-field" id="sm-third-date"><label for="sm-date3">Последний транш</label><input id="sm-date3" type="date"><span id="sm-date-hint" class="sm-hint"></span></div></div>
     </section>
-    <section class="sm-card" aria-live="polite"><h2>Как меняется платёж</h2><div id="sm-result"></div></section>
+    <section class="sm-card" aria-live="polite" id="calc-result" tabindex="-1"><h2>Как меняется платёж</h2><div id="sm-result"></div></section>
   </div>
   <footer class="sm-foot"><p class="sm-legal">Предварительный расчёт без учёта страховки и банковских комиссий. Окончательный график, остаток долга и условия определяет банк.</p><div class="sm-actions"><span id="sm-msg" class="sm-msg" role="status"></span><button id="sm-print" type="button" class="sm-btn sm-btn2">Распечатать</button><button id="sm-save" type="button" class="sm-btn">Сохранить PDF</button></div></footer>
 </main>
 <script src="assets/data.js?v=20261114-da"></script><script src="assets/tools-model.js?v=tools13-20261118"></script>
 <script src="assets/tools-loader.js?v=editor-flats-20261118-4"></script>
-<script src="assets/engine.js?v=editor-flats-20261118-4"></script><script src="assets/common.js?v=tools13-20261118"></script><script src="assets/flats.js?v=tools13-20261118"></script><script src="assets/transh-engine.js?v=20261114-tranche"></script><script src="assets/promotion-picker.js?v=tools13-20261118"></script><script src="assets/transh.js?v=tools13-20261118"></script>
+<script src="assets/engine.js?v=editor-flats-20261118-4"></script><script src="assets/common.js?v=tools13-20261118"></script><script src="assets/flats.js?v=tools13-20261118"></script><script src="assets/transh-engine.js?v=20261114-tranche"></script><script src="assets/promotion-picker.js?v=tools13-20261118"></script><script src="assets/transh.js?v=ux-review-1"></script>
 </body></html>
