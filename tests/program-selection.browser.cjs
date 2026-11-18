@@ -113,6 +113,7 @@ const base='https://evgeniigusv.github.io/ipoteka-calc/';
   assert.deepEqual(await p.evaluate(() => window.routeMovement), []);
   await p.locator('[data-tools-view="flats"]').click();
   assert.equal(new URL(p.url()).searchParams.get('view'), 'flats');
+  assert.equal(await p.locator('#tools-settings-panel').evaluate(panel => getComputedStyle(panel).animationName), 'none');
   const toolsOrigin = await p.evaluate(() => performance.timeOrigin);
   await p.locator('.sm-navigation a[aria-current="page"]').click();
   assert.equal(await p.locator('[data-tools-view="catalog"]').getAttribute('aria-pressed'), 'true');

@@ -424,7 +424,6 @@ function disclosureTiming(trigger){
 motionAllowed.addEventListener('change',event=>{
  if(event.matches)return;
  finishGroup();
- document.documentElement.classList.remove('sm-tools-switching');
  for(const effect of document.getAnimations())if(effect.id==='tools-disclosure')effect.cancel();
 });
 
@@ -640,10 +639,8 @@ settingsEditor=SMToolsSettings.setup({
  canSave:()=>!busy&&!changes.size,
  onSaved:res=>{accepted(res.data);pendingPublish=!res.published;render();}
 });
-function selectView(next, addHistory=false, event){
- const previous=view;
+function selectView(next, addHistory=false){
  view=['flats','compensation'].includes(next)?next:'catalog';
- document.documentElement.classList.toggle('sm-tools-switching',view!==previous && pointerMotion(event));
  const title={catalog:'Инструменты',flats:'Квартиры',compensation:'Дополнительные условия'}[view];
  document.querySelector('.tools-mast h1').textContent=title;document.title=title+' — Свобода мысли';
  $('tools-catalog-panel').hidden=view!=='catalog';$('tools-settings-panel').hidden=view==='catalog';
@@ -657,7 +654,7 @@ function selectView(next, addHistory=false, event){
  else history.replaceState(null,'',url);
  render();
 }
-document.querySelector('.tools-view-tabs').onclick=e=>{const button=e.target.closest('[data-tools-view]');if(button && button.dataset.toolsView!==view)selectView(button.dataset.toolsView,true,e);};
+document.querySelector('.tools-view-tabs').onclick=e=>{const button=e.target.closest('[data-tools-view]');if(button && button.dataset.toolsView!==view)selectView(button.dataset.toolsView,true);};
 $('tools-settings-edit').onclick=()=>ownerAction(view);
 window.addEventListener('popstate',()=>selectView(new URL(location.href).searchParams.get('view')));
 selectView(params.get('view'));

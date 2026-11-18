@@ -166,13 +166,15 @@
   }
   .sm-navigation a:focus-visible { outline: 2px solid var(--sky); outline-offset: -3px; }
 }
-@media screen and (hover: hover) {
+@media screen and (hover: hover) and (pointer: fine) {
   .sm:not(.sm-pdf) .sm-navigation a:not([aria-current]):hover { background: var(--sky-soft); }
 }
-@media screen and (prefers-reduced-motion: no-preference) {
-  .sm-tools-switching #tools-catalog-panel:not([hidden]),
-  .sm-tools-switching #tools-settings-panel:not([hidden]) { animation: sm-panel-in 190ms var(--ease); }
-  @keyframes sm-panel-in { from { opacity: .7; transform: translateY(5px); } }
+@media screen {
+  .sm:not(.sm-pdf) .sm-navigation a:not([aria-current]):active,
+  .tools-view-tabs button:not(:disabled):not([aria-pressed="true"]):active {
+    background: var(--sky-soft);
+    transition: none;
+  }
 }
 
 .sm-nav-short { display: none; }
@@ -209,10 +211,10 @@
 }
 
 @media screen and (prefers-reduced-motion: no-preference) {
-  :is(.sm-actions, .sm-pills, .sm-theme-switch, .tools-pills, .tools-view-tabs, .tools-toolbar-actions, .tools-editor-foot) button {
+  :is(.sm-actions, .sm-pills, .sm-theme-switch, .tools-pills, .tools-toolbar-actions, .tools-editor-foot) button {
     transition: transform 120ms var(--ease), background-color 150ms var(--ease), color 150ms var(--ease);
   }
-  :is(.sm-actions, .sm-pills, .sm-theme-switch, .tools-pills, .tools-view-tabs, .tools-toolbar-actions, .tools-editor-foot) button:active:not(:disabled):not(:focus-visible) {
+  :is(.sm-actions, .sm-pills, .sm-theme-switch, .tools-pills, .tools-toolbar-actions, .tools-editor-foot) button:active:not(:disabled):not(:focus-visible) {
     transform: scale(.965);
   }
 }
