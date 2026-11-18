@@ -223,6 +223,23 @@
   .sm-program-enter {
     animation: sm-program-enter 195ms var(--ease);
   }
+  .sm-hero.sm-program-enter { position: relative; }
+  .sm-hero.sm-program-enter::after {
+    content: '';
+    position: absolute;
+    inset: auto 20px 7px;
+    height: 3px;
+    border-radius: 2px;
+    background: var(--apricot);
+    pointer-events: none;
+    transform-origin: left;
+    animation: sm-payment-update 380ms ease-out both;
+  }
+  @keyframes sm-payment-update {
+    from { transform: scaleX(.04); opacity: .9; }
+    65% { transform: scaleX(1); opacity: .85; }
+    to { transform: scaleX(1); opacity: 0; }
+  }
   @keyframes sm-program-enter {
     from { opacity: .7; transform: translateY(4px); }
   }

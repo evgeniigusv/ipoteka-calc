@@ -15,6 +15,21 @@ const base='https://evgeniigusv.github.io/ipoteka-calc/';
   if(!process.argv.includes('--live')) await ctx.route(base+'**',r=>r.fulfill({path:path.resolve(root, new URL(r.request().url()).pathname.slice('/ipoteka-calc/'.length)||'index.html')}));
   const p=await ctx.newPage(), errors=[];p.on('pageerror',e=>errors.push(e.message));
   await p.addInitScript(() => {
+    window.indicatorFrames = new Set();
+    window.contentFrames = new Set();
+    addEventListener('DOMContentLoaded', () => {
+      const stop = performance.now() + 3000;
+      function sample() {
+        for (const a of document.getAnimations()) {
+          if (a.playState !== 'running') continue;
+          const el = a.effect.target;
+          if (a.id === 'sm-section-indicator') window.indicatorFrames.add(getComputedStyle(el).transform);
+          if (a.id === 'sm-section-content') window.contentFrames.add(getComputedStyle(el).opacity);
+        }
+        if (performance.now() < stop) requestAnimationFrame(sample);
+      }
+      sample();
+    }, {once:true});
     window.routeMovement = [];
     addEventListener('pagereveal', event => {
       const transition = event.viewTransition;
@@ -22,7 +37,7 @@ const base='https://evgeniigusv.github.io/ipoteka-calc/';
       transition.ready.then(() => {
         for (const animation of document.getAnimations()) {
           const effect = animation.effect;
-          if (!effect.pseudoElement?.startsWith('::view-transition') && !effect.target?.matches('.sm-nav-indicator')) continue;
+          if (!effect.pseudoElement?.startsWith('::view-transition')) continue;
           if (effect.getKeyframes().some(frame => frame.transform && frame.transform !== 'none')) window.routeMovement.push(animation.animationName || 'transform');
         }
       }, () => {});
@@ -56,6 +71,15 @@ const base='https://evgeniigusv.github.io/ipoteka-calc/';
   assert(loadingHeight >= finalHeight * 0.8, 'При загрузке ставок карточка расчёта схлопнулась');
   for(const name of ['index','rassrochka','chpv','transh']){
    await p.goto(base+name+'.html?theme='+theme,{waitUntil:'domcontentloaded'});await p.waitForFunction(()=>window.SM_TOOLS_DATA && document.querySelector('#sm-project button'));
+   if (name === 'index') {
+     const project = p.locator('#sm-project button').nth(1);
+     await project.click();
+     assert.equal(await project.evaluate(el => el.getAnimations().some(a => a.id === 'sm-button-release')), !reduced);
+     await p.waitForFunction(() => document.querySelector('#sm-flat').options.length > 1);
+     await p.locator('#sm-flat').selectOption({index:1});
+     assert.equal(await p.locator('#calc-result .sm-hero.sm-program-enter').count(), reduced ? 0 : 1);
+     await p.locator('#sm-project button').first().click();
+   }
    if(name==='index'||name==='rassrochka'){
     if(name==='rassrochka')await p.locator('#sm-down-rub').fill('4500000');
     const rows=p.locator('#sm-tbody tr.sm-pick');
@@ -110,6 +134,8 @@ const base='https://evgeniigusv.github.io/ipoteka-calc/';
   await p.locator('.sm-navigation a[href*="tools.html"]').click();
   assert.equal(await p.evaluate(() => sessionStorage.getItem('test-menu-aligned')), 'true');
   await p.waitForFunction(() => window.SM_TOOLS_DATA);
+  if (!reduced) await p.waitForFunction(() => indicatorFrames.size > 1 && contentFrames.size > 1);
+  else assert.equal(await p.evaluate(() => indicatorFrames.size + contentFrames.size), 0);
   assert.deepEqual(await p.evaluate(() => window.routeMovement), []);
   await p.locator('[data-tools-view="flats"]').click();
   assert.equal(new URL(p.url()).searchParams.get('view'), 'flats');
@@ -123,6 +149,8 @@ const base='https://evgeniigusv.github.io/ipoteka-calc/';
   assert.equal(await p.locator('[data-tools-view="flats"]').getAttribute('aria-pressed'), 'true');
   await p.locator('.sm-navigation a[href*="rassrochka.html"]').click();
   await p.waitForFunction(() => window.SM_TOOLS_DATA);
+  if (!reduced) await p.waitForFunction(() => indicatorFrames.size > 1 && contentFrames.size > 1);
+  else assert.equal(await p.evaluate(() => indicatorFrames.size + contentFrames.size), 0);
   assert.deepEqual(await p.evaluate(() => window.routeMovement), []);
   assert.deepEqual(errors,[]);console.log(theme,width,'4 калькулятора: выбор, клавиатура, ввод, расчёт и фокус проверены');await ctx.close();
  }

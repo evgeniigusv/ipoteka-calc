@@ -114,7 +114,7 @@
       }
       options.onChange();
     });
-    select.addEventListener('change', function () {
+    select.addEventListener('change', function (event) {
       var row = current();
       if (row) {
         search.value = String(row.num);
@@ -125,6 +125,7 @@
       else { options.price.value = ''; if (options.onClear) options.onClear(); if (options.discount) options.discount.value = ''; }
       updateWarning(row);
       options.onChange();
+      if (row) root.SMUi?.programFeedback(event);
     });
     fetch('assets/macro-flats.json', { cache: 'no-store' }).then(function (r) {
       if (!r.ok) throw new Error('no data'); return r.json();

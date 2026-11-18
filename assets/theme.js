@@ -28,7 +28,18 @@
   apply(initial);
   if (valid(requested) && window === window.parent) remember(initial);
 
+  const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
+  const navTripKey = 'ipoteka-calc.section-click';
   let sectionLink = null;
+  let arrivingSnapshot = null;
+  document.addEventListener('click', event => {
+    if (!event.detail || reducedMotion.matches) return;
+    const button = event.target.closest('.sm-pills button, .sm-theme-switch button, .sm-actions button, .tools-pills button, .tools-view-tabs button, .tools-toolbar-actions button');
+    if (!button || button.disabled) return;
+    for (const effect of button.getAnimations()) if (effect.id === 'sm-button-release') effect.cancel();
+    button.animate([{transform:'scale(.94)'}, {transform:'scale(1.02)',offset:.66}, {transform:'none'}],
+      {id:'sm-button-release', duration:240, easing:'cubic-bezier(.2,.7,.3,1)'});
+  }, true);
   window.addEventListener('pageswap', event => {
     if (!sectionLink || sectionLink.href !== event.activation?.entry?.url) event.viewTransition?.skipTransition();
     sectionLink = null;
@@ -36,6 +47,7 @@
   window.addEventListener('pagereveal', event => {
     const snapshot = event.viewTransition;
     if (!snapshot) return;
+    arrivingSnapshot = snapshot;
     snapshot.ready.catch(() => {}); // Быстрая загрузка может завершиться до создания снимка.
     // Готовые разделы сменяют друг друга за один кадр. При медленной сети показываем загрузку.
     const showPage = () => snapshot.skipTransition();
@@ -57,11 +69,42 @@
         target.searchParams.set('theme', root.dataset.theme);
         link.href = target.href;
       }
-      const reduced = matchMedia('(prefers-reduced-motion: reduce)');
       const pill = document.createElement('span');
       pill.className = 'sm-nav-indicator';
       pill.setAttribute('aria-hidden', 'true');
       active.prepend(pill);
+
+      let trip;
+      try {
+        trip = JSON.parse(sessionStorage.getItem(navTripKey));
+        sessionStorage.removeItem(navTripKey);
+      } catch { /* Навигация работает и без хранилища. */ }
+      if (trip?.to === location.href && links[trip.from] && !reducedMotion.matches &&
+          performance.getEntriesByType('navigation')[0]?.type === 'navigate') {
+        const start = links[trip.from].getBoundingClientRect(), end = active.getBoundingClientRect();
+        if (start.width && end.width) {
+          const timing = {duration:320, easing:'cubic-bezier(.2,.7,.22,1)', fill:'backwards'};
+          const travel = pill.animate([
+            {transform:'translateX(' + (start.left-end.left) + 'px) scaleX(' + start.width/end.width + ')',backgroundColor:'color-mix(in srgb, var(--blue, var(--sky)) 40%, white)'},
+            {transform:'none'}
+          ], {...timing,id:'sm-section-indicator'});
+          const ink = active.animate([{color:'var(--grey)'},{color:'var(--grey)',offset:.55},{}], timing);
+          travel.pause(); ink.pause();
+          const reveal = () => {
+            if (reducedMotion.matches) { travel.cancel(); ink.cancel(); return; }
+            travel.play(); ink.play();
+            const panel = document.querySelector('main.sm > .sm-grid, #public-catalog');
+            panel?.animate([{opacity:.48},{opacity:1}], {id:'sm-section-content', duration:270,easing:'ease-out'});
+          };
+          // Первый кадр готов после разбора разметки; фоновые ресурсы могут грузиться дольше.
+          const onPaint = () => requestAnimationFrame(() => {
+            if (arrivingSnapshot) arrivingSnapshot.finished.then(reveal);
+            else reveal();
+          });
+          if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', onPaint, {once:true});
+          else onPaint();
+        }
+      }
 
       let pending = null;
       window.addEventListener('pageshow', () => { pending = null; });
@@ -85,8 +128,10 @@
           event.preventDefault();
           return;
         }
-        if (event.detail === 0 || reduced.matches) return;
+        if (event.detail === 0 || reducedMotion.matches) return;
         sectionLink = pending = target;
+        try { sessionStorage.setItem(navTripKey, JSON.stringify({from:links.indexOf(active),to:target.href})); } catch {}
+
       });
       // Прогреваем только публичную HTML-страницу, на которую нацелился пользователь.
       const prefetched = new Set();
