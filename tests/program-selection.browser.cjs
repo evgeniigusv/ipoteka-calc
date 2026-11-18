@@ -17,7 +17,7 @@ const base='https://evgeniigusv.github.io/ipoteka-calc/';
   await p.addInitScript(() => {
     window.sectionArrivals = [];
     document.addEventListener('animationstart', event => {
-      if (event.animationName === 'sm-route-arrival') window.sectionArrivals.push(document.documentElement.dataset.smArrival);
+      if (event.animationName === 'sm-section-arrive') window.sectionArrivals.push(document.documentElement.dataset.smRoute);
     });
   });
   async function checkCurrentSection() {
@@ -82,7 +82,25 @@ const base='https://evgeniigusv.github.io/ipoteka-calc/';
    }
    await checkCurrentSection();
   }
+  // Пока следующее HTML-окно в сети, текущий индикатор и расчёт должны оставаться вместе.
+  await p.evaluate(() => {
+    document.addEventListener('click', () => {
+      setTimeout(() => {
+        const link = document.querySelector('.sm-navigation a[aria-current]');
+        const pill = link.querySelector('.sm-nav-indicator');
+        const aligned = !pill.getAnimations().length && Math.abs(pill.getBoundingClientRect().left - link.getBoundingClientRect().left) < 2;
+        sessionStorage.setItem('test-menu-aligned', String(aligned));
+      }, 60);
+    }, {once:true});
+  });
+  await p.route('**/tools.html?*', async route => {
+    if (!route.request().isNavigationRequest()) { await route.abort(); return; }
+    await new Promise(resolve => setTimeout(resolve, 180));
+    if (process.argv.includes('--live')) await route.continue();
+    else await route.fulfill({path: path.join(root, 'tools.html')});
+  });
   await p.locator('.sm-navigation a[href*="tools.html"]').click();
+  assert.equal(await p.evaluate(() => sessionStorage.getItem('test-menu-aligned')), 'true');
   if (!reduced) await p.waitForFunction(() => window.sectionArrivals.includes('forwards'));
   else assert.deepEqual(await p.evaluate(() => window.sectionArrivals), []);
   await p.locator('[data-tools-view="flats"]').click();

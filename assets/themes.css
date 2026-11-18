@@ -170,12 +170,6 @@
   .sm:not(.sm-pdf) .sm-navigation a:not([aria-current]):hover { background: var(--sky-soft); }
 }
 @media screen and (prefers-reduced-motion: no-preference) {
-  .sm:not(.sm-pdf) .sm-navigation a.sm-pill-leave { color: var(--grey); }
-  .sm:not(.sm-pdf) .sm-navigation a.sm-nav-pending,
-  .sm:not(.sm-pdf) .sm-navigation a.sm-nav-pending:hover {
-    background: transparent;
-    color: var(--graphite, white);
-  }
   .sm-tools-switching #tools-catalog-panel:not([hidden]),
   .sm-tools-switching #tools-settings-panel:not([hidden]) { animation: sm-panel-in 190ms var(--ease); }
   @keyframes sm-panel-in { from { opacity: .7; transform: translateY(5px); } }
@@ -205,16 +199,33 @@
 }
 
 @media screen and (prefers-reduced-motion: no-preference) {
-  [data-sm-arrival="forwards"] { --sm-route-offset: 9px; }
-  [data-sm-arrival="backwards"] { --sm-route-offset: -9px; }
-  [data-sm-arrival] :is(main.sm > .sm-grid, main.sm > .sm-tablecard,
-    main.sm > .sm-lede, #public-catalog > .tools-view-tabs, #tools-catalog-panel > .tools-toolbar,
-    #tools-catalog-panel > .tools-table-wrap) {
-    animation: sm-route-arrival 240ms cubic-bezier(.2,.75,.25,1);
+  @view-transition { navigation: auto; }
+  .sm-head { view-transition-name: sm-heading; }
+  .sm-nav-row { view-transition-name: sm-navigation; }
+  ::view-transition-group(*) { animation-duration: 260ms; }
+  :root[data-sm-route]::view-transition-old(root) {
+    animation: sm-section-leave 260ms cubic-bezier(.25,.72,.25,1) both;
+    background-color: var(--bg);
+    mix-blend-mode: normal;
   }
-  @keyframes sm-route-arrival {
-    from { opacity: .58; transform: translate(var(--sm-route-offset), 4px); }
+  :root[data-sm-route]::view-transition-new(root) {
+    animation: sm-section-arrive 260ms cubic-bezier(.25,.72,.25,1) both;
+    background-color: var(--bg);
+    mix-blend-mode: normal;
   }
+  [data-sm-route="forwards"] { --sm-enter: 100%; --sm-exit: -100%; }
+  [data-sm-route="backwards"] { --sm-enter: -100%; --sm-exit: 100%; }
+  @keyframes sm-section-arrive { from { transform: translateX(var(--sm-enter)); } }
+  @keyframes sm-section-leave { to { transform: translateX(var(--sm-exit)); } }
+  ::view-transition-old(sm-navigation), ::view-transition-old(sm-heading) { display: none; }
+  ::view-transition-new(sm-navigation), ::view-transition-new(sm-heading) { animation: none; }
+  :root[data-sm-route-waiting]::view-transition-new(root),
+  :root[data-sm-route-waiting]::view-transition-old(root) { animation-play-state: paused; }
+  :root[data-sm-route-waiting]::view-transition-old(sm-navigation),
+  :root[data-sm-route-waiting]::view-transition-old(sm-heading) { display: block; animation: none; }
+  :root[data-sm-route-waiting]::view-transition-new(sm-navigation),
+  :root[data-sm-route-waiting]::view-transition-new(sm-heading) { opacity: 0; }
+  ::view-transition { pointer-events: none; }
 }
 
 @media screen and (prefers-reduced-motion: no-preference) {

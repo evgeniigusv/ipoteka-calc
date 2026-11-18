@@ -28,6 +28,11 @@
   apply(initial);
   if (valid(requested) && window === window.parent) remember(initial);
 
+  let sectionLink = null;
+  window.addEventListener('pageswap', event => {
+    if (!sectionLink || sectionLink.href !== event.activation?.entry?.url) event.viewTransition?.skipTransition();
+    sectionLink = null;
+  });
   // Вызывается сразу после разметки навигации, до загрузки скриптов расчёта.
   window.SMNavigation = {
     mount(nav) {
@@ -52,60 +57,54 @@
         const box = element.getBoundingClientRect();
         return {left:box.left - nav.getBoundingClientRect().left, width:box.width};
       }
-      const duration = 180;
-      let motion, pending;
-      function move(from, target, start) {
-        const base = bounds(active);
-        const transform = box => 'translateX(' + (box.left - base.left) + 'px) scaleX(' + box.width / base.width + ')';
-        const end = target === active ? 'none' : transform(bounds(target));
-        motion?.cancel();
-        pill.style.transform = end;
-        if (performance.timeOrigin + performance.now() - start >= duration) return;
-        motion = pill.animate([{transform:transform(from)}, {transform:end}], {
-          duration, easing:getComputedStyle(nav).getPropertyValue('--ease').trim()
-        });
-        // Оба документа используют одно время старта, включая быстрый повторный клик.
-        motion.startTime = start - performance.timeOrigin;
-      }
-      function reset() {
-        motion?.cancel();
-        motion = null;
-        pill.style.transform = '';
-        active.classList.remove('sm-pill-leave');
-        pending?.classList.remove('sm-nav-pending');
-        if (pending) {
-          try { sessionStorage.removeItem(navKey); } catch {}
-        }
-        pending = null;
-      }
+      let pending = null;
+      let incoming = null;
       try {
         const trip = JSON.parse(sessionStorage.getItem(navKey));
         sessionStorage.removeItem(navKey);
-        if (!reduced.matches && trip?.to === location.href &&
-            performance.getEntriesByType('navigation')[0]?.type === 'navigate' &&
-            Number.isFinite(trip.from?.left) && trip.from.width > 0) {
-          root.dataset.smArrival = trip.backwards ? 'backwards' : 'forwards';
-          const finishArrival = event => {
-            if (event.animationName !== 'sm-route-arrival') return;
-            delete root.dataset.smArrival;
-            document.removeEventListener('animationend', finishArrival);
-          };
-          document.addEventListener('animationend', finishArrival);
-          if (trip.width === nav.clientWidth) move(trip.from, active, trip.start);
-        }
-      } catch { /* Без хранилища выбранный раздел виден сразу. */ }
+        if (trip?.to === location.href && trip.width === nav.clientWidth &&
+            performance.getEntriesByType('navigation')[0]?.type === 'navigate') incoming = trip;
+      } catch { /* Ссылки работают и без хранилища. */ }
 
-      window.addEventListener('pagereveal', () => {
-        if (window.navigation?.activation?.navigationType === 'traverse') reset();
+      function arrive() {
+        if (!incoming || reduced.matches) return;
+        const from = incoming.from;
+        incoming = null;
+        const to = bounds(active);
+        if (!Number.isFinite(from?.left) || !(from.width > 0 && to.width > 0)) return;
+        pill.animate([
+          {transform: 'translateX(' + (from.left - to.left) + 'px) scaleX(' + from.width / to.width + ')'},
+          {transform: 'none'}
+        ], {duration: 210, easing: 'cubic-bezier(.22,.68,.25,1)'});
+      }
+      window.addEventListener('pagereveal', event => {
+        const transition = event.viewTransition;
+        if (!transition || !incoming || reduced.matches) { transition?.skipTransition(); arrive(); return; }
+        root.dataset.smRoute = incoming.backwards ? 'backwards' : 'forwards';
+        root.dataset.smRouteWaiting = '';
+        // На экране остаётся снимок предыдущей вкладки, пока строится первый расчёт.
+        // Даже при сетевой ошибке браузер вовремя покажет штатное состояние загрузки.
+        let timer;
+        const release = () => {
+          if (!root.hasAttribute('data-sm-route-waiting')) return;
+          clearTimeout(timer);
+          delete root.dataset.smRouteWaiting;
+          arrive();
+        };
+        timer = setTimeout(release, 450);
+        function catalogReady() { Promise.resolve(window.SM_TOOLS_READY).then(release, release); }
+        if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', catalogReady, {once:true});
+        else catalogReady();
+        transition.finished.then(() => { release(); delete root.dataset.smRoute; });
       });
-      window.addEventListener('pageshow', event => { if (event.persisted) { delete root.dataset.smArrival; reset(); } });
-      reduced.addEventListener('change', () => { if (reduced.matches) reset(); });
+      window.addEventListener('pageshow', event => {
+        pending = null;
+        if (!event.persisted && !('onpagereveal' in window)) arrive();
+      });
       window.navigation?.addEventListener('navigate', event => {
-        if (pending?.href !== event.destination.url) return;
-        const departingMotion = motion;
-        event.signal.addEventListener('abort', () => {
-          if (motion === departingMotion) reset();
-        }, {once:true});
+        if (pending?.href === event.destination.url) {
+          event.signal.addEventListener('abort', () => { pending = null; }, {once:true});
+        }
       });
       nav.addEventListener('click', event => {
         const target = event.target.closest('a');
@@ -122,16 +121,10 @@
           event.preventDefault();
           return;
         }
-        const from = bounds(pill);
-        reset();
         if (event.detail === 0 || reduced.matches) return;
-        const start = performance.timeOrigin + performance.now();
-        pending = target;
-        active.classList.add('sm-pill-leave');
-        target.classList.add('sm-nav-pending');
-        move(from, target, start);
+        sectionLink = pending = target;
         try {
-          sessionStorage.setItem(navKey, JSON.stringify({from, start, to:target.href, width:nav.clientWidth, backwards: links.indexOf(target) < links.indexOf(active)}));
+          sessionStorage.setItem(navKey, JSON.stringify({from:bounds(active), to:target.href, width:nav.clientWidth, backwards:links.indexOf(target) < links.indexOf(active)}));
         } catch {}
       });
       // Прогреваем только публичную HTML-страницу, на которую нацелился пользователь.

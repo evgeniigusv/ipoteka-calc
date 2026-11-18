@@ -455,7 +455,10 @@ function animateGroup(button,rows,open){
  body.append(...rows);
  row.after(carrier);
  carrier.inert=!open;
- const height=table.getBoundingClientRect().height+'px';
+ // Дальние строки находятся за нижней границей окна. Их высота не должна
+ // отнимать время у видимой части раскрытия, особенно при закрытии на телефоне.
+ const visibleHeight=Math.max(body.rows[0].offsetHeight,document.documentElement.clientHeight-clip.getBoundingClientRect().top);
+ const height=Math.min(table.getBoundingClientRect().height,Math.ceil(visibleHeight))+'px';
  const animation=clip.animate([{height:open?'0px':height},{height:open?height:'0px'}],
    {id:'tools-group-height',duration:280,easing:'ease-in-out',fill:'both'});
  movingGroup={button,carrier,body,animation};

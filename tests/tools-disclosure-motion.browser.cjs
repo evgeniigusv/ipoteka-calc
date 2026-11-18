@@ -45,6 +45,13 @@ async function check(browser,width) {
     assert.ok(half>0);
     const full=await clip.locator('table').evaluate(t=>t.getBoundingClientRect().height);
     assert.ok(half<full);
+    const travel=await clip.evaluate(el=>{
+      const animation=el.getAnimations().find(a=>a.id==='tools-group-height');
+      const frames=animation.effect.getKeyframes();
+      const available=document.documentElement.clientHeight-el.getBoundingClientRect().top;
+      return {end:parseFloat(frames.at(-1).height),limit:Math.max(el.querySelector('tr').offsetHeight,Math.ceil(available))};
+    });
+    assert.ok(travel.end<=travel.limit+1,'За границей экрана анимируется лишняя высота группы');
     assert.equal(await group.getAttribute('aria-expanded'),'true');
     await pressGroup();
     assert.equal(await group.getAttribute('aria-expanded'),'false');

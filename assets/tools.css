@@ -202,16 +202,24 @@
     #tools-rows .tool-entry details::details-content {
       interpolate-size: allow-keywords;
       block-size: 0;
-      opacity: 0;
       overflow: clip;
     }
-    #tools-rows .tool-entry details[open]::details-content { block-size: auto; opacity: 1; }
+    #tools-rows .tool-entry details[open]::details-content { block-size: auto; }
     :root[data-sm-input="pointer"] #tools-rows details[data-pointer-disclosure]::details-content {
-      transition: block-size 260ms var(--ease), opacity 200ms ease, content-visibility 260ms allow-discrete;
+      transition: block-size 260ms var(--ease), content-visibility 260ms allow-discrete;
     }
     #tools-rows details:not([open]) > .tool-full { interactivity: inert; pointer-events: none; }
     :root[data-sm-input="pointer"] #tools-rows details[data-pointer-disclosure] > summary::before {
       transition: transform 260ms var(--ease);
     }
+  }
+}
+
+@media (hover: none) {
+  #tools-rows :is(summary, button[aria-expanded]) {
+    -webkit-tap-highlight-color: transparent;
+  }
+  #tools-rows :is(.tool-entry-actions summary, .tools-type-toggle):hover {
+    text-decoration: none;
   }
 }
