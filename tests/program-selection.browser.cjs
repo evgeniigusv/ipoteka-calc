@@ -14,6 +14,38 @@ const base='https://evgeniigusv.github.io/ipoteka-calc/';
   const ctx=await b.newContext({viewport:{width,height:850},reducedMotion:reduced?'reduce':'no-preference'});
   if(!process.argv.includes('--live')) await ctx.route(base+'**',r=>r.fulfill({path:path.resolve(root, new URL(r.request().url()).pathname.slice('/ipoteka-calc/'.length)||'index.html')}));
   const p=await ctx.newPage(), errors=[];p.on('pageerror',e=>errors.push(e.message));
+  await p.addInitScript(() => {
+    window.sectionArrivals = [];
+    document.addEventListener('animationstart', event => {
+      if (event.animationName === 'sm-route-arrival') window.sectionArrivals.push(document.documentElement.dataset.smArrival);
+    });
+  });
+  async function checkCurrentSection() {
+    const current = p.locator('.sm-navigation a[aria-current="page"]');
+    const initial = await p.evaluate(() => performance.timeOrigin);
+    const price = p.locator('#sm-price');
+    const amount = await price.count() ? await price.inputValue() : null;
+    await current.dblclick();
+    await current.press('Enter');
+    assert.equal(await p.evaluate(() => performance.timeOrigin), initial, 'Повторный выбор перезагрузил страницу');
+    if (amount !== null) assert.equal(await price.inputValue(), amount);
+  }
+  let releaseCatalog;
+  const catalogGate = new Promise(resolve => { releaseCatalog = resolve; });
+  await p.route('**/assets/tools.json', async route => {
+    await catalogGate;
+    if (process.argv.includes('--live')) await route.continue();
+    else await route.fulfill({path: path.join(root, 'assets/tools.json')});
+  }, { times: 1 });
+  await p.goto(base + '?theme=' + theme, {waitUntil: 'domcontentloaded'});
+  await p.locator('.sm-mortgage-loading').waitFor();
+  await p.evaluate(() => document.fonts.ready);
+  const result = p.locator('#calc-result');
+  const loadingHeight = (await result.boundingBox()).height;
+  releaseCatalog();
+  await p.locator('#sm-detail .sm-pay').waitFor();
+  const finalHeight = (await result.boundingBox()).height;
+  assert(loadingHeight >= finalHeight * 0.8, 'При загрузке ставок карточка расчёта схлопнулась');
   for(const name of ['index','rassrochka','chpv','transh']){
    await p.goto(base+name+'.html?theme='+theme);await p.waitForFunction(()=>window.SM_TOOLS_DATA && document.querySelector('#sm-project button'));
    if(name==='index'||name==='rassrochka'){
@@ -48,7 +80,23 @@ const base='https://evgeniigusv.github.io/ipoteka-calc/';
     await p.locator('#sm-price').fill('9999999');
     assert.equal(await p.locator('#calc-result .sm-program-enter').count(),0);
    }
+   await checkCurrentSection();
   }
+  await p.locator('.sm-navigation a[href*="tools.html"]').click();
+  if (!reduced) await p.waitForFunction(() => window.sectionArrivals.includes('forwards'));
+  else assert.deepEqual(await p.evaluate(() => window.sectionArrivals), []);
+  await p.locator('[data-tools-view="flats"]').click();
+  assert.equal(new URL(p.url()).searchParams.get('view'), 'flats');
+  const toolsOrigin = await p.evaluate(() => performance.timeOrigin);
+  await p.locator('.sm-navigation a[aria-current="page"]').click();
+  assert.equal(await p.locator('[data-tools-view="catalog"]').getAttribute('aria-pressed'), 'true');
+  assert.equal(await p.evaluate(() => performance.timeOrigin), toolsOrigin);
+  await checkCurrentSection();
+  await p.goBack();
+  assert.equal(await p.locator('[data-tools-view="flats"]').getAttribute('aria-pressed'), 'true');
+  await p.locator('.sm-navigation a[href*="rassrochka.html"]').click();
+  if (!reduced) await p.waitForFunction(() => window.sectionArrivals.includes('backwards'));
+  else assert.deepEqual(await p.evaluate(() => window.sectionArrivals), []);
   assert.deepEqual(errors,[]);console.log(theme,width,'4 калькулятора: выбор, клавиатура, ввод, расчёт и фокус проверены');await ctx.close();
  }
  }finally{await b.close();}

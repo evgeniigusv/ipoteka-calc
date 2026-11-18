@@ -118,12 +118,12 @@
 @media screen and (prefers-reduced-motion: no-preference) {
   #public-catalog[data-owner-entry="pointer"],
   #owner-window[data-owner-entry="pointer"] > :is(iframe, #owner-connection):not([hidden]) {
-    animation: tools-mode-entry 140ms var(--ease);
+    animation: tools-mode-entry 190ms var(--ease);
   }
   :is(#tools-editor, #ai-dialog)[data-owner-entry="pointer"][open] {
     animation: tools-form-entry 160ms var(--ease);
   }
-  @keyframes tools-mode-entry { from { opacity: .8; } }
+  @keyframes tools-mode-entry { from { opacity: .65; transform: translateY(5px); } }
   @keyframes tools-form-entry { from { opacity: .7; transform: translateY(4px); } }
 }
 
@@ -184,3 +184,34 @@
 .tools-promotion-list input { accent-color:var(--sky); width:18px; height:18px; flex:none; }
 .tools-milestone { grid-template-columns:repeat(2,minmax(0,1fr)); }
 .tools-milestone > button { grid-column:2; justify-self:end; }
+
+/* Высота меняется у одного контейнера независимо от числа банковских программ. */
+#tools-table .tools-group-carrier > td {
+  padding: 0; border: 0;
+}
+.tools-group-clip { overflow: clip; contain: layout paint; }
+#tools-table .tools-group-table { width: 100%; min-width: 0; }
+.tools-group-table col:first-child { width: 26%; }
+@media (max-width: 850px) {
+  #tools-table .tools-group-table { display: block; }
+  .tools-group-table colgroup { display: none; }
+}
+
+@media screen and (prefers-reduced-motion: no-preference) {
+  @supports (interpolate-size: allow-keywords) and selector(details::details-content) {
+    #tools-rows .tool-entry details::details-content {
+      interpolate-size: allow-keywords;
+      block-size: 0;
+      opacity: 0;
+      overflow: clip;
+    }
+    #tools-rows .tool-entry details[open]::details-content { block-size: auto; opacity: 1; }
+    :root[data-sm-input="pointer"] #tools-rows details[data-pointer-disclosure]::details-content {
+      transition: block-size 260ms var(--ease), opacity 200ms ease, content-visibility 260ms allow-discrete;
+    }
+    #tools-rows details:not([open]) > .tool-full { interactivity: inert; pointer-events: none; }
+    :root[data-sm-input="pointer"] #tools-rows details[data-pointer-disclosure] > summary::before {
+      transition: transform 220ms var(--ease);
+    }
+  }
+}

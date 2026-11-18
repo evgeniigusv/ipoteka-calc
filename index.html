@@ -9,11 +9,16 @@
 <meta name="robots" content="noindex, nofollow">
 <script async data-tools-preload src="assets/tools-loader.js?v=shared-conditions-nav-1"></script>
 <link rel="stylesheet" href="assets/style.css?v=quiet-calc-2">
-<link rel="stylesheet" href="assets/themes.css?v=quiet-calc-1">
-<script src="assets/theme.js?v=quiet-calc-1"></script>
+<link rel="stylesheet" href="assets/themes.css?v=stable-nav-1">
+<script src="assets/theme.js?v=stable-nav-1"></script>
 <style>
 .sm .sm-check { display:flex; align-items:center; gap:10px; color:var(--ink); }
 .sm .sm-check input { width:18px; height:18px; padding:0; flex:0 0 18px; accent-color:var(--sky); }
+.sm-mortgage-loading { min-block-size: 50rem; }
+.sm-mortgage-loading .sm-hero { min-block-size: 11rem; }
+@media (max-width: 640px) {
+  .sm-mortgage-loading { min-block-size: 63rem; }
+}
 </style>
 </head>
 <body>
@@ -83,7 +88,11 @@
 
     <section class="sm-card" aria-live="polite" id="calc-result" tabindex="-1">
       <h2>Расчёт по программе</h2>
-      <div id="sm-detail"></div>
+      <div id="sm-detail">
+        <div class="sm-mortgage-loading" role="status">
+          <div class="sm-hero"><span class="sm-hero-name">Загружаем условия ипотеки…</span></div>
+        </div>
+      </div>
     </section>
   </div>
 

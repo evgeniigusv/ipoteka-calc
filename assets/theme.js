@@ -71,7 +71,6 @@
         motion?.cancel();
         motion = null;
         pill.style.transform = '';
-        delete root.dataset.smNavLeaving;
         active.classList.remove('sm-pill-leave');
         pending?.classList.remove('sm-nav-pending');
         if (pending) {
@@ -82,17 +81,24 @@
       try {
         const trip = JSON.parse(sessionStorage.getItem(navKey));
         sessionStorage.removeItem(navKey);
-        if (!reduced.matches && trip?.to === location.href && trip.width === nav.clientWidth &&
+        if (!reduced.matches && trip?.to === location.href &&
             performance.getEntriesByType('navigation')[0]?.type === 'navigate' &&
             Number.isFinite(trip.from?.left) && trip.from.width > 0) {
-          move(trip.from, active, trip.start);
+          root.dataset.smArrival = trip.backwards ? 'backwards' : 'forwards';
+          const finishArrival = event => {
+            if (event.animationName !== 'sm-route-arrival') return;
+            delete root.dataset.smArrival;
+            document.removeEventListener('animationend', finishArrival);
+          };
+          document.addEventListener('animationend', finishArrival);
+          if (trip.width === nav.clientWidth) move(trip.from, active, trip.start);
         }
       } catch { /* Без хранилища выбранный раздел виден сразу. */ }
 
       window.addEventListener('pagereveal', () => {
         if (window.navigation?.activation?.navigationType === 'traverse') reset();
       });
-      window.addEventListener('pageshow', event => { if (event.persisted) reset(); });
+      window.addEventListener('pageshow', event => { if (event.persisted) { delete root.dataset.smArrival; reset(); } });
       reduced.addEventListener('change', () => { if (reduced.matches) reset(); });
       window.navigation?.addEventListener('navigate', event => {
         if (pending?.href !== event.destination.url) return;
@@ -105,17 +111,27 @@
         const target = event.target.closest('a');
         if (!target || event.defaultPrevented || event.button !== 0 ||
             event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+        if (target === active) {
+          event.preventDefault();
+          // Верхняя ссылка «Инструменты» возвращает из подраздела в общий каталог.
+          const catalog = document.querySelector('#public-catalog:not([hidden]) [data-tools-view="catalog"][aria-pressed="false"]');
+          catalog?.click();
+          return;
+        }
+        if (target === pending) {
+          event.preventDefault();
+          return;
+        }
         const from = bounds(pill);
         reset();
-        if (target === active || event.detail === 0 || reduced.matches) return;
+        if (event.detail === 0 || reduced.matches) return;
         const start = performance.timeOrigin + performance.now();
         pending = target;
-        root.dataset.smNavLeaving = '';
         active.classList.add('sm-pill-leave');
         target.classList.add('sm-nav-pending');
         move(from, target, start);
         try {
-          sessionStorage.setItem(navKey, JSON.stringify({from, start, to:target.href, width:nav.clientWidth}));
+          sessionStorage.setItem(navKey, JSON.stringify({from, start, to:target.href, width:nav.clientWidth, backwards: links.indexOf(target) < links.indexOf(active)}));
         } catch {}
       });
       // Прогреваем только публичную HTML-страницу, на которую нацелился пользователь.

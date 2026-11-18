@@ -9,7 +9,7 @@ function alert(message){$('tools-error').textContent=message||'';$('tools-error'
 function projects(){return project==='all'?Object.keys(M.projects):[project];}
 function header(){return '<tr><th rowspan="2" scope="col">Инструмент</th>'+projects().map(function(p){return '<th colspan="2" scope="colgroup">'+names[p]+'</th>';}).join('')+'</tr><tr>'+projects().map(function(){return '<th scope="col">Условия</th><th scope="col">Сочетание</th>';}).join('')+'</tr>';}
 const generalMortgageLabel='Общие условия ипотеки';
-let generalMortgageOpen=false;
+let generalMortgageOpen=false, movingGroup=null;
 const expandedMortgages=new Set();
 function searchText(text){return text.toLowerCase().replace(/ё/g,'е').replace(/ит(?=[ -]*ипотек)/g,'it');}
 function filtered(forPartners){
@@ -183,7 +183,7 @@ function sectionRows(cat, list, query, archive){
  return cat==='mortgage'?mortgageOverview(list,query,archive):list.map(compactRow).join('');
 }
 
-function render(){if(!data)return;$('tools-head').innerHTML=compactHeader();$('tools-table').dataset.single=String(project!=='all');var gs=filtered(),query=$('tools-search').value.trim(),n=1+projects().length,html='';
+function render(){if(!data)return;finishGroup();$('tools-head').innerHTML=compactHeader();$('tools-table').dataset.single=String(project!=='all');var gs=filtered(),query=$('tools-search').value.trim(),n=1+projects().length,html='';
  var archive=local&&$('tools-inactive').value==='archive';
  var overview=!query&&category==='all'&&!archive;
  Object.entries(M.categories).forEach(function([cat,label]){
@@ -413,7 +413,7 @@ function stageRecord(r){
  if(JSON.stringify(r)===JSON.stringify(original))changes.delete(r.id);else changes.set(r.id,data.records.find(item=>item.id===r.id));
  render();
 }
-const motionAllowed=window.matchMedia('(prefers-reduced-motion: no-preference)');
+const motionAllowed=window.matchMedia('screen and (prefers-reduced-motion: no-preference)');
 function pointerMotion(event){
  return event?.detail>0 && document.documentElement.dataset.smInput==='pointer' && motionAllowed.matches;
 }
@@ -423,16 +423,58 @@ function disclosureTiming(trigger){
 }
 motionAllowed.addEventListener('change',event=>{
  if(event.matches)return;
+ finishGroup();
  document.documentElement.classList.remove('sm-tools-switching');
  for(const effect of document.getAnimations())if(effect.id==='tools-disclosure')effect.cancel();
 });
 
+// На время движения строки остаются живыми в одной обрезаемой области.
+function finishGroup(){
+ if(!movingGroup)return;
+ const {button,carrier,body,animation}=movingGroup;
+ movingGroup=null;
+ animation.onfinish=null;
+ animation.cancel();
+ if(button.getAttribute('aria-expanded')==='true'){
+   const focus=body.contains(document.activeElement)?document.activeElement:null;
+   carrier.replaceWith(...body.rows);
+   focus?.focus({preventScroll:true});
+ }else carrier.remove();
+}
+
+function animateGroup(button,rows,open){
+ const row=button.closest('tr');
+ const carrier=document.createElement('tr');
+ carrier.className='tools-group-carrier';
+ const cell=carrier.insertCell();
+ cell.colSpan=projects().length+1;
+ cell.innerHTML='<div class="tools-group-clip"><table class="tools-table tools-group-table"><colgroup><col><col></colgroup><tbody></tbody></table></div>';
+ const clip=cell.firstElementChild, table=clip.firstElementChild, body=table.tBodies[0];
+ // Совпадающие колонки сохраняют переносы текста при возврате строк в основную таблицу.
+ table.querySelector('col:last-child').span=cell.colSpan-1;
+ body.append(...rows);
+ row.after(carrier);
+ carrier.inert=!open;
+ const height=table.getBoundingClientRect().height+'px';
+ const animation=clip.animate([{height:open?'0px':height},{height:open?height:'0px'}],
+   {id:'tools-group-height',duration:280,easing:'ease-in-out',fill:'both'});
+ movingGroup={button,carrier,body,animation};
+ animation.onfinish=finishGroup;
+}
+
+window.addEventListener('beforeprint',finishGroup);
+$('tools-rows').addEventListener('focusin',event=>{
+ if(movingGroup?.body.contains(event.target))finishGroup();
+});
 function toggleRows(button,event){
+ const animate=pointerMotion(event);
+ const reversing=animate && movingGroup?.button===button;
+ if(!reversing)finishGroup();
  const row=button.closest('tr');
  const cat=button.dataset.category;
  const type=button.dataset.mortgageType;
  const open=button.getAttribute('aria-expanded')==='false';
- button.toggleAttribute('data-pointer-disclosure',pointerMotion(event));
+ button.toggleAttribute('data-pointer-disclosure',animate);
  button.setAttribute('aria-expanded',String(open));
  if(cat)collapsed[cat]=!open;
  else if(type){
@@ -442,19 +484,24 @@ function toggleRows(button,event){
    button.setAttribute('aria-label',action+' · '+M.mortgageTypes[type]);
  }else generalMortgageOpen=open;
 
- if(!open){
-   const boundary=cat?'.tools-section':'.tools-section,.tools-mortgage-type,.tools-mortgage-general';
-   while(row.nextElementSibling && !row.nextElementSibling.matches(boundary))row.nextElementSibling.remove();
+ if(reversing){
+   movingGroup.carrier.inert=!open;
+   movingGroup.animation.reverse();
    return;
  }
- const groups=filtered().filter(g=>g.category===(cat||'mortgage'));
- const html=cat
-   ? sectionRows(cat,groups,'',false)
-   : M.groups({records:mortgageBuckets(groups).get(type||'other')||[]}).map(compactRow).join('');
- row.insertAdjacentHTML('afterend',html);
- if(html && pointerMotion(event)){
-   row.nextElementSibling.animate([{opacity:.7},{opacity:1}],disclosureTiming(button));
+ if(open){
+   const groups=filtered().filter(g=>g.category===(cat||'mortgage'));
+   const html=cat
+     ? sectionRows(cat,groups,'',false)
+     : M.groups({records:mortgageBuckets(groups).get(type||'other')||[]}).map(compactRow).join('');
+   row.insertAdjacentHTML('afterend',html);
+   if(!animate)return;
  }
+ const boundary=cat?'.tools-section':'.tools-section,.tools-mortgage-type,.tools-mortgage-general';
+ const rows=[];
+ for(let next=row.nextElementSibling;next && !next.matches(boundary);next=next.nextElementSibling)rows.push(next);
+ if(rows.length && animate)animateGroup(button,rows,open);
+ else if(!open)for(const item of rows)item.remove();
 }
 
 // Запускаем отклик только от самого нажатия. Валидация и переключение вкладок
@@ -465,8 +512,13 @@ document.addEventListener('click',event=>{
  const details=summary.parentElement;
  const content=details.querySelector(':scope > .tool-full');
  const animate=pointerMotion(event);
+ if(content){
+   if(movingGroup?.body.contains(details))finishGroup();
+   details.toggleAttribute('data-pointer-disclosure',animate);
+   return;
+ }
  const marker=animate?getComputedStyle(summary,'::before').transform:null;
- for(const effect of summary.getAnimations({subtree:true}).concat(content?.getAnimations()||[])){
+ for(const effect of summary.getAnimations({subtree:true})){
    if(effect.id==='tools-disclosure')effect.cancel();
  }
  if(!animate)return;
@@ -475,7 +527,13 @@ document.addEventListener('click',event=>{
    summary.animate([{transform:marker},
      {transform:details.open?'rotate(45deg)':'rotate(135deg)'}],{...timing,pseudoElement:'::before'});
  }else summary.animate([{opacity:.7},{opacity:1}],timing);
- if(content && !details.open)content.animate([{opacity:.7},{opacity:1}],timing);
+
+});
+
+$('tools-rows').addEventListener('transitionend',event=>{
+ if(event.propertyName==='block-size' || event.propertyName==='height'){
+   if(event.pseudoElement==='::details-content')event.target.removeAttribute('data-pointer-disclosure');
+ }
 });
 
 $('tools-rows').onclick=function(e){
@@ -596,7 +654,7 @@ function selectView(next, addHistory=false, event){
  else history.replaceState(null,'',url);
  render();
 }
-document.querySelector('.tools-view-tabs').onclick=e=>{const button=e.target.closest('[data-tools-view]');if(button)selectView(button.dataset.toolsView,true,e);};
+document.querySelector('.tools-view-tabs').onclick=e=>{const button=e.target.closest('[data-tools-view]');if(button && button.dataset.toolsView!==view)selectView(button.dataset.toolsView,true,e);};
 $('tools-settings-edit').onclick=()=>ownerAction(view);
 window.addEventListener('popstate',()=>selectView(new URL(location.href).searchParams.get('view')));
 selectView(params.get('view'));
