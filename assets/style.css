@@ -390,3 +390,35 @@ html, body { margin: 0; padding: 0; background: var(--bg); }
 .sm-promotion-picker legend { color:var(--muted); font-size:13px; margin-bottom:8px; }
 .sm .sm-promotion-picker label { display:flex; align-items:flex-start; gap:8px; color:var(--grey); margin:8px 0; font-size:14px; }
 .sm .sm-promotion-picker input { width:18px; height:18px; flex:none; margin:1px 0 0; accent-color:var(--sky); }
+
+
+.sm-conditions-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  margin-bottom: 16px;
+}
+.sm .sm-conditions-head h2 { margin: 0; }
+.sm label.sm-notes-choice {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  margin: 0;
+  cursor: pointer;
+}
+.sm .sm-notes-choice input {
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  padding: 0;
+  accent-color: var(--sky);
+}
+@media screen {
+  .sm-conditions:has(#sm-show-notes:not(:checked)) .sm-hint:not([data-action-needed="true"]) {
+    display: none;
+  }
+}
+@media print { .sm label.sm-notes-choice { display: none; } }

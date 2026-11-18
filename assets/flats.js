@@ -36,13 +36,10 @@
         return (houses[project] || []).indexOf(item.row.house_id) >= 0 && (!query || normalize(item.row.num).indexOf(query) >= 0);
       });
     }
-    function hint(found, exact) {
-      if (failed) return 'Список квартир недоступен. Укажите номер и цену вручную.';
+    function hint(issue) {
+      if (issue) return issue;
       if (!loaded) return 'Загрузка квартир из Macro…';
-      var message = 'Обновление Macro: ' + updated + ' (время сервера). Наличие и цену уточняйте в Macro.';
-      if (normalize(search.value) && !found.length) return 'Квартира не найдена в остатке Macro. Цену можно ввести вручную. ' + message;
-      if (exact > 1) return 'Найдено несколько квартир с таким номером. Выберите нужную из списка. ' + message;
-      return message;
+      return 'Обновление Macro: ' + updated + ' (время сервера). Наличие и цену уточняйте в Macro.';
     }
     function refresh() {
       var found = matches(), query = normalize(search.value), exact = found.filter(function (it) { return normalize(it.row.num) === query; });
@@ -53,7 +50,12 @@
           ' · этаж ' + (row.floor || '—') + ' · ' + Number(row.area).toLocaleString('ru-RU') + ' м²' + (row.status ? ' · ' + row.status : '');
         select.add(new Option(title, String(item.index + 1)));
       });
-      info.textContent = hint(found, exact.length);
+      let issue = '';
+      if (failed) issue = 'Список квартир недоступен. Укажите номер и цену вручную.';
+      else if (loaded && query && !found.length) issue = 'Квартира не найдена в остатке Macro. Цену можно ввести вручную.';
+      else if (exact.length > 1) issue = 'Найдено несколько квартир с таким номером. Выберите нужную из списка.';
+      info.setAttribute('data-action-needed', String(Boolean(issue)));
+      info.textContent = hint(issue);
       updateWarning();
       return exact;
     }
@@ -114,7 +116,12 @@
     });
     select.addEventListener('change', function () {
       var row = current();
-      if (row) { search.value = String(row.num); apply(row); }
+      if (row) {
+        search.value = String(row.num);
+        info.setAttribute('data-action-needed', 'false');
+        info.textContent = hint('');
+        apply(row);
+      }
       else { options.price.value = ''; if (options.onClear) options.onClear(); if (options.discount) options.discount.value = ''; }
       updateWarning(row);
       options.onChange();
