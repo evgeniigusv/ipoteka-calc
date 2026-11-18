@@ -46,12 +46,76 @@
       programFeedback(e);
     });
   }
-  // Подсвечиваем только новый итог после выбора программы. Ввод суммы остаётся мгновенным.
-  function programFeedback(event) {
+  function playCue(node, name) {
+    if (!node) return;
+    const repeating = node.classList.contains(name);
+    node.classList.add(name);
+    const effect = node.getAnimations().find(animation => animation.animationName === name);
+    if (!effect) { node.classList.remove(name); return; }
+    if (repeating) { effect.currentTime = 0; return; }
+    const clear = () => node.classList.remove(name);
+    effect.finished.then(clear, clear);
+  }
+
+  let issued = false;
+  function resultIssued(container) {
+    if (issued) return;
+    const hero = container.querySelector('.sm-hero');
+    if (!hero) return;
+    issued = true;
+    if (document.documentElement.dataset.smInput !== 'keyboard' &&
+        matchMedia('screen and (prefers-reduced-motion: no-preference)').matches) {
+      playCue(hero, 'sm-result-issued');
+    }
+  }
+
+  function programFeedback(event, row, repeat = false) {
     if (document.documentElement.dataset.smInput !== 'pointer' ||
         (event.type === 'click' && event.detail === 0) ||
-        matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    document.querySelector('#calc-result .sm-hero, #calc-result .sm-empty')?.classList.add('sm-program-enter');
+        !matchMedia('screen and (prefers-reduced-motion: no-preference)').matches) return;
+    const card = document.querySelector('#calc-result .sm-hero, #calc-result .sm-empty');
+    if (!card) return;
+    card.classList.remove('sm-result-issued');
+    if (repeat) card.classList.remove('sm-program-enter');
+    playCue(card, repeat ? 'sm-result-confirm' : 'sm-program-enter');
+    if (row) playCue(row.querySelector('td:first-child > span'), 'sm-program-choice');
+  }
+
+  if (typeof document !== 'undefined' && document.getElementById('calc-result')) {
+    for (const link of document.querySelectorAll('a[href="#calc-result"]')) {
+      link.addEventListener('click', event => programFeedback(event, null, true));
+    }
+  }
+
+  function onProgramSelect(select, apply) {
+    let previousOption;
+    select.addEventListener('pointerdown', event => {
+      previousOption = event.target.closest('option:checked');
+    });
+    select.addEventListener('change', event => {
+      apply();
+      programFeedback(event);
+    });
+    // Повторный выбор в нативном меню не вызывает change.
+    select.addEventListener('click', event => {
+      if (event.target === previousOption) programFeedback(event, null, true);
+      previousOption = null;
+    });
+  }
+
+  function emptyResult(container, message, field, label) {
+    const note = document.createElement('p');
+    note.className = 'sm-empty';
+    note.textContent = message;
+    if (field && !field.value.trim() && !field.disabled && !field.readOnly) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'sm-link sm-result-action';
+      button.textContent = label;
+      button.addEventListener('click', () => field.focus());
+      note.append(' ', button);
+    }
+    container.replaceChildren(note);
   }
   function markProgram(row) {
     const previous = row.parentElement.querySelector('.sm-sel');
@@ -201,17 +265,28 @@
     });
   }
   function saveButton(btn, msg, make) {
-    btn.addEventListener('click', function () {
-      var label = btn.textContent;
-      btn.disabled = true; btn.textContent = 'Готовлю PDF…'; msg.textContent = '';
-      make().then(function (r) { if (r) r.pdf.save(r.file); }).catch(function () {
+    btn.addEventListener('click', async function () {
+      if (btn.getAttribute('aria-busy') === 'true') return;
+      const label = btn.textContent;
+      btn.setAttribute('aria-busy', 'true');
+      // Форма управляет disabled при пересчёте. Блокировка экспорта сохраняет фокус.
+      btn.setAttribute('aria-disabled', 'true');
+      btn.textContent = 'Готовлю PDF…'; msg.textContent = '';
+      try {
+        const result = await make();
+        if (result) await result.pdf.save(result.file);
+      } catch {
         msg.textContent = 'Не получилось сохранить PDF. Нажмите «Распечатать» и выберите «Сохранить как PDF».';
-      }).then(function () { btn.disabled = false; btn.textContent = label; });
+      } finally {
+        btn.removeAttribute('aria-busy');
+        btn.removeAttribute('aria-disabled');
+        btn.textContent = label;
+      }
     });
   }
 
   window.SMUi = {
     esc: esc, parseMoney: parseMoney, moneyInput: moneyInput, parsePct: parsePct, pctInput: pctInput,
-    pills: pills, onPill: onPill, programFeedback: programFeedback, markProgram: markProgram, stamp: stamp, reportHead: reportHead, page: page, makePdf: makePdf, saveButton: saveButton
+    pills: pills, onPill: onPill, programFeedback: programFeedback, resultIssued: resultIssued, onProgramSelect: onProgramSelect, emptyResult: emptyResult, markProgram: markProgram, stamp: stamp, reportHead: reportHead, page: page, makePdf: makePdf, saveButton: saveButton
   };
 })();

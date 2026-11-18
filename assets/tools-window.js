@@ -61,7 +61,7 @@
     const details = event.target.closest('details[open]');
     if (!details || !details.closest('#public-catalog, #tools-editor, #ai-dialog')) return;
     const summary = details.querySelector(':scope > summary');
-    if (!summary) return;
+    if (!summary || !summary.getClientRects().length) return;
     event.preventDefault();
     details.removeAttribute('data-pointer-disclosure');
     details.open = false;
@@ -136,6 +136,7 @@
     clearTimeout(timeout);
     panel.hidden = true;
     delivered = false;
+    delete $('public-catalog').dataset.viewMotion;
     markEntrance($('public-catalog'), pointer);
     $('public-catalog').hidden = false;
     document.querySelector('.tools-mast h1').textContent = publicTitle;

@@ -77,9 +77,9 @@
       c.error?'—':F.rub(c.total),c.error?'—':F.rub(c.rows[0].amount)+'<span class="sm-sub">'+(c.fullPayment?'100% стоимости договора':F.pct1(c.share)+(c.pvFromBase?' прайса':' цены в договоре'))+'</span>',c.error?'—':pay,F.dmy(c.end)];
     return '<tr class="sm-pick'+(selected?' sm-sel':'')+(c.error?' sm-off':'')+'"'+(selected?' aria-current="true"':'')+' data-id="'+c.id+'">'+values.map(function(v,i){return '<td data-l="'+cols[i]+'"><span>'+v+'</span></td>';}).join('')+'</tr>';
   }
-  function empty(message) {
+  function empty(message, field, label) {
     currentCards = [];
-    last=null;el.detail.innerHTML='<p class="sm-empty">'+esc(message)+'</p>';
+    last=null;U.emptyResult(el.detail,message,field,label);
     el.options.innerHTML=el.thead.innerHTML=el.tbody.innerHTML='';el.tip.textContent=message;$('sm-save').disabled=true;
   }
   function render() {
@@ -96,11 +96,11 @@
       ' (Екатеринбург). Условия из раздела «Инструменты».'+(status.stale?' Проверка задерживается; подтвердите условия.':'');
     const downError=syncDownPayment(U.parseMoney(el.price.value));
     var inp=readInputs(),date=dealDate();
-    if(!date)return empty('Укажите корректную дату сделки.');
+    if(!date)return empty('Укажите корректную дату сделки.',programs.length ? el.date : null,'Ввести дату');
     if(flats.isPif())return empty('Для квартиры ПИФ условия рассрочки нужно уточнить.');
-    if(!inp.base)return empty('Укажите стоимость квартиры.');
+    if(!inp.base)return empty('Укажите стоимость квартиры.',programs.length ? el.price : null,'Ввести цену');
     if(downError)return empty(downError);
-    if(inp.downRub==null)return empty('Введите первоначальный взнос в рублях или процентах.');
+    if(inp.downRub==null)return empty('Введите первоначальный взнос в рублях или процентах.',programs.length ? (downUnit==='pct' ? downPct : downRub) : null,'Ввести взнос');
     if(!Number.isSafeInteger(inp.downRub)||inp.downRub<0)return empty('Укажите корректный первоначальный взнос.');
     const cards = C.installments(D, inp, date);
     currentCards = cards;
@@ -114,6 +114,7 @@
   function showSelection(selected) {
     last = selected;
     el.detail.innerHTML = detailHtml(selected);
+    if (!selected.error) U.resultIssued(el.detail);
     el.options.innerHTML = optionsHtml(selected);
     $('sm-save').disabled = !!selected.error;
   }
@@ -137,11 +138,12 @@
     const button = row.querySelector('button');
     if (document.activeElement !== button) button.focus({preventScroll:true});
     state.picks[state.project] = selected.id;
-    if (last !== selected) {
+    const repeat = last === selected;
+    if (!repeat) {
       showSelection(selected);
       U.markProgram(row);
-      U.programFeedback(event);
     }
+    U.programFeedback(event, row, repeat);
   });
   el.options.addEventListener('click',function(e){var b=e.target.closest('[data-step] button[data-v]');if(!b||!last)return;var value=b.getAttribute('data-v');state.step[last.id]=+value;render();U.programFeedback(e);el.options.querySelector('[data-step] button[data-v="'+value+'"]').focus({preventScroll:true});});
   el.promotions.addEventListener('change',function(e){var id=e.target.getAttribute('data-promotion');if(!id)return;state.promotionIds=state.promotionIds.filter(function(v){return v!==id;});if(e.target.checked)state.promotionIds.push(id);render();});

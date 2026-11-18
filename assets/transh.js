@@ -112,9 +112,13 @@
       minFirst:p.minFirst||0,tranches:+p.tranches,firstRub:p.flexibleTranches?U.parseMoney($('sm-first-rub').value):p.firstRub,bank:el.bank.value.trim()};
   }
   function results(x,r){
+    const largestPayment = r.stages.reduce((largest, stage) => Math.max(largest, stage.payment), 0);
     var payments = r.stages.map(function(stage, i){
       var prefix = x.estimate ? '≈ ' : '';
-      return '<div><div class="sm-k">После '+(i+1)+'-го транша, в месяц</div><div class="sm-v">'+prefix+F.rub(stage.payment)+'</div><div>'+esc(stagePeriod(i))+'</div></div>';
+      const scale = r.stages.length > 1 && largestPayment > 0
+        ? '<span class="sm-stage-scale" aria-hidden="true" style="--sm-payment-share:' + (stage.payment / largestPayment * 100) + '%"></span>'
+        : '';
+      return '<div><div class="sm-k">После '+(i+1)+'-го транша, в месяц</div><div class="sm-v">'+prefix+F.rub(stage.payment)+'</div>'+scale+'<div>'+esc(stagePeriod(i))+'</div></div>';
     });
     var html='<div class="sm-hero"><div class="sm-hero-name">'+esc(x.bank||'Траншевая ипотека')+'</div><div class="sm-hero-flat">'+esc(project)+(flats.selectedNumber()?' · кв. '+esc(flats.selectedNumber()):'')+'</div><div class="sm-pay">'+payments.join('')+'</div></div>';
     html+='<dl><dt>Программа</dt><dd>'+esc(selected ? selected.name.replace('Сбербанк · ', '') : x.estimate?'По ориентиру 1 500 ₽':'По ставке банка')+'</dd><dt>'+(x.estimate?'Оценочная ставка и срок':'Ставка и срок')+'</dt><dd>'+(x.estimate?'≈ ':'')+F.pct(x.rate)+' · '+F.years(x.years)+'</dd><dt>Стоимость квартиры после скидки</dt><dd>'+F.rub(r.price)+'</dd><dt>Первоначальный взнос</dt><dd>'+F.rub(r.down)+'</dd><dt>Общий кредит</dt><dd>'+F.rub(r.total)+'</dd></dl>';
@@ -138,16 +142,21 @@
     return html;
   }
   function render(){var x=read();last=null;$('sm-save').disabled=true;
-    if(!x.base){el.result.innerHTML='<p class="sm-empty">Выберите квартиру или укажите её стоимость.</p>';return;}
     if(!selected){el.result.innerHTML='<p class="sm-empty">Активных траншевых программ нет.</p>';return;}
+    if(!x.base){U.emptyResult(el.result,'Выберите квартиру или укажите её стоимость.',el.price,'Ввести цену');return;}
     if(x.down<selected.minPv){el.result.innerHTML='<p class="sm-empty">Первоначальный взнос по программе от '+F.pct(selected.minPv)+'.</p>';return;}
     try{var r=calc.calculate(x);el.result.innerHTML=results(x,r);last={x:x,r:r};$('sm-save').disabled=false;}
-    catch(e){el.result.innerHTML='<p class="sm-empty">'+esc(e.message)+'</p>';}
+    catch(e){
+      const field=e.message==='Введите подтверждённую ставку банка.' ? el.rate : null;
+      U.emptyResult(el.result,e.message,field,'Ввести ставку');
+      return;
+    }
+    U.resultIssued(el.result);
   }
   var flats=window.SMFlats.setup({select:el.flat,info:$('sm-flat-info'),price:el.price,project:project,onChange:render});
   U.pills(el.project,projects.map(function(p){return {value:p,label:p};}),project,'v');
   U.onPill(el.project,'v',function(v,btn){project=v;flats.setProject(v);el.date2.value='';el.date3.value='';Array.prototype.forEach.call(el.project.children,function(b){b.setAttribute('aria-pressed',String(b===btn));});setupProgram();});
-  el.program.addEventListener('change',function(e){applyProgram();U.programFeedback(e);});U.moneyInput(el.price,render);
+  U.onProgramSelect(el.program,applyProgram);U.moneyInput(el.price,render);
   [el.discount,el.rate,el.pv,el.first,el.second].forEach(function(e){U.pctInput(e,render);});
   [el.bank,el.term,el.date2,el.date3].forEach(function(e){e.addEventListener('input',render);});
   U.moneyInput($('sm-first-rub'),render);

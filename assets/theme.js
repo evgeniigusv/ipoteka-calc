@@ -66,6 +66,9 @@
       for (const link of links) {
         const target = new URL(link.href);
         target.searchParams.set('theme', root.dataset.theme);
+        // Ссылка на выпуск открывает один и тот же выпуск оформления во всех разделах.
+        const release = url.searchParams.get('v');
+        if (release) target.searchParams.set('v', release);
         link.href = target.href;
       }
       const pill = document.createElement('span');
@@ -125,6 +128,7 @@
       if (trip?.to === location.href && Number.isFinite(trip.x) && trip.width > 0 &&
           now() - trip.started < 15000 && motionAllowed.matches &&
           performance.getEntriesByType('navigation')[0]?.type === 'navigate') {
+        root.style.setProperty('--sm-enter-offset', trip.direction === -1 ? '-8px' : '8px');
         root.classList.add('sm-arriving');
         glide(active, trip);
         const settle = () => {
@@ -136,7 +140,12 @@
         if (travel) travel.finished.then(settle, () => {});
         else settle();
       }
-      window.addEventListener('pageshow', event => { if (event.persisted) restore(); });
+      window.addEventListener('pageshow', event => {
+        if (event.persisted) {
+          root.classList.remove('sm-arriving');
+          restore();
+        }
+      });
       window.navigation?.addEventListener('navigate', event => {
         const link = pending;
         if (link?.href === event.destination.url) {
@@ -164,7 +173,8 @@
           return;
         }
         if (event.detail === 0 || !motionAllowed.matches) return;
-        const journey = {...position(pill.getBoundingClientRect()), started:now(), to:target.href};
+        const journey = {...position(pill.getBoundingClientRect()), started:now(), to:target.href,
+          direction: Math.sign(links.indexOf(target) - links.indexOf(active))};
         pending = target;
         glide(target, journey);
         try { sessionStorage.setItem(navTripKey, JSON.stringify(journey)); } catch {}
@@ -182,7 +192,7 @@
         prefetched.add(href);
         try {
           const response = await fetch(href, {priority:'low'});
-          if (!response.ok) return;
+          if (!response.ok) { prefetched.delete(href); return; }
           const template = document.createElement('template');
           template.innerHTML = await response.text();
           for (const tag of template.content.querySelectorAll('link[rel="stylesheet"][href], script[src]')) {
@@ -195,20 +205,20 @@
             hint.href = asset.href;
             document.head.append(hint);
           }
-        } catch { /* Обычная ссылка работает и без предзагрузки. */ }
+        } catch { prefetched.delete(href); }
       }
       const warmLink = event => warm(event.target.closest('a'));
       nav.addEventListener('pointerover', warmLink);
       nav.addEventListener('focusin', warmLink);
       nav.addEventListener('pointerdown', warmLink, {passive:true});
       // HTML публичных разделов невелик. Загрузить его заранее, пока менеджер работает.
-      if (publicSite) window.addEventListener('load', () => {
+      if (publicSite) document.addEventListener('DOMContentLoaded', () => {
         for (const asset of document.querySelectorAll('link[rel="stylesheet"][href], script[src]')) {
           prefetched.add(asset.href || asset.src);
         }
-        Promise.resolve(window.SM_TOOLS_READY).then(() => {
-          if (!document.hidden) links.forEach(warm);
-        });
+        if (document.hidden || ['slow-2g', '2g'].includes(navigator.connection?.effectiveType)) return;
+        // Сеть справочника может быть медленной. HTML соседнего расчёта уже можно получить.
+        links.forEach(warm);
       }, {once:true});
     }
   };

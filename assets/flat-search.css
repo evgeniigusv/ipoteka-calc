@@ -53,17 +53,24 @@
   inline-size: 5px;
   block-size: 9px;
   border: solid var(--sky);
-  border-width: 0 1.8px 1.8px 0;
+  border-width: 0 2px 2px 0;
   transform: translateY(-60%) rotate(45deg);
 }
 .sm-flat-search__option[aria-selected="true"] {
-  box-shadow: inset 3px 0 var(--sky);
+  outline: 2px solid var(--sky);
+  outline-offset: -2px;
 }
 @media (forced-colors: active) {
   .sm-flat-search__option[aria-selected="true"] { outline: 2px solid Highlight; outline-offset: -2px; }
 }
 @media (max-width: 640px) {
   .sm-flat-search__popup { inline-size: 100%; }
+  /* В одноколоночной форме соседний выбор квартиры остаётся доступным для касания. */
+  .sm-flat-search__popup:not(.sm-flat-search__popup--above) {
+    position: relative;
+    inset: auto;
+    margin-block-start: 5px;
+  }
 }
 @media (hover: hover) and (pointer: fine) {
   .sm-flat-search__option:not([aria-current]):not([aria-selected="true"]):hover { background: var(--sm-menu-hover); }

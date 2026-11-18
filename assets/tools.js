@@ -519,6 +519,9 @@ document.addEventListener('click',event=>{
    details.toggleAttribute('data-pointer-disclosure',animate);
    return;
  }
+ if(details.matches('.tools-settings-section, #tools-form details')){
+   details.toggleAttribute('data-pointer-disclosure',animate);
+ }
  const marker=animate?getComputedStyle(summary,'::before').transform:null;
  for(const effect of summary.getAnimations({subtree:true})){
    if(effect.id==='tools-disclosure')effect.cancel();
@@ -639,7 +642,9 @@ settingsEditor=SMToolsSettings.setup({
  canSave:()=>!busy&&!changes.size,
  onSaved:res=>{accepted(res.data);pendingPublish=!res.published;render();}
 });
-function selectView(next, addHistory=false){
+function selectView(next, addHistory=false, event){
+ finishGroup();
+ $('public-catalog').toggleAttribute('data-view-motion',pointerMotion(event));
  view=['flats','compensation'].includes(next)?next:'catalog';
  const title={catalog:'Инструменты',flats:'Квартиры',compensation:'Дополнительные условия'}[view];
  document.querySelector('.tools-mast h1').textContent=title;document.title=title+' — Свобода мысли';
@@ -652,9 +657,9 @@ function selectView(next, addHistory=false){
  const url=new URL(location.href);if(view==='catalog')url.searchParams.delete('view');else url.searchParams.set('view',view);
  if(addHistory && !SMOwnerWindow.embedded && url.href!==location.href)history.pushState(null,'',url);
  else history.replaceState(null,'',url);
- render();
+ $('tools-savebar').hidden=!local||view!=='catalog';
 }
-document.querySelector('.tools-view-tabs').onclick=e=>{const button=e.target.closest('[data-tools-view]');if(button && button.dataset.toolsView!==view)selectView(button.dataset.toolsView,true);};
+document.querySelector('.tools-view-tabs').onclick=e=>{const button=e.target.closest('[data-tools-view]');if(button && button.dataset.toolsView!==view)selectView(button.dataset.toolsView,true,e);};
 $('tools-settings-edit').onclick=()=>ownerAction(view);
 window.addEventListener('popstate',()=>selectView(new URL(location.href).searchParams.get('view')));
 selectView(params.get('view'));
@@ -677,6 +682,7 @@ SMOwnerWindow.ready(function(action){
    for(const key of action.sections?.collapsed||[])if(Object.hasOwn(M.categories,key))collapsed[key]=true;
    for(const key of action.sections?.mortgages||[])if(Object.hasOwn(M.mortgageTypes,key))expandedMortgages.add(key);
    generalMortgageOpen=action.sections?.general===true;
+   render();
  }
  lastPartnerFilters=partnerFilters;
  selectView(['flats','compensation'].includes(action.kind)?action.kind:'catalog');

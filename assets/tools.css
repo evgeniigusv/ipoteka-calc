@@ -139,7 +139,7 @@
       :is(#tools-editor, #ai-dialog)[data-owner-entry="pointer"][open]::backdrop { opacity: 0; }
     }
   }
-  @keyframes tools-mode-entry { from { opacity: .65; transform: translateY(1px); } }
+  @keyframes tools-mode-entry { from { opacity: .48; } }
   @keyframes tools-form-entry { from { opacity: .7; transform: translateY(4px); } }
 }
 

@@ -69,6 +69,7 @@
       'Процент от финансируемой суммы первоначального взноса. Действует для всех программ ЧПВ проекта. Для проекта без программ поле можно оставить пустым.',
       'стоимость денег');
     var flatSection = element('details', 'tools-settings-section');
+    flatSection.open = true;
     flatSection.append(element('summary', '', 'Квартиры со специальными условиями'));
     var flatBody = element('div', 'tools-settings-body');
     flatBody.append(element('p', 'tools-settings-hint', 'Отметьте квартиры, доступные только при 100% оплате или по ипотеке без субсидирования. Квартиры останутся во всех калькуляторах.'));
@@ -243,9 +244,8 @@
     root.addEventListener('beforeunload', beforeUnload);
     function show(view){
       host.open=true;host.classList.toggle('tools-settings-tab',true);
-      costSection.hidden=view==='flats';costSection.open=view!=='flats';
+      costSection.hidden=view==='flats';
       capSection.hidden=view==='flats';flatSection.hidden=view!=='flats';
-      capSection.open=true;flatSection.open=view==='flats';
       if(view==='flats')loadFlats();
     }
     function flatFilter() { return { project: projectSelect.value, number: search.value }; }

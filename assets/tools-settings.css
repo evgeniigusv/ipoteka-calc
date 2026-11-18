@@ -39,3 +39,9 @@
 #tools-settings-owner { margin-bottom:16px; }
 
 [data-theme="sm"] .tools-view-tabs [aria-pressed="true"] { background:var(--blue);border-color:var(--blue);color:var(--black); }
+
+@media screen and (prefers-reduced-motion: no-preference) {
+  :root[data-sm-input="pointer"] .tools-settings-flat:has(input:enabled) {
+    transition: background-color var(--sm-motion-popup, 180ms) var(--sm-ease-enter, ease-out);
+  }
+}

@@ -306,6 +306,7 @@ $('tools-ai').onclick();$('ai-text').value='Новая команда';await $('
 context.location={origin:'https://evgeniigusv.github.io'};load('assets/tools-window.js');
 const host=window.SMOwnerWindow,panel=$('owner-window'),action={kind:'manage',project:'da1',section:'installment'};
 panel.hidden=true;
+$('public-catalog').dataset.viewMotion='';
 host.open(action,'Каталог');const frame=panel.children.at(-1);assert.equal(frame.hidden,true);assert.equal(panel.hidden,false);
 host.open(action,'Каталог');assert.equal(panel.children.length,1);assert.equal($('public-catalog').hidden,true);
 emit('tools:ready',{},'http://127.0.0.1:8795');
@@ -313,6 +314,7 @@ emit('tools:ready',frame.contentWindow,'https://example.com');assert.equal(frame
 emit('tools:ready',frame.contentWindow,'http://127.0.0.1:8795');assert.equal(frame.hidden,false);assert.equal($('owner-connection').hidden,true);
 emit('tools:ready',frame.contentWindow,'http://127.0.0.1:8795');assert.equal(frame.contentWindow.messages.length,1);
 emit('tools:close',frame.contentWindow,'http://127.0.0.1:8795');assert.equal(panel.hidden,true);assert.equal($('public-catalog').hidden,false);
+assert.equal(Object.hasOwn($('public-catalog').dataset,'viewMotion'),false);
 host.open(action,'Каталог');assert.equal(panel.children.length,1);assert.equal(frame.contentWindow.messages.length,2);
 emit('tools:failed',frame.contentWindow,'http://127.0.0.1:8795');assert.equal(frame.hidden,true);assert.equal($('owner-connection').hidden,false);
 $('owner-cancel').onclick();assert.equal(panel.hidden,true);assert.equal($('trigger').focused,true);

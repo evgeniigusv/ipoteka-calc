@@ -43,9 +43,18 @@ const base='https://evgeniigusv.github.io/ipoteka-calc/';
       }, () => {});
     });
   });
+  // Слова разной длины на телефоне не должны смещать меню между документами.
+  const menuPosition = () => p.locator('.sm-navigation').evaluate(nav => {
+    const box = nav.getBoundingClientRect();
+    return [box.left + scrollX, box.top + scrollY];
+  });
+  let initialMenu;
   async function checkCurrentSection() {
     const current = p.locator('.sm-navigation a[aria-current="page"]');
     const initial = await p.evaluate(() => performance.timeOrigin);
+    const position = await menuPosition();
+    assert.ok(position.every((v, i) => Math.abs(v - initialMenu[i]) < 1),
+      'Меню сместилось при переходе: ' + initialMenu + ' → ' + position);
     const price = p.locator('#sm-price');
     const amount = await price.count() ? await price.inputValue() : null;
     await current.dblclick();
@@ -63,6 +72,7 @@ const base='https://evgeniigusv.github.io/ipoteka-calc/';
   await p.goto(base + '?theme=' + theme, {waitUntil: 'domcontentloaded'});
   await p.locator('.sm-mortgage-loading').waitFor();
   await p.evaluate(() => document.fonts.ready);
+  initialMenu = await menuPosition();
   const result = p.locator('#calc-result');
   const loadingHeight = (await result.boundingBox()).height;
   releaseCatalog();

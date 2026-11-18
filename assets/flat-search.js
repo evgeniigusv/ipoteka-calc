@@ -42,7 +42,7 @@
       const viewport = root.visualViewport;
       const top = viewport?.offsetTop || 0;
       const rect = field.getBoundingClientRect();
-      const below = top + (viewport?.height || root.innerHeight) - rect.bottom - 8;
+      const below = top + (viewport?.height || root.innerHeight) - input.getBoundingClientRect().bottom - 8;
       const above = rect.top - top - 8;
       // У границы экранной клавиатуры небольшое изменение высоты не переворачивает открытый список.
       const margin = popup.hasAttribute('data-open') ? 20 : 0;

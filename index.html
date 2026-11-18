@@ -9,8 +9,8 @@
 <meta name="robots" content="noindex, nofollow">
 <script async data-tools-preload src="assets/tools-loader.js?v=fast-nav-1"></script>
 <link rel="stylesheet" href="assets/style.css?v=quiet-calc-2">
-<link rel="stylesheet" href="assets/themes.css?v=fast-nav-1">
-<script src="assets/theme.js?v=fast-nav-1"></script>
+<link rel="stylesheet" href="assets/themes.css?v=workspace-motion-1">
+<script src="assets/theme.js?v=workspace-motion-1"></script>
 <style>
 .sm .sm-check { display:flex; align-items:center; gap:10px; color:var(--ink); }
 .sm .sm-check input { width:18px; height:18px; padding:0; flex:0 0 18px; accent-color:var(--sky); }
@@ -19,21 +19,26 @@
 @media (max-width: 640px) {
   .sm-mortgage-loading { min-block-size: 63rem; }
 }
+@media (max-width: 370px) {
+  .sm-mortgage-loading { min-block-size: 75rem; }
+}
 </style>
-<link rel="stylesheet" href="assets/flat-search.css?v=fast-nav-1">
-<link rel="stylesheet" href="assets/select.css?v=fast-nav-1">
+<link rel="stylesheet" href="assets/flat-search.css?v=workspace-motion-1">
+<link rel="stylesheet" href="assets/select.css?v=workspace-motion-1">
+<link rel="stylesheet" href="assets/control-motion.css?v=workspace-motion-1">
+<link rel="stylesheet" href="assets/calculator-motion.css?v=workspace-motion-1">
+<script defer src="assets/control-motion.js?v=workspace-motion-1"></script>
 </head>
 <body>
 
 <main class="sm" id="sm-ipoteka">
-  <header class="sm-head"><h1>Ипотечный калькулятор</h1><a class="sm-logo" href="https://da-dom.life/" target="_blank" rel="noopener"><img src="assets/logo-svoboda-dark.svg" width="106" height="56" alt="Свобода мысли"></a></header>
+  <div class="sm-app-header"><header class="sm-head"><div class="sm-heading"><h1>Ипотечный калькулятор</h1><p class="sm-lede">Сравните ставки, взнос и ежемесячный платёж.</p></div><a class="sm-logo" href="https://da-dom.life/" target="_blank" rel="noopener"><img src="assets/logo-svoboda-dark.svg" width="106" height="56" alt="Свобода мысли"></a></header>
   <div class="sm-nav-row"><nav class="sm-navigation" aria-label="Калькуляторы"><a class="sm-nav" href="./" aria-current="page">Ипотека</a><a class="sm-nav" href="rassrochka.html">Рассрочка</a><a class="sm-nav" href="chpv.html">ЧПВ</a><a class="sm-nav" href="transh.html" aria-label="Траншевая ипотека"><span class="sm-nav-full">Траншевая ипотека</span><span class="sm-nav-short" aria-hidden="true">Транш</span></a><a class="sm-nav" href="tools.html">Инструменты</a></nav><script>SMNavigation.mount(document.currentScript.previousElementSibling)</script>
     <div id="sm-theme-switch" class="sm-theme-switch" role="group" aria-label="Тема оформления" hidden>
       <span>Тема</span>
       <button type="button" data-theme-choice="classic">Классика</button>
       <button type="button" data-theme-choice="sm">Свобода мысли</button>
-    </div></div>
-  <p class="sm-lede">Выберите очередь и условия покупки. Сравните ежемесячные платежи и взносы по доступным программам.</p>
+    </div></div></div>
 
   <nav class="sm-section-links" aria-label="Переходы внутри расчёта"><a href="#calc-result">К расчёту</a><a href="#calc-programs">Сравнить программы</a></nav>
   <div class="sm-grid">
@@ -89,7 +94,7 @@
     </section>
 
     <section class="sm-card" aria-live="polite" id="calc-result" tabindex="-1">
-      <h2>Расчёт по программе</h2>
+      <div class="sm-result-heading"><h2>Расчёт по программе</h2><a class="sm-jump" href="#calc-programs">К программам</a></div>
       <div id="sm-detail">
         <div class="sm-mortgage-loading" role="status">
           <div class="sm-hero"><span class="sm-hero-name">Загружаем условия ипотеки…</span></div>
@@ -127,9 +132,9 @@
 <script defer src="assets/tools-loader.js?v=fast-nav-1"></script>
 <script defer src="assets/mortgage-loader.js?v=fast-nav-1"></script>
 <script defer src="assets/engine.js?v=shared-conditions-nav-1"></script>
-<script defer src="assets/common.js?v=interaction-motion-1"></script>
-<script defer src="assets/flat-search.js?v=fast-nav-1"></script>
+<script defer src="assets/common.js?v=workspace-motion-1"></script>
+<script defer src="assets/flat-search.js?v=workspace-motion-1"></script>
 <script defer src="assets/flats.js?v=fast-nav-1"></script>
-<script defer src="assets/ipoteka.js?v=interaction-motion-1"></script>
+<script defer src="assets/ipoteka.js?v=workspace-motion-1"></script>
 </body>
 </html>

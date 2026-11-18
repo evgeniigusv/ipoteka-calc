@@ -55,11 +55,14 @@
     :is(.sm, .tools) select:not([multiple], [size])::picker(select) {
       appearance: base-select;
     }
-    :is(.sm, .tools) select:not([multiple], [size]) {
-      align-items: center;
+    :is(.sm, .tools) select:not([multiple], [size], [hidden]) {
+      display: block;
+      position: relative;
+      align-content: center;
+      text-align: start;
       min-width: 0;
       background-image: none;
-      padding-inline-end: 14px;
+      padding-inline-end: 36px;
       overflow: hidden;
       white-space: nowrap;
       text-overflow: ellipsis;
@@ -67,15 +70,19 @@
     }
     :is(.sm, .tools) select::picker-icon {
       content: "";
-      flex: none;
+      position: absolute;
+      inset-inline-end: 13px;
+      inset-block-start: calc(50% - 4px);
       inline-size: 12px;
       block-size: 8px;
-      margin-inline-start: auto;
       background: currentColor;
       color: var(--muted);
       clip-path: polygon(0 18%, 10% 0, 50% 62%, 90% 0, 100% 18%, 50% 96%);
     }
-    :is(.sm, .tools) select:open::picker-icon { transform: scaleY(-1); }
+    :is(.sm, .tools) select:open::picker-icon { transform: scaleY(-1); color: var(--sky); }
+    :is(.sm, .tools) select:not([multiple], [size]):has(option:checked[value=""]) {
+      color: var(--muted);
+    }
     :is(.sm, .tools) select:disabled { cursor: default; color: var(--muted); }
     :is(.sm, .tools) select::picker(select) {
       box-sizing: border-box;
@@ -125,7 +132,7 @@
       inline-size: 5px;
       block-size: 9px;
       border: solid var(--sky);
-      border-width: 0 1.8px 1.8px 0;
+      border-width: 0 2px 2px 0;
       transform: translateY(-60%) rotate(45deg);
     }
     :is(.sm, .tools) select option:disabled { color: var(--muted); cursor: default; }

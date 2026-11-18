@@ -33,7 +33,13 @@
     var x = inputs();
     if(programs.length&&!Number.isFinite(x.cost)){els.result.innerHTML='<p class="sm-empty">Заполните «Стоимость денег» в дополнительных условиях выбранного проекта.</p>';return;}
     if(!programs.length){els.result.innerHTML='<p class="sm-empty">Активных программ ЧПВ нет.</p>';return;}
-    if (!x.base || !x.cash || x.client == null || !x.ddu) { els.result.innerHTML = '<p class="sm-empty">Укажите цену по прайсу, цену при 100% оплате, средства клиента и цену ДДУ.</p>'; return; }
+    if (!x.base || !x.cash || x.client == null || !x.ddu) {
+      const missing = [[x.base, els.price, 'Ввести цену по прайсу'], [x.cash, els.cash, 'Ввести цену при 100% оплате'],
+        [x.client != null, els.client, 'Ввести средства клиента'], [x.ddu, els.ddu, 'Ввести цену ДДУ']].filter(([valid]) => !valid);
+      const [, field, label] = missing.length === 1 ? missing[0] : [];
+      U.emptyResult(els.result, 'Укажите цену по прайсу, цену при 100% оплате, средства клиента и цену ДДУ.', field, label);
+      return;
+    }
     var r;try{r=calc.calculate(x);}catch(e){els.result.innerHTML='<p class="sm-empty">'+esc(e.message)+'</p>';return;}
     var rows=[];
     function add(k,v) { rows.push('<dt>' + k + '</dt><dd>' + v + '</dd>'); }
@@ -49,15 +55,16 @@
       (r.funded < 0 ? '<div class="sm-note">Средства клиента превышают рассчитанный ПВ. Проверьте ввод.</div>' : '') +
       (r.excess > 0 ? '<div class="sm-note">Как в таблице, платёж для сверхлимита рассчитан по '+F.pct(x.overRate)+' на всю сумму. Реальные условия комбо-ипотеки уточните у брокера.</div>' : '') +
       '<div class="sm-note">Вердикт повторяет лист «Расчёт ЧПВ»; справочная ставка и применимость условий требуют подтверждения.</div>';
+    U.resultIssued(els.result);
   }
   U.onPill(els.project, 'v', function (v, btn) { project = v; setupPrograms(); els.cash.value = ''; els.ddu.value = ''; flats.setProject(v); Array.prototype.forEach.call(els.project.children, function (b) { b.setAttribute('aria-pressed', String(b === btn)); }); render(); });
   [els.price, els.cash, els.client, els.ddu].forEach(function (e) { U.moneyInput(e, render); });
-  els.program.addEventListener('change', function (e) { render(); U.programFeedback(e); });
-  $('sm-suggest').addEventListener('click', function () {
+  U.onProgramSelect(els.program, render);
+  $('sm-suggest').addEventListener('click', function (event) {
     var x=inputs();if(!programs.length||!Number.isFinite(x.cost)){render();return;}if(!x.cash||x.client==null)return;
     var amount=calc.suggested(x);
     if(amount==null){els.result.innerHTML='<p class="sm-empty">При этих условиях дофинансирование первоначального взноса не требуется либо невозможно подобрать цену. Проверьте средства клиента и стоимость денег.</p>';return;}
-    els.ddu.value=F.int(amount);render();
+    els.ddu.value=F.int(amount);render();U.programFeedback(event);
   });
   $('sm-print').addEventListener('click', function () { window.print(); });
   render();

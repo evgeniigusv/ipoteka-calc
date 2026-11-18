@@ -136,6 +136,11 @@
   function renderSelection(inp, res) {
     el.detail.innerHTML = res.best ? detailHtml(inp, res.best)
       : '<p class="sm-empty">' + (res.rows.length ? 'При таких условиях ни одна программа не подходит. Измените скидку, взнос или тип ипотеки.' : 'Условия ипотеки для этого проекта готовятся.') + '</p>';
+    if (res.best) U.resultIssued(el.detail);
+    renderTip(inp, res);
+  }
+
+  function renderTip(inp, res) {
     el.tip.innerHTML = !res.best ? ''
       : state.pick != null ? 'Программа выбрана вручную · <button type="button" class="sm-link" id="sm-auto">вернуть автоподбор</button>'
       : (inp.pv > 0
@@ -219,15 +224,21 @@
 
   var pick = function (e) {
     var tr = e.target.closest('tr.sm-pick');
-    if (!tr || !last || state.pick === +tr.dataset.id) return;
+    if (!tr || !last) return;
+    if (state.pick === +tr.dataset.id) {
+      U.programFeedback(e, tr, true);
+      return;
+    }
     const selected = last.res.rows.find(row => row.ok && row.id === +tr.dataset.id);
     if (!selected) return;
+    const repeat = selected === last.res.best;
     state.pick = last.inp.pick = selected.id;
     last.res.best = selected;
     last.res.picked = true;
     U.markProgram(tr);
-    renderSelection(last.inp, last.res);
-    U.programFeedback(e);
+    if (repeat) renderTip(last.inp, last.res);
+    else renderSelection(last.inp, last.res);
+    U.programFeedback(e, tr, repeat);
   };
   el.tbody.addEventListener('click', pick);
   el.tbody.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(e); } });
