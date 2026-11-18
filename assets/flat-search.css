@@ -17,7 +17,7 @@
   border: 1px solid var(--sm-menu-edge);
   border-radius: var(--sm-menu-radius);
   box-shadow: var(--sm-menu-shadow);
-  background: var(--white);
+  background: var(--surface);
   color: var(--black);
   font: 500 15px/1.4 var(--text);
   font-variant-numeric: tabular-nums;

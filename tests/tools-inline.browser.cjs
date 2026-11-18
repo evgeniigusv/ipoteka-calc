@@ -33,6 +33,9 @@ async function check(browser, width, entry = partner) {
     const example = catalog.records.find(r=>r.enabled && r.kind==='info' && r.category==='installment' && r.project==='da1');
     const personal = {...example, id:'qa-private', group:'qa-private', name:privateName, combination:'', params:{...example.params,ownerOnly:true}};
     let deny = !live && width===1280 && entry===partner, sessions = 0;
+    const changeDuringLoad = !live && width === 390 && entry === partner;
+    let releaseCatalog;
+    const catalogGate = changeDuringLoad ? new Promise(resolve => { releaseCatalog = resolve; }) : Promise.resolve();
     const errors = [];
     await context.route('**/*', async route => {
       const request = route.request(), url = new URL(request.url());
@@ -45,6 +48,7 @@ async function check(browser, width, entry = partner) {
         if (url.pathname==='/api/session') { sessions++; return route.fulfill({json:{csrf:'synthetic-test-session'}}); }
         if (url.pathname==='/api/settings') return route.fulfill({json:{settings:catalog.settings,revision:'qa'}});
         if (url.pathname==='/api/tools') {
+          await catalogGate;
           assert.equal(request.headers()['x-editor-session'],'synthetic-test-session');
           if (deny) return route.fulfill({status:401,json:{}});
           return route.fulfill({json:{...catalog,revision:'qa',records:[...catalog.records,personal]}});
@@ -60,7 +64,7 @@ async function check(browser, width, entry = partner) {
     page.on('console',msg=>{
       if (msg.type()==='error' && !(deny && msg.text().includes('401'))) errors.push(msg.text());
     });
-    await page.goto(entry+'tools.html?theme=sm&project=da1&section=installment');
+    await page.goto(entry+'tools.html?theme=dark&project=da1&section=installment');
     assert.match(await page.title(),/Инструменты/);
     const startUrl = page.url();
     const edit = page.locator('#tools-owner-link');
@@ -76,8 +80,16 @@ async function check(browser, width, entry = partner) {
       await page.locator('#owner-retry').click();
     }
     const frame = page.frameLocator('#owner-window iframe');
+    if (changeDuringLoad) {
+      await frame.locator('html[data-theme=dark]').waitFor({state:'attached'});
+      await page.locator('[data-theme-choice=light]').click();
+      assert.equal(await page.locator('#owner-window iframe').isVisible(), false);
+      releaseCatalog();
+    }
     await frame.locator('.tool-record-edit').first().waitFor({timeout:60000});
-    assert.equal(page.url(), startUrl);
+    const expectedUrl = new URL(startUrl);
+    if (changeDuringLoad) expectedUrl.searchParams.set('theme','light');
+    assert.equal(page.url(), expectedUrl.href);
     assert.equal(context.pages().length,1);
     assert.equal(await page.locator('dialog[open]').count(),0);
     assert.equal(await page.locator('#public-catalog').isVisible(),false);
@@ -88,6 +100,7 @@ async function check(browser, width, entry = partner) {
     const actual = await frame.locator('.tools-view-tabs').boundingBox();
     for (const key of ['x','y','width']) assert.ok(Math.abs(actual[key]-placement[key])<=1,
       'Положение '+key+' в просмотре '+placement[key]+', в редакторе '+actual[key]);
+    assert.equal(await frame.locator('html').getAttribute('data-theme'), changeDuringLoad ? 'light' : 'dark');
     const sessionFrame = page.frames().find(f=>f.parentFrame()===page.mainFrame() && f.url().startsWith(owner));
     assert.equal(await sessionFrame.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
@@ -110,8 +123,10 @@ async function check(browser, width, entry = partner) {
     if (!live) assert.equal(await animation(dialog),expectedMotion('tools-form-entry'));
     const name = dialog.locator('[name=name]');
     await name.fill('Несохранённый текст формы');
-    await page.locator('[data-theme-choice=classic]').click();
-    await frame.locator('html[data-theme=classic]').waitFor();
+    const nextTheme = changeDuringLoad ? 'dark' : 'light';
+    await page.locator('[data-theme-choice=' + nextTheme + ']').click();
+    await frame.locator('html[data-theme=' + nextTheme + ']').waitFor();
+    assert.equal(new URL(await page.locator('#owner-direct').getAttribute('href')).searchParams.get('theme'), nextTheme);
     assert.equal(await name.inputValue(),'Несохранённый текст формы');
     await dialog.press('Escape');
     await dialog.waitFor({state:'hidden'});

@@ -239,7 +239,7 @@ async function check(browser, file, width, reduced, theme) {
   try {
     for (const width of [1280,390,320]) {
       for (const file of ['index.html','rassrochka.html','chpv.html','transh.html']) {
-        const themes = file === 'index.html' ? ['classic','sm'] : [width === 1280 ? 'classic' : 'sm'];
+        const themes = file === 'index.html' ? ['light','dark'] : [width === 1280 ? 'light' : 'dark'];
         for (const theme of themes) await check(browser, file, width, width === 320, theme);
       }
     }

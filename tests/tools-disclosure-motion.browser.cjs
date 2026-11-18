@@ -18,7 +18,7 @@ async function check(browser,width) {
       assert.equal(url.origin,new URL(base).origin);
       return r.fulfill({path:path.join(root,url.pathname)});
     });
-    await page.goto(base+'tools.html?theme=sm');
+    await page.goto(base+'tools.html?theme=dark');
     const group = page.locator('[data-mortgage-type]').first();
     const rows = page.locator('#tools-rows');
     const carrier = page.locator('.tools-group-carrier');

@@ -10,7 +10,7 @@ const base='https://evgeniigusv.github.io/ipoteka-calc/';
 (async()=>{
  const b=await chromium.launch({executablePath:process.env.CHROMIUM_BIN});
  try{
- for(const [theme,width,reduced] of [['sm',1280,false],['classic',390,false],['sm',320,true]]){
+ for(const [theme,width,reduced] of [['light',1280,false],['dark',390,false],['dark',320,true]]){
   const ctx=await b.newContext({viewport:{width,height:850},reducedMotion:reduced?'reduce':'no-preference'});
   if(!process.argv.includes('--live')) await ctx.route(base+'**',r=>r.fulfill({path:path.resolve(root, new URL(r.request().url()).pathname.slice('/ipoteka-calc/'.length)||'index.html')}));
   const p=await ctx.newPage(), errors=[];p.on('pageerror',e=>errors.push(e.message));
@@ -101,6 +101,43 @@ const base='https://evgeniigusv.github.io/ipoteka-calc/';
     await target.click();assert.equal(await p.locator('#sm-tbody .sm-sel').getAttribute('data-id'),id);
     assert(await p.evaluate(()=>originalRows.every((r,i)=>r===document.querySelectorAll('#sm-tbody tr')[i])));
     assert.equal(await p.locator('#calc-result .sm-program-enter').count(),reduced?0:1);
+    // Проверяем путь плашки и новое начало при развороте на полпути.
+    const glide = await p.evaluate(reduced => {
+      const chosen = document.querySelector('#sm-tbody .sm-sel');
+      const other = document.querySelector('#sm-tbody .sm-pick:not(.sm-sel)');
+      document.querySelector('.sm-row-indicator')?.getAnimations().forEach(a => a.finish());
+      return Promise.resolve().then(() => {
+        other.scrollIntoView({block:'center', behavior:'instant'});
+        const originalY = chosen.getBoundingClientRect().top;
+        const destination = other.getBoundingClientRect().top;
+        const pick = row => row.dispatchEvent(new MouseEvent('click', {bubbles:true, detail:1}));
+        pick(other);
+        const marker = document.querySelector('.sm-row-indicator');
+        if (reduced || !marker) return {moving:!!marker};
+        const travel = marker.getAnimations()[0];
+        travel.pause();
+        travel.currentTime = travel.effect.getTiming().duration / 2;
+        const mid = marker.getBoundingClientRect().top;
+        const anchored = other.getBoundingClientRect().top;
+        // Локальная координата сохраняется даже при изменении высоты расчёта над таблицей.
+        const offset = el => el.getBoundingClientRect().top - el.closest('.sm-scroll').getBoundingClientRect().top;
+        const beforeReverse = offset(marker);
+        pick(chosen);
+        const back = document.querySelector('.sm-row-indicator');
+        const reverse = back.getAnimations()[0];
+        reverse.pause();
+        reverse.currentTime = 0;
+        const afterReverse = offset(back);
+        reverse.finish();
+        return {moving:true, originalY, destination, anchored, mid, beforeReverse, afterReverse};
+      });
+    }, reduced);
+    assert.equal(glide.moving, !reduced);
+    if (!reduced) {
+      assert(Math.abs(glide.anchored - glide.destination) < 2, 'Выбранная строка сместилась под указателем');
+      assert(glide.mid > Math.min(glide.originalY, glide.destination) && glide.mid < Math.max(glide.originalY, glide.destination), 'Нет промежуточной позиции');
+      assert(Math.abs(glide.afterReverse - glide.beforeReverse) < 2, 'Разворот плашки начался скачком');
+    }
     const before=await p.locator('#sm-detail').innerText();
     await p.locator('#sm-price').dispatchEvent('input');
     assert.equal(await p.locator('#sm-detail').innerText(),before);

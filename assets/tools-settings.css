@@ -1,15 +1,15 @@
 /* Общие токены обеих тем; файл подключается только в личном редакторе. */
 .tools-settings { margin: 0 0 24px; color: var(--black); font-family: var(--text); }
 .tools-settings > summary { padding: 14px 0; color: var(--sky); font: 600 16px/1.4 var(--text); cursor: pointer; }
-.tools-settings .tools-settings-section { margin: 12px 0; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--white); overflow: hidden; }
+.tools-settings .tools-settings-section { margin: 12px 0; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--surface); overflow: hidden; }
 .tools-settings .tools-settings-section > summary { padding: 18px 20px; color: var(--black); font: 600 17px/1.4 var(--text); cursor: pointer; }
 .tools-settings .tools-settings-body { padding: 0 20px 20px; }
 .tools-settings .tools-settings-hint, .tools-settings .tools-settings-status { color: var(--muted); font-size: 13px; line-height: 1.5; margin: 8px 0 14px; }
 .tools-settings .tools-settings-error { color: var(--indian-text); }
-.tools-settings-actions { position: sticky; bottom: 0; z-index: 2; display: flex; flex-wrap: wrap; gap: 10px; padding: 12px 0; border-top: 1px solid var(--line); background: var(--white); }
+.tools-settings-actions { position: sticky; bottom: 0; z-index: 2; display: flex; flex-wrap: wrap; gap: 10px; padding: 12px 0; border-top: 1px solid var(--line); background: var(--surface); }
 .tools-settings-caps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
 .tools-settings-field { display: flex; flex-direction: column; gap: 7px; min-width: 0; font-size: 13px; font-weight: 500; }
-.tools-settings-field input, .tools-settings-field select { width: 100%; min-width: 0; box-sizing: border-box; min-height: 44px; padding: 10px 12px; font: inherit; color: var(--black); background: var(--white); border: 1px solid var(--field); border-radius: var(--r-md); }
+.tools-settings-field input, .tools-settings-field select { width: 100%; min-width: 0; box-sizing: border-box; min-height: 44px; padding: 10px 12px; font: inherit; color: var(--black); background: var(--surface); border: 1px solid var(--field); border-radius: var(--r-md); }
 .tools-settings :is(input, select, button, summary):focus-visible { outline: 2px solid var(--sky); outline-offset: 3px; }
 .tools-settings :is(input, button):disabled { opacity: .55; cursor: not-allowed; }
 .tools-settings-filters { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin: 16px 0; }
@@ -35,13 +35,14 @@
 .tools-settings-tab > summary { display:none; }
 .tools-settings [hidden], #tools-settings-panel[hidden], #tools-catalog-panel[hidden], #tools-settings-owner[hidden] { display:none !important; }
 .tools-view-tabs { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:24px; }
-.tools-view-tabs [aria-pressed="true"] { background:var(--sky);color:var(--white);border-color:var(--sky); }
+.tools-view-tabs [aria-pressed="true"] { background:var(--sky);color:var(--on-accent);border-color:var(--sky); }
 #tools-settings-owner { margin-bottom:16px; }
 
-[data-theme="sm"] .tools-view-tabs [aria-pressed="true"] { background:var(--blue);border-color:var(--blue);color:var(--black); }
 
 @media screen and (prefers-reduced-motion: no-preference) {
   :root[data-sm-input="pointer"] .tools-settings-flat:has(input:enabled) {
     transition: background-color var(--sm-motion-popup, 180ms) var(--sm-ease-enter, ease-out);
   }
 }
+
+.tools-settings .tools-settings-field input:disabled { opacity: 1; color: var(--muted); -webkit-text-fill-color: currentColor; }

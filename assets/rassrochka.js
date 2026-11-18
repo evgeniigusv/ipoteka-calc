@@ -140,10 +140,12 @@
     state.picks[state.project] = selected.id;
     const repeat = last === selected;
     if (!repeat) {
-      showSelection(selected);
-      U.markProgram(row);
+      U.changeProgram(el.tbody, row, event, () => {
+        showSelection(selected);
+        U.markProgram(row);
+      });
     }
-    U.programFeedback(event, row, repeat);
+    U.programFeedback(event, repeat);
   });
   el.options.addEventListener('click',function(e){var b=e.target.closest('[data-step] button[data-v]');if(!b||!last)return;var value=b.getAttribute('data-v');state.step[last.id]=+value;render();U.programFeedback(e);el.options.querySelector('[data-step] button[data-v="'+value+'"]').focus({preventScroll:true});});
   el.promotions.addEventListener('change',function(e){var id=e.target.getAttribute('data-promotion');if(!id)return;state.promotionIds=state.promotionIds.filter(function(v){return v!==id;});if(e.target.checked)state.promotionIds.push(id);render();});

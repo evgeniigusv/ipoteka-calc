@@ -69,7 +69,7 @@
     }
   }
 
-  function programFeedback(event, row, repeat = false) {
+  function programFeedback(event, repeat = false) {
     if (document.documentElement.dataset.smInput !== 'pointer' ||
         (event.type === 'click' && event.detail === 0) ||
         !matchMedia('screen and (prefers-reduced-motion: no-preference)').matches) return;
@@ -78,12 +78,11 @@
     card.classList.remove('sm-result-issued');
     if (repeat) card.classList.remove('sm-program-enter');
     playCue(card, repeat ? 'sm-result-confirm' : 'sm-program-enter');
-    if (row) playCue(row.querySelector('td:first-child > span'), 'sm-program-choice');
   }
 
   if (typeof document !== 'undefined' && document.getElementById('calc-result')) {
     for (const link of document.querySelectorAll('a[href="#calc-result"]')) {
-      link.addEventListener('click', event => programFeedback(event, null, true));
+      link.addEventListener('click', event => programFeedback(event, true));
     }
   }
 
@@ -98,7 +97,7 @@
     });
     // Повторный выбор в нативном меню не вызывает change.
     select.addEventListener('click', event => {
-      if (event.target === previousOption) programFeedback(event, null, true);
+      if (event.target === previousOption) programFeedback(event, true);
       previousOption = null;
     });
   }
@@ -128,6 +127,63 @@
     row.classList.add('sm-sel');
     row.setAttribute('aria-current', 'true');
     row.querySelector('button')?.setAttribute('aria-pressed', 'true');
+  }
+  // Обе таблицы обновляют расчёт сразу. Плашка движется отдельно от текста и фокуса.
+  function changeProgram(tbody, anchor, event, update) {
+    const viewport = tbody.closest('.sm-scroll');
+    const previous = tbody.querySelector('.sm-sel');
+    const indicator = viewport.querySelector('.sm-row-indicator');
+    const allowMotion = matchMedia('screen and (prefers-reduced-motion: no-preference) and (forced-colors: none)');
+    const animate = event.type === 'click' && event.detail > 0 && allowMotion.matches;
+    const from = animate && (indicator || previous)?.getBoundingClientRect();
+    const anchorBox = anchor.getBoundingClientRect();
+    const keepAnchor = anchorBox.bottom > 0 && anchorBox.top < window.innerHeight;
+    const oldOffset = from && from.top - viewport.getBoundingClientRect().top;
+    indicator?.getAnimations().forEach(effect => effect.cancel());
+    indicator?.remove();
+    update();
+
+    // Если у банка другой набор условий или длиннее график, удерживаем строку под указателем.
+    if (keepAnchor) {
+      const shift = anchor.getBoundingClientRect().top - anchorBox.top;
+      if (Math.abs(shift) >= 1) window.scrollBy({top:shift, behavior:'instant'});
+    }
+    const selected = tbody.querySelector('.sm-sel');
+    if (!from || !selected || selected.dataset.id === previous?.dataset.id) return;
+    const box = selected.getBoundingClientRect();
+    const frame = viewport.getBoundingClientRect();
+    if (!box.height || !from.height) return;
+    const marker = document.createElement('span');
+    marker.className = 'sm-row-indicator';
+    marker.setAttribute('aria-hidden', 'true');
+    Object.assign(marker.style, {
+      top: (box.top - frame.top + viewport.scrollTop - viewport.clientTop) + 'px',
+      left: (box.left - frame.left + viewport.scrollLeft - viewport.clientLeft) + 'px',
+      width: box.width + 'px', height: box.height + 'px',
+      borderRadius: getComputedStyle(selected).borderRadius
+    });
+    viewport.append(marker);
+    const dy = oldOffset - (box.top - frame.top);
+    const travel = marker.animate([
+      {transform: 'translateY(' + dy + 'px) scaleY(' + from.height / box.height + ')'},
+      {transform: 'none'}
+    ], {id:'sm-program-row', duration:240, easing:'cubic-bezier(.22,.72,.26,1)'});
+
+    // Изменение параметров может заменить строки во время движения.
+    const reset = () => travel.cancel();
+    const rowsChanged = new MutationObserver(reset);
+    rowsChanged.observe(tbody, {childList:true});
+    window.addEventListener('resize', reset);
+    allowMotion.addEventListener('change', reset);
+    document.addEventListener('keydown', reset, true);
+    function finish() {
+      marker.remove();
+      rowsChanged.disconnect();
+      window.removeEventListener('resize', reset);
+      allowMotion.removeEventListener('change', reset);
+      document.removeEventListener('keydown', reset, true);
+    }
+    travel.finished.then(finish, finish);
   }
   function stamp() {
     var now = new Date();
@@ -287,6 +343,6 @@
 
   window.SMUi = {
     esc: esc, parseMoney: parseMoney, moneyInput: moneyInput, parsePct: parsePct, pctInput: pctInput,
-    pills: pills, onPill: onPill, programFeedback: programFeedback, resultIssued: resultIssued, onProgramSelect: onProgramSelect, emptyResult: emptyResult, markProgram: markProgram, stamp: stamp, reportHead: reportHead, page: page, makePdf: makePdf, saveButton: saveButton
+    pills: pills, onPill: onPill, programFeedback: programFeedback, resultIssued: resultIssued, onProgramSelect: onProgramSelect, emptyResult: emptyResult, markProgram: markProgram, changeProgram: changeProgram, stamp: stamp, reportHead: reportHead, page: page, makePdf: makePdf, saveButton: saveButton
   };
 })();

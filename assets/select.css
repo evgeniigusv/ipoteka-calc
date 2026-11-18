@@ -1,9 +1,9 @@
 /* Общая поверхность меню и иерархия строки для обоих способов выбора квартиры. */
 :root {
   --sm-menu-radius: calc(var(--r-md) * .6 + 7px);
-  --sm-menu-edge: color-mix(in srgb, var(--grey) 16%, transparent);
+  --sm-menu-edge: var(--field);
   --sm-menu-shadow: 0 2px 5px rgb(27 33 47 / .06), 0 12px 32px -6px rgb(27 33 47 / .16);
-  --sm-menu-hover: color-mix(in srgb, var(--sky-soft) 54%, var(--white));
+  --sm-menu-hover: var(--row-hover);
   --sm-menu-enter: min(160ms, var(--sm-motion-popup, 180ms));
   --sm-menu-exit: min(110ms, var(--sm-motion-exit, 125ms));
   --sm-menu-ease: cubic-bezier(.2, .65, .35, 1);
@@ -48,14 +48,21 @@
   line-height: 1.35;
 }
 
-/* В браузерах с обычным системным меню остаются исходные option с полной подписью. */
+/* Системная стрелка следует цветовой схеме и остаётся видна без ::picker. */
+@media screen {
+  :is(.sm:not(.sm-pdf), .tools) select:not([multiple], [size]) {
+    appearance: auto;
+    background-image: none;
+  }
+}
+
 @supports (appearance: base-select) and selector(::picker(select)) {
   @media screen {
-    :is(.sm, .tools) select:not([multiple], [size]),
-    :is(.sm, .tools) select:not([multiple], [size])::picker(select) {
+    :is(.sm:not(.sm-pdf), .tools) select:not([multiple], [size]),
+    :is(.sm:not(.sm-pdf), .tools) select:not([multiple], [size])::picker(select) {
       appearance: base-select;
     }
-    :is(.sm, .tools) select:not([multiple], [size], [hidden]) {
+    :is(.sm:not(.sm-pdf), .tools) select:not([multiple], [size], [hidden]) {
       display: block;
       position: relative;
       align-content: center;
@@ -68,7 +75,7 @@
       text-overflow: ellipsis;
       cursor: pointer;
     }
-    :is(.sm, .tools) select::picker-icon {
+    :is(.sm:not(.sm-pdf), .tools) select::picker-icon {
       content: "";
       position: absolute;
       inset-inline-end: 13px;
@@ -79,12 +86,12 @@
       color: var(--muted);
       clip-path: polygon(0 18%, 10% 0, 50% 62%, 90% 0, 100% 18%, 50% 96%);
     }
-    :is(.sm, .tools) select:open::picker-icon { transform: scaleY(-1); color: var(--sky); }
-    :is(.sm, .tools) select:not([multiple], [size]):has(option:checked[value=""]) {
+    :is(.sm:not(.sm-pdf), .tools) select:open::picker-icon { transform: scaleY(-1); color: var(--sky); }
+    :is(.sm:not(.sm-pdf), .tools) select:not([multiple], [size]):has(option:checked[value=""]) {
       color: var(--muted);
     }
-    :is(.sm, .tools) select:disabled { cursor: default; color: var(--muted); }
-    :is(.sm, .tools) select::picker(select) {
+    :is(.sm:not(.sm-pdf), .tools) select:disabled { cursor: default; color: var(--muted); }
+    :is(.sm:not(.sm-pdf), .tools) select::picker(select) {
       box-sizing: border-box;
       inline-size: max(anchor-size(width), min(22rem, 100%));
       max-inline-size: 100%;
@@ -94,7 +101,7 @@
       border: 1px solid var(--sm-menu-edge);
       border-radius: var(--sm-menu-radius);
       box-shadow: var(--sm-menu-shadow);
-      background: var(--white);
+      background: var(--surface);
       color: var(--black);
       font: 500 15px/1.4 var(--text);
       font-variant-numeric: tabular-nums;
@@ -103,8 +110,8 @@
       scrollbar-width: thin;
       opacity: 0;
     }
-    :is(.sm, .tools) select:open::picker(select) { opacity: 1; }
-    :is(.sm, .tools) select option {
+    :is(.sm:not(.sm-pdf), .tools) select:open::picker(select) { opacity: 1; }
+    :is(.sm:not(.sm-pdf), .tools) select option {
       display: flex;
       position: relative;
       align-items: center;
@@ -117,14 +124,14 @@
       color: var(--black);
       cursor: pointer;
     }
-    :is(.sm, .tools) select option:checked {
+    :is(.sm:not(.sm-pdf), .tools) select option:checked {
       color: var(--sky);
       background: var(--sky-soft);
     }
     #sm-flat option[value=""] { color: var(--muted); font-size: 14px; }
-    :is(.sm, .tools) select option:focus-visible { outline: 2px solid var(--sky); outline-offset: -2px; }
-    :root[data-sm-input="pointer"] :is(.sm, .tools) select option:focus-visible { outline: none; }
-    :is(.sm, .tools) select option::checkmark {
+    :is(.sm:not(.sm-pdf), .tools) select option:focus-visible { outline: 2px solid var(--sky); outline-offset: -2px; }
+    :root[data-sm-input="pointer"] :is(.sm:not(.sm-pdf), .tools) select option:focus-visible { outline: none; }
+    :is(.sm:not(.sm-pdf), .tools) select option::checkmark {
       content: "";
       position: absolute;
       inset-inline-end: 14px;
@@ -135,13 +142,13 @@
       border-width: 0 2px 2px 0;
       transform: translateY(-60%) rotate(45deg);
     }
-    :is(.sm, .tools) select option:disabled { color: var(--muted); cursor: default; }
+    :is(.sm:not(.sm-pdf), .tools) select option:disabled { color: var(--muted); cursor: default; }
     @media (max-width: 640px) {
-      :is(.sm, .tools) select::picker(select) { inline-size: anchor-size(width); }
-      :is(.sm, .tools) select option { min-block-size: 44px; }
+      :is(.sm:not(.sm-pdf), .tools) select::picker(select) { inline-size: anchor-size(width); }
+      :is(.sm:not(.sm-pdf), .tools) select option { min-block-size: 44px; }
     }
     @media (hover: hover) and (pointer: fine) {
-      :is(.sm, .tools) select option:enabled:not(:checked):hover { background: var(--sm-menu-hover); }
+      :is(.sm:not(.sm-pdf), .tools) select option:enabled:not(:checked):hover { background: var(--sm-menu-hover); }
     }
     @media (prefers-reduced-motion: no-preference) {
       :root[data-sm-input="pointer"] select::picker-icon {

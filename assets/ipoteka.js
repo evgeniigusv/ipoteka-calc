@@ -226,7 +226,7 @@
     var tr = e.target.closest('tr.sm-pick');
     if (!tr || !last) return;
     if (state.pick === +tr.dataset.id) {
-      U.programFeedback(e, tr, true);
+      U.programFeedback(e, true);
       return;
     }
     const selected = last.res.rows.find(row => row.ok && row.id === +tr.dataset.id);
@@ -235,14 +235,21 @@
     state.pick = last.inp.pick = selected.id;
     last.res.best = selected;
     last.res.picked = true;
-    U.markProgram(tr);
-    if (repeat) renderTip(last.inp, last.res);
-    else renderSelection(last.inp, last.res);
-    U.programFeedback(e, tr, repeat);
+    U.changeProgram(el.tbody, tr, e, () => {
+      U.markProgram(tr);
+      if (repeat) renderTip(last.inp, last.res);
+      else renderSelection(last.inp, last.res);
+    });
+    U.programFeedback(e, repeat);
   };
   el.tbody.addEventListener('click', pick);
   el.tbody.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(e); } });
-  el.tip.addEventListener('click', function (e) { if (e.target.id === 'sm-auto') { state.pick = null; render(); el.tbody.querySelector('tr.sm-sel')?.focus({preventScroll:true}); U.programFeedback(e); } });
+  el.tip.addEventListener('click', function (e) {
+    if (e.target.id !== 'sm-auto') return;
+    U.changeProgram(el.tbody, el.tip, e, () => { state.pick = null; render(); });
+    el.tbody.querySelector('tr.sm-sel')?.focus({preventScroll:true});
+    U.programFeedback(e);
+  });
   $('sm-print').addEventListener('click', function () { window.print(); });
   U.saveButton($('sm-save'), $('sm-msg'), createPdf);
 

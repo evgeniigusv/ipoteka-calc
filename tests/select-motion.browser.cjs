@@ -128,6 +128,6 @@ async function nativeFallback(browser) {
   const browser = await chromium.launch({executablePath: process.env.CHROMIUM_BIN});
   try {
     if (!process.argv.includes('--live')) await nativeFallback(browser);
-    for (const args of [[1280,'classic',false], [1280,'sm',false], [390,'classic',false], [390,'sm',false], [320,'classic',true]]) await run(browser, ...args);
+    for (const args of [[1280,'light',false], [1280,'dark',false], [390,'light',false], [390,'dark',false], [320,'light',true]]) await run(browser, ...args);
   } finally { await browser.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });

@@ -82,7 +82,11 @@
     window.addEventListener('message', event => {
       if (event.origin !== site || event.source !== window.parent) return;
       const message = event.data;
-      if (message?.type === 'tools:theme') window.SMTheme?.set(message.theme);
+      if (message?.type === 'tools:theme') {
+        window.SMTheme.set(message.theme);
+        send('tools:theme-applied', {theme:theme()});
+        return;
+      }
       if (message?.type !== 'tools:open' || !openAction || document.querySelector('dialog[open]') || window.SMProposals?.isTransitioning()) return;
       window.SMTheme?.set(message.theme);
       document.documentElement.dataset.smInput = message.pointer === true ? 'pointer' : 'keyboard';
@@ -91,7 +95,7 @@
     });
     window.SMOwnerWindow = {
       embedded,
-      ready(handler) { openAction = handler; send('tools:ready'); },
+      ready(handler) { openAction = handler; send('tools:ready', {theme:theme()}); },
       failed(reason) { send('tools:failed', {reason}); },
       viewChanged(view) { send('tools:view', {view}); },
       close() { send('tools:close'); }
@@ -101,7 +105,7 @@
   }
 
   const panel = $('owner-window');
-  let frame, ready = false, action, timeout, delivered = false, trigger, scroll, publicTitle;
+  let frame, frameTheme, themePending = false, ready = false, action, timeout, delivered = false, trigger, scroll, publicTitle;
   function report(message, retry) {
     $('owner-progress').textContent = message;
     $('owner-recovery').hidden = !retry;
@@ -109,7 +113,8 @@
   function start() {
     clearTimeout(timeout);
     frame?.remove();
-    ready = delivered = false;
+    ready = delivered = themePending = false;
+    frameTheme = undefined;
     frame = document.createElement('iframe');
     frame.title = 'Личный редактор инструментов';
     frame.allow = 'microphone; local-network-access; loopback-network';
@@ -122,8 +127,19 @@
     $('owner-cancel').focus({preventScroll:true});
     timeout = setTimeout(() => report('Нет связи с личным редактором. Откройте каталог на Маке владельца и разрешите браузеру доступ к локальной сети, если он запросит разрешение.', true), 9000);
   }
+  function syncFrameTheme() {
+    if (!ready || themePending || frameTheme === theme()) return;
+    // Старый экземпляр редактора не передавал тему в tools:ready и не отвечал на обновление.
+    themePending = Boolean(frameTheme);
+    frame.contentWindow.postMessage({type:'tools:theme', theme:theme()}, owner);
+  }
   function showFrame() {
     if (panel.hidden || delivered) return;
+    // Пока редактор загружался или был свёрнут, оформление могло измениться.
+    if (themePending || (frameTheme && frameTheme !== theme())) {
+      syncFrameTheme();
+      return;
+    }
     markEntrance(panel, pointerInput());
     frame.hidden = false;
     $('owner-connection').hidden = true;
@@ -135,6 +151,7 @@
     if (panel.hidden) return;
     clearTimeout(timeout);
     panel.hidden = true;
+    if (frame) frame.hidden = true;
     delivered = false;
     delete $('public-catalog').dataset.viewMotion;
     markEntrance($('public-catalog'), pointer);
@@ -154,7 +171,14 @@
       case 'tools:ready':
         clearTimeout(timeout);
         ready = true;
+        frameTheme = event.data.theme;
         showFrame();
+        break;
+      case 'tools:theme-applied':
+        frameTheme = event.data.theme;
+        themePending = false;
+        syncFrameTheme();
+        if (ready) showFrame();
         break;
       case 'tools:failed':
         clearTimeout(timeout);
@@ -175,9 +199,17 @@
         break;
     }
   });
-  new MutationObserver(() => {
-    if (delivered) frame.contentWindow.postMessage({type:'tools:theme', theme:theme()}, owner);
-  }).observe(document.documentElement, {attributes:true, attributeFilter:['data-theme']});
+  function syncTheme() {
+    const direct = $('owner-direct');
+    if (!panel.hidden && direct.href) {
+      const url = new URL(direct.href);
+      url.searchParams.set('theme', theme());
+      direct.href = url.href;
+    }
+    syncFrameTheme();
+  }
+  new MutationObserver(syncTheme).observe(document.documentElement, {attributes:true, attributeFilter:['data-theme']});
+  window.addEventListener('pageshow', event => { if (event.persisted) syncTheme(); });
   $('owner-retry').onclick = start;
   $('owner-cancel').onclick = () => close(pointerInput());
   panel.addEventListener('keydown', event => {
