@@ -130,3 +130,31 @@
 }
 
 #tools-table .tools-section td{background:var(--sky);color:var(--white)}
+
+/* Основные условия сразу видны, дополнительные раскрываются по запросу. */
+#tools-editor-fields { display: block; }
+.tools-form-core.tools-param-grid { margin: 0; }
+.tools-form-help { margin: 0 0 16px; color: var(--muted); font-size: 13px; }
+.tools-field-title { color: var(--grey); font-weight: 600; }
+.tools-field:has(> :required) > .tools-field-title::after { content: ' *'; color: var(--indian-text); }
+.tools-field input[type="checkbox"] { accent-color: var(--sky); }
+.tools-form-more { border-top: 1px solid var(--line); margin-top: 20px; padding-top: 14px; }
+.tools-form-more > summary, .tools-stages-panel > summary { cursor: pointer; color: var(--sky); font-weight: 600; padding: 6px 0; }
+.tools-stages-panel { grid-column: 1 / -1; }
+.tools-stages-field { margin-top: 12px; }
+.tools-form-core > .tools-field:has([name="name"]) { grid-column: 1 / -1; }
+.tools-form-core .tools-ownership-note { margin-bottom: 4px; }
+.tools-milestone { grid-template-columns: minmax(80px,.7fr) minmax(120px,1.2fr) minmax(120px,1fr) 32px; align-items: end; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
+.tools-milestone .t-icon { min-height: 42px; }
+.tools-editor-foot { flex-wrap: wrap; }
+@media (max-width:650px) {
+  .tools-milestone { grid-template-columns: minmax(0,1fr) minmax(0,1fr); }
+  .tools-milestone .t-icon { justify-self: end; }
+}
+.tools-form-context { grid-column: 1 / -1; }
+.tools-form-context summary { cursor: pointer; font-size: 14px; font-weight: 600; color: var(--grey); }
+.tools-form-context summary span { color: var(--sky); font-weight: 400; margin-left: 8px; }
+.tools-form-core > .wide { grid-column: 1 / -1; }
+.tools-periods { display: flex; flex-wrap: wrap; gap: 10px 18px; }
+.tools-periods label { display: inline-flex; align-items: center; gap: 6px; color: var(--grey); font-size: 14px; }
+.tools-periods input { width: 18px; height: 18px; }

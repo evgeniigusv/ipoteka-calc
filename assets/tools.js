@@ -203,62 +203,103 @@ function render(){if(!data)return;$('tools-head').innerHTML=compactHeader();$('t
 
 }
 function status(){var date=data.full_checked_at||data.checked_at;$('tools-status').textContent=(local?'Личный редактор · ':'')+'Проверено '+new Date(date).toLocaleString('ru-RU',{timeZone:'Asia/Yekaterinburg',dateStyle:'short',timeStyle:'short'})+' · Екатеринбург';if(Date.now()-Date.parse(date)>8*86400000)alert('Справочник не проверялся больше недели. Подтвердите условия перед отправкой партнёрам.');}
-function field(label,name,value,type,wide,options){var s='<label class="tools-field'+(wide?' wide':'')+'">'+esc(label);if(options)s+='<select name="'+name+'">'+options.map(function(o){var v=typeof o==='string'?o:o[0],l=typeof o==='string'?o:o[1];return '<option value="'+esc(v)+'"'+(String(value)===v?' selected':'')+'>'+esc(l)+'</option>';}).join('')+'</select>';else if(type==='textarea')s+='<textarea name="'+name+'">'+esc(value||'')+'</textarea>';else s+='<input name="'+name+'" type="'+(type||'text')+'"'+(type==='checkbox'?(value?' checked':''):' value="'+esc(value==null?'':value)+'"')+'>';return s+'</label>';}
+function field(label,name,value,type,wide,options){var s='<label class="tools-field'+(wide?' wide':'')+'"><span class="tools-field-title">'+esc(label)+'</span>';if(options)s+='<select name="'+name+'">'+options.map(function(o){var v=typeof o==='string'?o:o[0],l=typeof o==='string'?o:o[1];return '<option value="'+esc(v)+'"'+(String(value)===v?' selected':'')+'>'+esc(l)+'</option>';}).join('')+'</select>';else if(type==='textarea')s+='<textarea name="'+name+'">'+esc(value||'')+'</textarea>';else s+='<input name="'+name+'" type="'+(type||'text')+'"'+(type==='checkbox'?(value?' checked':''):' value="'+esc(value==null?'':value)+'"')+'>';return s+'</label>';}
 var kindsByCategory={mortgage:['mortgage','info'],installment:['installment','info'],tranche:['tranche','info'],chpv:['chpv','info'],discount:['info','discount'],extra:['info'],booking:['info']};
+let editorDrafts = new Map();
 function editorFields(r,isNew){
- var section=M.section(r),kinds=kindsByCategory[section]||[];
- var html=field('Проект','project',r.project,'select',false,[['','Выберите проект'],...Object.entries(names)])
+ const section=M.section(r),kinds=kindsByCategory[section]||[];
+ let html=field('Проект','project',r.project,'select',false,[['','Выберите проект'],...Object.entries(names)])
    +field('Раздел','category',section,'select',false,[['','Выберите раздел'],...Object.entries(M.categories)])
+   +field('Тип записи','kind',r.kind,'select',true,kinds.length?kinds.map(k=>[k,k==='info'?'Условия текстом':kindNames[k]]):[['','Сначала выберите раздел']])
    +field('Название','name',r.name,'text',true)
-   +field('Механика расчёта','kind',r.kind,'select',true,kinds.length?kinds.map(k=>[k,kindNames[k]]):[['','Сначала выберите раздел']]);
- html+=field('Условия инструмента','description',r.description,'textarea',true)+field('Сочетание с акциями','combination',r.combination,'textarea',true)+field('Правило сочетания','mode',r.mode,'select',true,Object.entries(M.modes));
+   +field('Пояснение для партнёров','description',r.description,'textarea',true)
+   +field('Сочетание с акциями','combination',r.combination,'textarea',true)
+   +field('Как применять дополнительные скидки','mode',r.mode,'select',true,Object.entries(M.modes));
  if(isNew&&!proposalEdit)html+=field('Кому виден инструмент','visibility',r.params.ownerOnly?'private':'public','select',true,[['public','Партнёрам'],['private','Только мне']]);
  if(r.source==='subsidies')html+='<p class="tools-ownership-note">После сохранения вы ведёте эту программу здесь. Импорт больше не меняет её условия.</p>';
- const hasParams=!!r.kind;
- if(hasParams)html+='<details class="tools-param-panel"><summary>Параметры расчёта</summary><div class="tools-param-grid">';
- (M.fields[r.kind]||[]).forEach(function(f){var v=M.get(r.params,f.key),type=f.type;if(type==='percent'&&v!=null)v=+(v*100).toFixed(6);if(type==='steps')v=(v||[]).join(', ');if(type==='percentList')v=(v||[]).map(function(n){return +(n*100).toFixed(4);}).join('; ');var opts=type==='select'?f.options.map(function(o,i){return [o,f.labels?f.labels[i]:o||'Не применяется'];}):null;if(r.kind==='tranche'&&f.key==='tranches')opts=[['','По согласованию'],...opts];html+=field(f.label,'p:'+f.key,v,type==='boolean'?'checkbox':type==='date'?'date':'text',false,opts);});
- if(hasParams)html+=field('Условия действуют до','validUntil',r.params.validUntil,'date',true);
- if(r.kind==='installment'){html+='<div class="tools-field wide">Промежуточные этапы (% от стоимости)<div id="tools-milestones" class="tools-milestones"></div><button type="button" id="tools-add-stage" class="t-btn">Добавить этап</button><small>Для этапа укажите дату или количество месяцев после сделки. Остаток рассчитывается автоматически.</small></div>';}
- if(hasParams)html+='</div></details>';
- $('tools-editor-fields').innerHTML=html;var form=$('tools-form');form.elements.kind.disabled=!isNew||kinds.length<2;
- form.elements.project.disabled=!isNew;form.elements.category.disabled=!isNew&&r.kind!=='info';
+ for(const f of M.fields[r.kind]||[]){
+   let v=M.get(r.params,f.key),type=f.type;
+   if(type==='percent'&&v!=null)v=+(v*100).toFixed(6);
+   if(type==='steps')v=(v||[]).join(', ');
+   if(type==='percentList')v=(v||[]).map(n=>+(n*100).toFixed(4)).join('; ');
+   let opts=type==='select'?f.options.map((o,i)=>[o,f.labels?f.labels[i]:o||'Не применяется']):null;
+   if(r.kind==='tranche'&&f.key==='tranches')opts=[['','По согласованию'],...opts];
+   html+=field(f.label,'p:'+f.key,v,type==='boolean'?'checkbox':type==='date'?'date':'text',false,opts);
+ }
+ html+=field('Оформление по программе до','validUntil',r.params.validUntil,'date',true);
+ if(r.kind==='installment')html+='<div class="tools-field wide">Промежуточные платежи<div id="tools-milestones" class="tools-milestones"></div><button type="button" id="tools-add-stage" class="t-btn">Добавить платёж</button><small>Укажите долю цены квартиры и срок. Остаток рассчитывается автоматически.</small></div>';
+ $('tools-editor-fields').innerHTML=html;
+ const form=$('tools-form');
+ form.elements.kind.disabled=!isNew||kinds.length<2;
+ form.elements.project.disabled=!isNew;
+ form.elements.category.disabled=!isNew&&r.kind!=='info';
  if(!isNew&&!form.elements.category.disabled)form.elements.category.options[0].disabled=true;
- form.elements.name.required=form.elements.project.required=form.elements.category.required=true;
+ form.elements.project.required=form.elements.category.required=true;
  if(!isNew){
-  // Проект указан в заголовке. Редактируемые условия идут сразу за названием.
-  ['project','category','kind'].forEach(key=>{
-   const input=form.elements[key];
-   if(input.disabled)input.closest('label').hidden=true;
-  });
- }
- const mainFields={
-  mortgage:['bank','type','kids','term','rate','subsidy','minPv','limit'],
-  installment:['minPv',r.params.discFromPv?'discFromPv':'disc'],
-  tranche:['minPv',r.params.estimate?'referencePayment':'rate'],
-  chpv:['rate','limit'],discount:['percent']
- };
- const keys=r.kind==='mortgage'&&!isNew?['rate','minPv','subsidy']:mainFields[r.kind]||[];
- const description=form.elements.description.closest('label');
- for(const key of keys){
-  const input=form.elements['p:'+key];
-  if(input)description.before(input.closest('label'));
- }
+   for(const key of ['project','category','kind']){
+     if(form.elements[key].disabled)form.elements[key].closest('label').hidden=true;
+   }
+ }else if(kinds.length<2)form.elements.kind.closest('label').hidden=true;
  if(r.kind==='installment')(r.params.milestones||[]).forEach(addStage);
+ SMToolsForm.mount(form,r);
  function switchFields(event){
-   if(form.elements.visibility){if(form.elements.visibility.value==='private')r.params.ownerOnly=true;else delete r.params.ownerOnly;}
-   ['name','project','description','combination','mode'].forEach(function(k){r[k]=form.elements[k].value;});
-   var nextCategory=form.elements.category.value,options=kindsByCategory[nextCategory]||[];
-   var kind=event.target.name==='category'?(isNew?options[0]:'info'):form.elements.kind.value;
-   r.category=nextCategory;
-   if(kind!==r.kind){var ownerOnly=r.params.ownerOnly;r.kind=kind;r.params=defaults(kind);if(ownerOnly)r.params.ownerOnly=true;}
-   editorFields(r,isNew);
-   form.elements[event.target.name].focus();
+   const previousCategory=r.category,previousKind=r.kind;
+   const nextCategory=form.elements.category.value;
+   const options=kindsByCategory[nextCategory]||[];
+   const kind=event.target.name==='category'?(isNew?options[0]:'info'):form.elements.kind.value;
+   try{
+     // Сохраняем введённые условия при переключении вида записи туда и обратно.
+     r.params=SMToolsForm.readParams(form,r);
+     editorDrafts.set(previousKind,M.clone(r.params));
+     for(const key of ['name','project','description','combination','mode'])r[key]=form.elements[key].value;
+     r.category=nextCategory;
+     if(kind!==r.kind){
+       const ownerOnly=r.params.ownerOnly;
+       r.kind=kind;
+       r.params=M.clone(editorDrafts.get(kind)||defaults(kind));
+       if(ownerOnly)r.params.ownerOnly=true;else delete r.params.ownerOnly;
+     }
+     editorFields(r,isNew);
+     form.elements[event.target.name].focus();
+   }catch(error){
+     form.elements.category.value=previousCategory;
+     form.elements.kind.value=previousKind;
+     $('tools-form-error').textContent=error.message;
+   }
  }
  form.elements.category.onchange=form.elements.kind.onchange=switchFields;
- if($('tools-add-stage'))$('tools-add-stage').onclick=function(){addStage({});};
+ if($('tools-add-stage'))$('tools-add-stage').onclick=()=>addStage({});
 }
-function defaults(kind){return kind==='mortgage'?{type:'Базовая ипотека',term:30,minPv:.201,subsidy:0}:kind==='installment'?{scheme:'deferred',minPv:.2,months:12,disc:0}:kind==='tranche'?{tranches:2,minPv:.201,firstRub:100000,secondMonths:12}:kind==='chpv'?{minDown:.201,cost:.25,overRate:.14,years:15}:kind==='discount'?{scope:'cash',percent:0}:{};}
-function addStage(m){var div=document.createElement('div');div.className='tools-milestone';div.innerHTML='<input data-stage="share" inputmode="decimal" aria-label="Доля этапа, %" placeholder="Доля, %" value="'+esc(m.share?+(m.share*100).toFixed(4):'')+'"><input data-stage="date" type="date" aria-label="Дата этапа" value="'+esc(m.date?(m.date.length===7?m.date+'-01':m.date):'')+'"><input data-stage="months" type="number" min="1" max="60" aria-label="Месяцев после сделки" placeholder="Или месяцев" value="'+esc(m.months||'')+'"><button type="button" class="t-icon" aria-label="Убрать этап">'+icon('x-lg')+'</button>';div.querySelector('button').onclick=function(){div.remove();};$('tools-milestones').appendChild(div);}
+function defaults(kind){
+ if(kind==='mortgage')return {type:'Базовая ипотека',term:30,subsidy:0};
+ if(kind==='installment')return {scheme:'deferred'};
+ if(kind==='tranche')return {tranches:2};
+ if(kind==='discount')return {scope:'cash'};
+ return {};
+}
+function addStage(stage){
+ const row=document.createElement('div');
+ row.className='tools-milestone';
+ row.dataset.originalDate=stage.date||'';
+ row.innerHTML='<label class="tools-field"><span class="tools-field-title">Доля цены, %</span><input data-stage="share" inputmode="decimal" required value="'+esc(stage.share?+(stage.share*100).toFixed(4):'')+'"></label>'
+   +'<label class="tools-field"><span class="tools-field-title">Когда платить</span><select data-stage="mode"><option value="date">В дату</option><option value="months">Через несколько месяцев</option></select></label>'
+   +'<label class="tools-field"><span class="tools-field-title">Дата платежа</span><input data-stage="date" type="date" value="'+esc(stage.date?(stage.date.length===7?stage.date+'-01':stage.date):'')+'"></label>'
+   +'<label class="tools-field"><span class="tools-field-title">Месяцев от сделки</span><input data-stage="months" type="number" min="1" max="60" value="'+esc(stage.months||'')+'"></label>'
+   +'<button type="button" class="t-icon" aria-label="Убрать платёж">'+icon('x-lg')+'</button>';
+ const mode=row.querySelector('[data-stage="mode"]');
+ mode.value=stage.months?'months':'date';
+ const refresh=()=>{
+   for(const key of ['date','months']){
+     const input=row.querySelector('[data-stage="'+key+'"]');
+     input.required=key===mode.value;
+     input.closest('label').hidden=key!==mode.value;
+   }
+ };
+ mode.onchange=refresh;
+ refresh();
+ row.querySelector('button').onclick=()=>row.remove();
+ $('tools-milestones').append(row);
+}
 var proposalEdit=null;
 function activeInProject(template,projectKey){
  return data.records.find(r=>r.enabled&&r.group===template.group&&M.section(r)===M.section(template)&&r.project===projectKey);
@@ -275,6 +316,7 @@ function addProjectConditions(templateId,targetProject){
  openEditor(null,draft,false,true);
 }
 function openEditor(id,draft,newProposal,projectConditions){
+ editorDrafts=new Map();
  if(draft||id){
    editing=M.clone(draft||data.records.find(r=>r.id===id));
  }else{
@@ -290,7 +332,12 @@ function openEditor(id,draft,newProposal,projectConditions){
  editorFields(editing,!id||newProposal);
  if(projectConditions){
   const form=$('tools-form');
-  for(const field of ['project','category','kind'])form.elements[field].disabled=true;
+  for(const field of ['project','category','kind']){
+    form.elements[field].disabled=true;
+    form.elements[field].closest('label').hidden=true;
+  }
+  const context=form.querySelector('.tools-form-context');
+  if(context)context.hidden=true;
  }
  $('tools-editor').showModal();
 }
@@ -313,18 +360,13 @@ function duplicateRecord(id){
  $('tools-editor-title').textContent='Копия инструмента';
  $('tools-form').querySelector('button[type=submit]').textContent='В черновик';
 }
-function numeric(value,label){var s=value.trim().replace(/\s/g,'').replace(',','.');if(!/^(?:\d+)(?:\.\d+)?$/.test(s))throw Error(label+': введите число.');return Number(s);}
-$('tools-form').onsubmit=async function(e){e.preventDefault();if(busy)return;busy=true;var submit=e.currentTarget.querySelector('button[type=submit]');submit.disabled=true;$('tools-close').disabled=$('tools-cancel').disabled=true;try{var form=e.currentTarget,r=M.clone(editing),p=M.clone(r.params);['name','project','kind','category','description','combination','mode'].forEach(function(k){r[k]=form.elements[k].value;});
- if(!M.fields[r.kind])throw Error('Выберите раздел и механику расчёта.');
- M.fields[r.kind].forEach(function(f){var input=form.elements['p:'+f.key],v=input.value.trim();if(f.type==='boolean'){if(!input.checked&&M.get(p,f.key)==null)return;v=input.checked;}else if(v===''){if(f.key.includes('.')){var keys=f.key.split('.');if(p[keys[0]])delete p[keys[0]][keys[1]];}else delete p[f.key];return;}else if(['integer','money','percent'].includes(f.type)){v=numeric(v,f.label);if(f.type==='percent'){const previous=M.get(editing.params,f.key);v=previous!=null&&v===+(previous*100).toFixed(6)?previous:v/100;}}else if(['steps','percentList'].includes(f.type)){v=v.split(f.type==='steps'?/[,;]+/:/;/).map(function(s){return numeric(s,f.label)/(f.type==='percentList'?100:1);});}M.set(p,f.key,v);});
- if(p.pay&&!Object.keys(p.pay).length)delete p.pay;
- if(r.kind==='installment'){var stages=Array.from($('tools-milestones').children).map(function(div){var o={share:numeric(div.querySelector('[data-stage=share]').value,'Доля этапа')/100},date=div.querySelector('[data-stage=date]').value,months=div.querySelector('[data-stage=months]').value;if(date)o.date=date;if(months)o.months=numeric(months,'Месяцев');return o;});if(stages.length)p.milestones=stages;else delete p.milestones;delete p.noExtra;delete p.extraSequential;}
- if(form.elements.validUntil){if(form.elements.validUntil.value)p.validUntil=form.elements.validUntil.value;else delete p.validUntil;}
- if(form.elements.visibility){
-  if(form.elements.visibility.value==='private')p.ownerOnly=true;
-  else delete p.ownerOnly;
- }
- r.params=p;
+$('tools-form').onsubmit=async function(e){e.preventDefault();if(busy)return;busy=true;var submit=e.currentTarget.querySelector('button[type=submit]');submit.disabled=true;$('tools-close').disabled=$('tools-cancel').disabled=true;try{var form=e.currentTarget,r=M.clone(editing);
+ for(const key of ['name','project','kind','category','description','combination','mode'])r[key]=form.elements[key].value;
+ if(!M.fields[r.kind])throw Error('Выберите раздел и тип записи.');
+ r.params=SMToolsForm.readParams(form,editing);
+ if(!r.name.trim())r.name=SMToolsForm.suggestedName(form,r);
+ M.validateRecord(r);
+ var p=r.params;
  if(editing.source==='subsidies'||(r.kind==='mortgage'&&(p.type==='Семейная ипотека'||p.variant==='субсидированная ставка')))r=takeOwnership(r);
  var original=baseline.records.find(function(item){return item.id===r.id;});
  if(!proposalEdit&&(editing.source==='subsidies'||!original||['name','description','combination'].some(function(k){return r[k]!==original[k];}))){
