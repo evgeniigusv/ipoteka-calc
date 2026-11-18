@@ -1,3 +1,19 @@
+:root {
+  --sm-motion-press: 120ms;
+  --sm-motion-color: 150ms;
+  --sm-motion-result: 195ms;
+  --sm-motion-result-accent: 380ms;
+  --sm-motion-navigation: 320ms;
+  --sm-motion-page: 270ms;
+  --sm-motion-list: 260ms;
+  --sm-motion-popup: 180ms;
+  --sm-motion-dialog: 190ms;
+  --sm-motion-exit: 125ms;
+  --sm-ease-enter: var(--ease, ease-out);
+  --sm-ease-out: ease-out;
+  --sm-ease-navigation: cubic-bezier(.2, .7, .22, 1);
+}
+
 /* Переключатель принадлежит шапке сайта и не попадает в отчёты. */
 .sm-nav-row {
   display: flex;
@@ -19,7 +35,9 @@
   color: var(--muted);
   background: transparent;
 }
-.sm-theme-switch button:hover { color: var(--black); text-decoration: underline; }
+@media (hover: hover) and (pointer: fine) {
+  .sm-theme-switch button:not([aria-pressed="true"]):hover { color: var(--black); text-decoration: underline; }
+}
 .sm-theme-switch button[aria-pressed="true"] {
   color: var(--black);
   background: var(--white);
@@ -150,7 +168,7 @@
     background: transparent;
     color: var(--grey);
     white-space: nowrap;
-    transition: background-color 120ms var(--ease);
+    transition: background-color var(--sm-motion-press) var(--sm-ease-enter);
   }
   .sm:not(.sm-pdf) .sm-navigation a[aria-current] { color: white; }
   [data-theme="sm"] .sm:not(.sm-pdf) .sm-navigation a[aria-current] { color: var(--graphite); }
@@ -211,17 +229,19 @@
 }
 
 @media screen and (prefers-reduced-motion: no-preference) {
-  :is(.sm-actions, .sm-pills, .sm-theme-switch, .tools-pills, .tools-toolbar-actions, .tools-editor-foot) button {
-    transition: transform 120ms var(--ease), background-color 150ms var(--ease), color 150ms var(--ease);
+  :is(.sm-actions, .sm-pills, .sm-theme-switch, .tools-pills, .tools-view-tabs, .tools-toolbar-actions, .tools-editor-foot) button {
+    transition: transform var(--sm-motion-press) var(--sm-ease-enter),
+                background-color var(--sm-motion-color) var(--sm-ease-enter), color var(--sm-motion-color) var(--sm-ease-enter);
   }
-  :is(.sm-actions, .sm-pills, .sm-theme-switch, .tools-pills, .tools-toolbar-actions, .tools-editor-foot) button:active:not(:disabled):not(:focus-visible) {
+  [data-sm-input="pointer"] :is(.sm-actions, .sm-pills, .sm-theme-switch, .tools-pills, .tools-view-tabs, .tools-toolbar-actions, .tools-editor-foot) button:active:not(:disabled):not([aria-pressed="true"]) {
     transform: scale(.965);
+    transition-property: background-color, color;
   }
 }
 
 @media screen and (prefers-reduced-motion: no-preference) {
   .sm-program-enter {
-    animation: sm-program-enter 195ms var(--ease);
+    animation: sm-program-enter var(--sm-motion-result) var(--sm-ease-enter);
   }
   .sm-hero.sm-program-enter { position: relative; }
   .sm-hero.sm-program-enter::after {
@@ -233,7 +253,8 @@
     background: var(--apricot);
     pointer-events: none;
     transform-origin: left;
-    animation: sm-payment-update 380ms ease-out both;
+    opacity: 0;
+    animation: sm-payment-update var(--sm-motion-result-accent) var(--sm-ease-out);
   }
   @keyframes sm-payment-update {
     from { transform: scaleX(.04); opacity: .9; }
@@ -241,12 +262,13 @@
     to { transform: scaleX(1); opacity: 0; }
   }
   @keyframes sm-program-enter {
-    from { opacity: .7; transform: translateY(4px); }
+    from { opacity: .9; }
   }
   [data-sm-input="pointer"] #sm-tbody .sm-pick td {
-    transition: background-color 120ms var(--ease);
+    transition: background-color var(--sm-motion-press) var(--sm-ease-enter);
   }
 }
 /* Одинаковая ширина подписей сохраняет положение соседних кнопок при выборе. */
 .sm .sm-pills button[aria-pressed] { font-weight: 600; }
-[data-sm-input="keyboard"] .sm-pills button { transition: none; }
+[data-sm-input="keyboard"] :is(.sm-pills, .sm-theme-switch, .sm-actions, .tools-pills, .tools-view-tabs, .tools-toolbar-actions, .tools-editor-foot) button,
+[data-sm-input="keyboard"] .sm:not(.sm-pdf) .sm-navigation a.sm-nav { transition: none; }

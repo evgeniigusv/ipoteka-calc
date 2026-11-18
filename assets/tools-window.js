@@ -20,9 +20,24 @@
 
   const editor = $('tools-editor');
   let returnRecord;
-  for (const dialog of [editor, $('ai-dialog')]) {
+  const dialogs = [editor, $('ai-dialog')];
+  for (const dialog of dialogs) {
+    dialog.addEventListener('click', event => {
+      if (event.detail > 0 && pointerInput() && !window.SMProposals?.isTransitioning() &&
+          event.target.closest('#tools-cancel, #tools-close, #ai-close')) {
+        dialog.dataset.ownerExit = 'pointer';
+      }
+    }, true);
     dialog.addEventListener('beforetoggle', event => {
       if (event.newState !== 'open') return;
+      for (const layer of dialogs) {
+        if (!layer.hasAttribute('data-owner-exit')) continue;
+        delete layer.dataset.ownerExit;
+        // Убираем и отложенное снятие из верхнего слоя до следующего showModal.
+        for (const effect of layer.getAnimations({subtree:true})) {
+          if (effect instanceof CSSTransition && effect.effect.target === layer) effect.cancel();
+        }
+      }
       markEntrance(dialog, pointerInput());
       if (dialog === editor) returnRecord = document.activeElement.closest('[data-record]')?.dataset.record;
     });
@@ -37,6 +52,22 @@
     (edit || $('tools-add')).focus({preventScroll:true});
   });
 
+  // Escape сворачивает ближайшее раскрытие до выхода из формы или панели.
+  document.addEventListener('keydown', event => {
+    if (event.key !== 'Escape' || event.defaultPrevented || event.isComposing) return;
+    if (event.target.closest('[role="combobox"], [role="listbox"]')) return;
+    const select = event.target.closest('select');
+    if (select && (!CSS.supports('selector(select:open)') || select.matches(':open'))) return;
+    const details = event.target.closest('details[open]');
+    if (!details || !details.closest('#public-catalog, #tools-editor, #ai-dialog')) return;
+    const summary = details.querySelector(':scope > summary');
+    if (!summary) return;
+    event.preventDefault();
+    details.removeAttribute('data-pointer-disclosure');
+    details.open = false;
+    summary.focus({preventScroll:true});
+  });
+
   if (embedded) {
     const send = (type, details = {}) => window.parent.postMessage({type, ...details}, site);
     document.body.classList.add('tools-embedded');
@@ -45,7 +76,7 @@
     exit.hidden = false;
     exit.onclick = () => send('tools:close', {pointer:pointerInput()});
     document.addEventListener('keydown', event => {
-      if (event.key === 'Escape' && !document.querySelector('dialog[open]')) send('tools:close');
+      if (event.key === 'Escape' && !event.defaultPrevented && !document.querySelector('dialog[open]')) send('tools:close');
     });
     let openAction;
     window.addEventListener('message', event => {

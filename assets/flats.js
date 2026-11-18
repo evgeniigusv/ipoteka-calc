@@ -7,6 +7,11 @@
     var projectState = Object.create(null);
     var list = [], project = options.project, updated = '', loaded = false, failed = false;
     var select = options.select, search = document.getElementById('sm-flat-search'), info = options.info;
+    var hasManualPrice = false, manualAfterQuery = false;
+    options.price.addEventListener('input', function () {
+      hasManualPrice = true;
+      manualAfterQuery = true;
+    });
     var warning = document.createElement('div');
     warning.className = 'sm-special-flat-warning';
     warning.setAttribute('role', 'alert');
@@ -41,15 +46,26 @@
       if (!loaded) return 'Загрузка квартир из Macro…';
       return 'Обновление Macro: ' + updated + ' (время сервера). Наличие и цену уточняйте в Macro.';
     }
+    function title(row) {
+      return '№ ' + row.num + (row.house_id === 10899161 ? ' · ПИФ' : '') +
+        ' · этаж ' + (row.floor || '—') + ' · ' + Number(row.area).toLocaleString('ru-RU') + ' м²' + (row.status ? ' · ' + row.status : '');
+    }
+    var combo = root.SMFlatSearch?.setup(search, {
+      choices: () => matches().map(item => ({value: String(item.index + 1), label: title(item.row)})),
+      emptyMessage: () => failed ? 'Список недоступен. Цену можно ввести вручную.'
+        : !loaded ? 'Загрузка квартир из Macro…' : 'Совпадений нет. Цену можно ввести вручную.',
+      choose: value => {
+        select.value = value;
+        select.dispatchEvent(new Event('change', {bubbles: true}));
+      }
+    });
     function refresh() {
       var found = matches(), query = normalize(search.value), exact = found.filter(function (it) { return normalize(it.row.num) === query; });
       select.replaceChildren(new Option(query ? 'Выберите квартиру или введите цену' : 'Выбрать из списка', ''));
       found.forEach(function (item) {
-        var row = item.row;
-        var title = '№ ' + row.num + (row.house_id === 10899161 ? ' · ПИФ' : '') +
-          ' · этаж ' + (row.floor || '—') + ' · ' + Number(row.area).toLocaleString('ru-RU') + ' м²' + (row.status ? ' · ' + row.status : '');
-        select.add(new Option(title, String(item.index + 1)));
+        select.add(new Option(title(item.row), String(item.index + 1)));
       });
+      combo?.refresh();
       let issue = '';
       if (failed) issue = 'Список квартир недоступен. Укажите номер и цену вручную.';
       else if (loaded && query && !found.length) issue = 'Квартира не найдена в остатке Macro. Цену можно ввести вручную.';
@@ -64,6 +80,7 @@
       updateWarning(row);
       if (options.onClear) options.onClear();
       if (row) {
+        hasManualPrice = false; manualAfterQuery = false;
         options.price.value = Number(row.price).toLocaleString('ru-RU');
         if (options.rooms) options.rooms.value = String(row.studio || Number(row.rooms) <= 1 ? 1 : Math.min(3, Number(row.rooms)));
         if (options.onSelect) options.onSelect(row);
@@ -76,8 +93,11 @@
     }
     function setProject(next) {
       if (next === project) return;
-      var row = current(), manualPrice = !row && !search.value.trim() ? options.price.value : '';
+      combo?.close(true);
+      var carryPrice = !current() && !search.value.trim();
+      var previousPrice = carryPrice ? options.price.value : '';
       projectState[project] = {
+        hasManualPrice, manualAfterQuery, pending: !loaded,
         query: search.value, selection: select.value, price: options.price.value,
         rooms: options.rooms ? options.rooms.value : '',
         discount: options.discount ? options.discount.value : '',
@@ -86,11 +106,12 @@
       var saved = projectState[next];
       project = next;
       selectedCash = null; selectedPrice = ''; selectedDiscount = '';
+      hasManualPrice = carryPrice && hasManualPrice; manualAfterQuery = false;
       search.value = saved ? saved.query : '';
-      options.price.value = saved ? saved.price : manualPrice;
+      options.price.value = saved ? saved.price : previousPrice;
       if (options.discount) options.discount.value = '';
       if (options.onClear) options.onClear();
-      refresh();
+      var exact = refresh();
       if (saved) {
         var restored = saved.selection ? list[Number(saved.selection) - 1] : null;
         if (restored && (houses[project] || []).indexOf(restored.house_id) >= 0) {
@@ -100,21 +121,46 @@
         options.price.value = saved.price;
         if (options.rooms) options.rooms.value = saved.rooms;
         if (options.discount) options.discount.value = saved.discount;
+        hasManualPrice = saved.hasManualPrice; manualAfterQuery = saved.manualAfterQuery;
         selectedCash = saved.cash; selectedPrice = saved.sourcePrice; selectedDiscount = saved.sourceDiscount;
+        if (saved.pending && loaded && !manualAfterQuery) applyExact(exact);
       }
     }
-    search.addEventListener('input', function () {
-      options.price.value = '';
-      if (options.onClear) options.onClear();
-      if (options.discount) options.discount.value = '';
-      var exact = refresh();
-      if (loaded && normalize(search.value) && exact.length === 1) {
-        select.value = String(exact[0].index + 1);
-        apply(exact[0].row);
+    function applyExact(exact) {
+      if (!normalize(search.value) || exact.length !== 1) return false;
+      select.value = String(exact[0].index + 1);
+      apply(exact[0].row);
+      return true;
+    }
+    function searchChanged() {
+      manualAfterQuery = false;
+      // Начальная цена калькулятора — пример. Её нельзя выдавать за цену искомой квартиры.
+      if (!hasManualPrice) options.price.value = '';
+      if (!hasManualPrice || current()) {
+        if (options.onClear) options.onClear();
+        if (options.discount) options.discount.value = '';
       }
+      selectedCash = null;
+      var exact = refresh();
+      if (loaded) applyExact(exact);
+      if (document.activeElement === search) combo?.open();
       options.onChange();
+    }
+    var composing = false, completedText = null;
+    search.addEventListener('compositionstart', function () { composing = true; });
+    search.addEventListener('compositionend', function () {
+      composing = false;
+      completedText = search.value;
+      searchChanged();
+    });
+    search.addEventListener('input', function (event) {
+      if (composing || event?.isComposing) return;
+      // Некоторые клавиатуры отправляют ещё один input после compositionend.
+      if (completedText !== search.value) searchChanged();
+      completedText = null;
     });
     select.addEventListener('change', function (event) {
+      combo?.close();
       var row = current();
       if (row) {
         search.value = String(row.num);
@@ -122,7 +168,7 @@
         info.textContent = hint('');
         apply(row);
       }
-      else { options.price.value = ''; if (options.onClear) options.onClear(); if (options.discount) options.discount.value = ''; }
+      else { if (!hasManualPrice) options.price.value = ''; if (options.onClear) options.onClear(); if (options.discount) options.discount.value = ''; }
       updateWarning(row);
       options.onChange();
       if (row) root.SMUi?.programFeedback(event);
@@ -133,7 +179,7 @@
       if (!Array.isArray(data.rows) || !data.updated) throw new Error('invalid data');
       list = data.rows; updated = data.updated; loaded = true;
       var exact = refresh();
-      if (normalize(search.value) && exact.length === 1) { select.value = String(exact[0].index + 1); apply(exact[0].row); options.onChange(); }
+      if (!composing && !manualAfterQuery && applyExact(exact)) options.onChange();
     }).catch(function () { failed = true; refresh(); });
     return {
       setProject: setProject,

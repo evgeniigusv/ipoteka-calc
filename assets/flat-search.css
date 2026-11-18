@@ -1,0 +1,75 @@
+.sm-flat-search { position: relative; min-inline-size: 0; }
+
+.sm-flat-search__popup {
+  position: absolute;
+  z-index: 5;
+  opacity: 0;
+  pointer-events: none;
+  inset-block-start: calc(100% + 4px);
+  inset-inline-start: 0;
+  box-sizing: border-box;
+  inline-size: max(100%, min(22rem, calc(100vw - 4rem)));
+  max-block-size: min(21rem, var(--sm-flat-space, 45vh));
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  padding: 4px;
+  border: 1px solid var(--field);
+  border-radius: var(--r-md);
+  box-shadow: 0 8px 26px rgb(35 33 45 / .15);
+  background: var(--white);
+  color: var(--black);
+  font: 500 15px/1.4 var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.sm-flat-search__popup[data-open] { opacity: 1; pointer-events: auto; }
+.sm-flat-search__popup--above { inset-block-start: auto; inset-block-end: calc(100% + 4px); }
+.sm-flat-search__popup[hidden] { display: none; }
+.sm-flat-search__option, .sm-flat-search__message {
+  padding: 10px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.sm-flat-search__option {
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  min-block-size: 44px;
+  border-radius: calc(var(--r-md) * .7);
+  cursor: pointer;
+}
+.sm-flat-search__option[aria-selected="true"] {
+  outline: 2px solid var(--sky);
+  outline-offset: -2px;
+  color: var(--sky);
+  background: var(--sky-soft);
+}
+@media (max-width: 640px) {
+  .sm-flat-search__popup { inline-size: 100%; }
+}
+@media (hover: hover) {
+  .sm-flat-search__option:hover { background: var(--sky-soft); }
+}
+.sm-flat-search__message { color: var(--muted); }
+.sm-flat-search__sr {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  clip-path: inset(50%);
+  overflow: hidden;
+  white-space: nowrap;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .sm-flat-search__popup {
+    transition: opacity var(--sm-motion-exit, 125ms) var(--sm-ease-enter, ease-out);
+  }
+  .sm-flat-search__popup[data-open] { transition-duration: var(--sm-motion-popup, 180ms); }
+}
+@media print { .sm-flat-search__popup { display: none; } }
+
+/* При переходе прямо из соседнего списка завершаем его выход до показа подсказок. */
+@supports selector(::picker(select)) {
+  .sm-flat-pair:has(#sm-flat-search[aria-expanded="true"]) #sm-flat:not(:open)::picker(select) {
+    transition: none;
+  }
+}

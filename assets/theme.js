@@ -28,17 +28,35 @@
   apply(initial);
   if (valid(requested) && window === window.parent) remember(initial);
 
-  const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
+  const motionAllowed = matchMedia('screen and (prefers-reduced-motion: no-preference)');
+  // Web Animations принимает время в миллисекундах, а CSS допускает и секунды.
+  function motionTiming(durationToken, easingToken, fallbackMs) {
+    const style = getComputedStyle(root);
+    const time = style.getPropertyValue('--sm-motion-' + durationToken).trim();
+    const ms = parseFloat(time) * (time.endsWith('ms') ? 1 : 1000);
+    return {
+      duration: Number.isFinite(ms) ? ms : fallbackMs,
+      easing: style.getPropertyValue('--sm-ease-' + easingToken).trim() || 'ease-out'
+    };
+  }
   const navTripKey = 'ipoteka-calc.section-click';
   let sectionLink = null;
   let arrivingSnapshot = null;
+  motionAllowed.addEventListener('change', () => {
+    if (motionAllowed.matches) return;
+    const ids = ['sm-button-release', 'sm-section-indicator', 'sm-section-ink', 'sm-section-content'];
+    for (const effect of document.getAnimations()) {
+      if (ids.includes(effect.id)) effect.cancel();
+    }
+  });
   document.addEventListener('click', event => {
-    if (!event.detail || reducedMotion.matches) return;
+    if (!event.detail || !motionAllowed.matches) return;
     const button = event.target.closest('.sm-pills button, .sm-theme-switch button, .sm-actions button, .tools-pills button, .tools-view-tabs button, .tools-toolbar-actions button');
-    if (!button || button.disabled) return;
+    if (!button || button.disabled || button.getAttribute('aria-pressed') === 'true') return;
+    const transform = getComputedStyle(button).transform;
     for (const effect of button.getAnimations()) if (effect.id === 'sm-button-release') effect.cancel();
-    button.animate([{transform:'scale(.94)'}, {transform:'scale(1.02)',offset:.66}, {transform:'none'}],
-      {id:'sm-button-release', duration:240, easing:'cubic-bezier(.2,.7,.3,1)'});
+    button.animate([{transform}, {transform:'none'}],
+      {id:'sm-button-release', ...motionTiming('press', 'enter', 120)});
   }, true);
   window.addEventListener('pageswap', event => {
     if (!sectionLink || sectionLink.href !== event.activation?.entry?.url) event.viewTransition?.skipTransition();
@@ -79,22 +97,22 @@
         trip = JSON.parse(sessionStorage.getItem(navTripKey));
         sessionStorage.removeItem(navTripKey);
       } catch { /* Навигация работает и без хранилища. */ }
-      if (trip?.to === location.href && links[trip.from] && !reducedMotion.matches &&
+      if (trip?.to === location.href && links[trip.from] && motionAllowed.matches &&
           performance.getEntriesByType('navigation')[0]?.type === 'navigate') {
         const start = links[trip.from].getBoundingClientRect(), end = active.getBoundingClientRect();
         if (start.width && end.width) {
-          const timing = {duration:320, easing:'cubic-bezier(.2,.7,.22,1)', fill:'backwards'};
+          const timing = {...motionTiming('navigation', 'navigation', 320), fill:'backwards'};
           const travel = pill.animate([
             {transform:'translateX(' + (start.left-end.left) + 'px) scaleX(' + start.width/end.width + ')',backgroundColor:'color-mix(in srgb, var(--blue, var(--sky)) 40%, white)'},
             {transform:'none'}
           ], {...timing,id:'sm-section-indicator'});
-          const ink = active.animate([{color:'var(--grey)'},{color:'var(--grey)',offset:.55},{}], timing);
+          const ink = active.animate([{color:'var(--grey)'},{color:'var(--grey)',offset:.55},{}], {...timing,id:'sm-section-ink'});
           travel.pause(); ink.pause();
           const reveal = () => {
-            if (reducedMotion.matches) { travel.cancel(); ink.cancel(); return; }
+            if (!motionAllowed.matches) { travel.cancel(); ink.cancel(); return; }
             travel.play(); ink.play();
             const panel = document.querySelector('main.sm > .sm-grid, #public-catalog');
-            panel?.animate([{opacity:.48},{opacity:1}], {id:'sm-section-content', duration:270,easing:'ease-out'});
+            panel?.animate([{opacity:.48},{opacity:1}], {id:'sm-section-content', ...motionTiming('page', 'out', 270)});
           };
           // Первый кадр готов после разбора разметки; фоновые ресурсы могут грузиться дольше.
           const onPaint = () => requestAnimationFrame(() => {
@@ -128,7 +146,7 @@
           event.preventDefault();
           return;
         }
-        if (event.detail === 0 || reducedMotion.matches) return;
+        if (event.detail === 0 || !motionAllowed.matches) return;
         sectionLink = pending = target;
         try { sessionStorage.setItem(navTripKey, JSON.stringify({from:links.indexOf(active),to:target.href})); } catch {}
 

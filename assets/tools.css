@@ -118,10 +118,26 @@
 @media screen and (prefers-reduced-motion: no-preference) {
   #public-catalog[data-owner-entry="pointer"],
   #owner-window[data-owner-entry="pointer"] > :is(iframe, #owner-connection):not([hidden]) {
-    animation: tools-mode-entry 190ms var(--ease);
+    animation: tools-mode-entry var(--sm-motion-dialog, 190ms) var(--sm-ease-enter, var(--ease));
   }
   :is(#tools-editor, #ai-dialog)[data-owner-entry="pointer"][open] {
-    animation: tools-form-entry 160ms var(--ease);
+    animation: tools-form-entry var(--sm-motion-dialog, 160ms) var(--sm-ease-enter, var(--ease));
+  }
+  @supports (transition-behavior: allow-discrete) and (overlay: auto) {
+    :is(#tools-editor, #ai-dialog)[data-owner-exit]:not([open]),
+    :is(#tools-editor, #ai-dialog)[data-owner-exit]:not([open])::backdrop {
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity var(--sm-motion-exit, 125ms) ease-out,
+        display var(--sm-motion-exit, 125ms) allow-discrete,
+        overlay var(--sm-motion-exit, 125ms) allow-discrete;
+    }
+    :is(#tools-editor, #ai-dialog)[data-owner-entry="pointer"][open]::backdrop {
+      transition: opacity var(--sm-motion-dialog, 190ms) var(--sm-ease-enter, ease-out);
+    }
+    @starting-style {
+      :is(#tools-editor, #ai-dialog)[data-owner-entry="pointer"][open]::backdrop { opacity: 0; }
+    }
   }
   @keyframes tools-mode-entry { from { opacity: .65; transform: translateY(1px); } }
   @keyframes tools-form-entry { from { opacity: .7; transform: translateY(4px); } }
@@ -206,11 +222,13 @@
     }
     #tools-rows .tool-entry details[open]::details-content { block-size: auto; }
     :root[data-sm-input="pointer"] #tools-rows details[data-pointer-disclosure]::details-content {
-      transition: block-size 260ms var(--ease), content-visibility 260ms allow-discrete;
+      --disclosure-time: var(--sm-motion-exit, 125ms);
+      transition: block-size var(--disclosure-time) var(--sm-ease-enter, var(--ease)), content-visibility var(--disclosure-time) allow-discrete;
     }
+    #tools-rows details[open][data-pointer-disclosure]::details-content { --disclosure-time: var(--sm-motion-popup, 180ms); }
     #tools-rows details:not([open]) > .tool-full { interactivity: inert; pointer-events: none; }
     :root[data-sm-input="pointer"] #tools-rows details[data-pointer-disclosure] > summary::before {
-      transition: transform 260ms var(--ease);
+      transition: transform var(--sm-motion-exit, 125ms) var(--sm-ease-enter, var(--ease));
     }
   }
 }
