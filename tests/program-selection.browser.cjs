@@ -15,9 +15,17 @@ const base='https://evgeniigusv.github.io/ipoteka-calc/';
   if(!process.argv.includes('--live')) await ctx.route(base+'**',r=>r.fulfill({path:path.resolve(root, new URL(r.request().url()).pathname.slice('/ipoteka-calc/'.length)||'index.html')}));
   const p=await ctx.newPage(), errors=[];p.on('pageerror',e=>errors.push(e.message));
   await p.addInitScript(() => {
-    window.sectionArrivals = [];
-    document.addEventListener('animationstart', event => {
-      if (event.animationName === 'sm-section-arrive') window.sectionArrivals.push(document.documentElement.dataset.smRoute);
+    window.routeMovement = [];
+    addEventListener('pagereveal', event => {
+      const transition = event.viewTransition;
+      if (!transition) return;
+      transition.ready.then(() => {
+        for (const animation of document.getAnimations()) {
+          const effect = animation.effect;
+          if (!effect.pseudoElement?.startsWith('::view-transition') && !effect.target?.matches('.sm-nav-indicator')) continue;
+          if (effect.getKeyframes().some(frame => frame.transform && frame.transform !== 'none')) window.routeMovement.push(animation.animationName || 'transform');
+        }
+      }, () => {});
     });
   });
   async function checkCurrentSection() {
@@ -101,8 +109,8 @@ const base='https://evgeniigusv.github.io/ipoteka-calc/';
   });
   await p.locator('.sm-navigation a[href*="tools.html"]').click();
   assert.equal(await p.evaluate(() => sessionStorage.getItem('test-menu-aligned')), 'true');
-  if (!reduced) await p.waitForFunction(() => window.sectionArrivals.includes('forwards'));
-  else assert.deepEqual(await p.evaluate(() => window.sectionArrivals), []);
+  await p.waitForFunction(() => window.SM_TOOLS_DATA);
+  assert.deepEqual(await p.evaluate(() => window.routeMovement), []);
   await p.locator('[data-tools-view="flats"]').click();
   assert.equal(new URL(p.url()).searchParams.get('view'), 'flats');
   const toolsOrigin = await p.evaluate(() => performance.timeOrigin);
@@ -113,8 +121,8 @@ const base='https://evgeniigusv.github.io/ipoteka-calc/';
   await p.goBack();
   assert.equal(await p.locator('[data-tools-view="flats"]').getAttribute('aria-pressed'), 'true');
   await p.locator('.sm-navigation a[href*="rassrochka.html"]').click();
-  if (!reduced) await p.waitForFunction(() => window.sectionArrivals.includes('backwards'));
-  else assert.deepEqual(await p.evaluate(() => window.sectionArrivals), []);
+  await p.waitForFunction(() => window.SM_TOOLS_DATA);
+  assert.deepEqual(await p.evaluate(() => window.routeMovement), []);
   assert.deepEqual(errors,[]);console.log(theme,width,'4 калькулятора: выбор, клавиатура, ввод, расчёт и фокус проверены');await ctx.close();
  }
  }finally{await b.close();}

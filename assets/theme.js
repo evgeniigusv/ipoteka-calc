@@ -33,13 +33,24 @@
     if (!sectionLink || sectionLink.href !== event.activation?.entry?.url) event.viewTransition?.skipTransition();
     sectionLink = null;
   });
+  window.addEventListener('pagereveal', event => {
+    const snapshot = event.viewTransition;
+    if (!snapshot) return;
+    snapshot.ready.catch(() => {}); // Быстрая загрузка может завершиться до создания снимка.
+    // Готовые разделы сменяют друг друга за один кадр. При медленной сети показываем загрузку.
+    const showPage = () => snapshot.skipTransition();
+    const timer = setTimeout(showPage, 450);
+    snapshot.finished.then(() => clearTimeout(timer));
+    const whenParsed = () => Promise.resolve(window.SM_TOOLS_READY).then(showPage, showPage);
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', whenParsed, {once:true});
+    else whenParsed();
+  });
   // Вызывается сразу после разметки навигации, до загрузки скриптов расчёта.
   window.SMNavigation = {
     mount(nav) {
       if (!nav || window.parent !== window) return;
       const active = nav.querySelector('[aria-current="page"]');
       if (!active) return;
-      const navKey = 'ipoteka-calc.navigation';
       const links = [...nav.querySelectorAll('a')];
       for (const link of links) {
         const target = new URL(link.href);
@@ -52,55 +63,8 @@
       pill.setAttribute('aria-hidden', 'true');
       active.prepend(pill);
 
-      // Координаты относительно строки остаются общими для обеих HTML-страниц.
-      function bounds(element) {
-        const box = element.getBoundingClientRect();
-        return {left:box.left - nav.getBoundingClientRect().left, width:box.width};
-      }
       let pending = null;
-      let incoming = null;
-      try {
-        const trip = JSON.parse(sessionStorage.getItem(navKey));
-        sessionStorage.removeItem(navKey);
-        if (trip?.to === location.href && trip.width === nav.clientWidth &&
-            performance.getEntriesByType('navigation')[0]?.type === 'navigate') incoming = trip;
-      } catch { /* Ссылки работают и без хранилища. */ }
-
-      function arrive() {
-        if (!incoming || reduced.matches) return;
-        const from = incoming.from;
-        incoming = null;
-        const to = bounds(active);
-        if (!Number.isFinite(from?.left) || !(from.width > 0 && to.width > 0)) return;
-        pill.animate([
-          {transform: 'translateX(' + (from.left - to.left) + 'px) scaleX(' + from.width / to.width + ')'},
-          {transform: 'none'}
-        ], {duration: 210, easing: 'cubic-bezier(.22,.68,.25,1)'});
-      }
-      window.addEventListener('pagereveal', event => {
-        const transition = event.viewTransition;
-        if (!transition || !incoming || reduced.matches) { transition?.skipTransition(); arrive(); return; }
-        root.dataset.smRoute = incoming.backwards ? 'backwards' : 'forwards';
-        root.dataset.smRouteWaiting = '';
-        // На экране остаётся снимок предыдущей вкладки, пока строится первый расчёт.
-        // Даже при сетевой ошибке браузер вовремя покажет штатное состояние загрузки.
-        let timer;
-        const release = () => {
-          if (!root.hasAttribute('data-sm-route-waiting')) return;
-          clearTimeout(timer);
-          delete root.dataset.smRouteWaiting;
-          arrive();
-        };
-        timer = setTimeout(release, 450);
-        function catalogReady() { Promise.resolve(window.SM_TOOLS_READY).then(release, release); }
-        if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', catalogReady, {once:true});
-        else catalogReady();
-        transition.finished.then(() => { release(); delete root.dataset.smRoute; });
-      });
-      window.addEventListener('pageshow', event => {
-        pending = null;
-        if (!event.persisted && !('onpagereveal' in window)) arrive();
-      });
+      window.addEventListener('pageshow', () => { pending = null; });
       window.navigation?.addEventListener('navigate', event => {
         if (pending?.href === event.destination.url) {
           event.signal.addEventListener('abort', () => { pending = null; }, {once:true});
@@ -123,9 +87,6 @@
         }
         if (event.detail === 0 || reduced.matches) return;
         sectionLink = pending = target;
-        try {
-          sessionStorage.setItem(navKey, JSON.stringify({from:bounds(active), to:target.href, width:nav.clientWidth, backwards:links.indexOf(target) < links.indexOf(active)}));
-        } catch {}
       });
       // Прогреваем только публичную HTML-страницу, на которую нацелился пользователь.
       const prefetched = new Set();

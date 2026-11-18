@@ -200,32 +200,12 @@
 
 @media screen and (prefers-reduced-motion: no-preference) {
   @view-transition { navigation: auto; }
-  .sm-head { view-transition-name: sm-heading; }
-  .sm-nav-row { view-transition-name: sm-navigation; }
-  ::view-transition-group(*) { animation-duration: 260ms; }
-  :root[data-sm-route]::view-transition-old(root) {
-    animation: sm-section-leave 260ms cubic-bezier(.25,.72,.25,1) both;
-    background-color: var(--bg);
-    mix-blend-mode: normal;
+  /* Браузер держит неподвижный снимок до готовности следующего раздела. */
+  ::view-transition-group(root) { animation: none; }
+  ::view-transition-old(root), ::view-transition-new(root) {
+    animation-play-state: paused;
   }
-  :root[data-sm-route]::view-transition-new(root) {
-    animation: sm-section-arrive 260ms cubic-bezier(.25,.72,.25,1) both;
-    background-color: var(--bg);
-    mix-blend-mode: normal;
-  }
-  [data-sm-route="forwards"] { --sm-enter: 100%; --sm-exit: -100%; }
-  [data-sm-route="backwards"] { --sm-enter: -100%; --sm-exit: 100%; }
-  @keyframes sm-section-arrive { from { transform: translateX(var(--sm-enter)); } }
-  @keyframes sm-section-leave { to { transform: translateX(var(--sm-exit)); } }
-  ::view-transition-old(sm-navigation), ::view-transition-old(sm-heading) { display: none; }
-  ::view-transition-new(sm-navigation), ::view-transition-new(sm-heading) { animation: none; }
-  :root[data-sm-route-waiting]::view-transition-new(root),
-  :root[data-sm-route-waiting]::view-transition-old(root) { animation-play-state: paused; }
-  :root[data-sm-route-waiting]::view-transition-old(sm-navigation),
-  :root[data-sm-route-waiting]::view-transition-old(sm-heading) { display: block; animation: none; }
-  :root[data-sm-route-waiting]::view-transition-new(sm-navigation),
-  :root[data-sm-route-waiting]::view-transition-new(sm-heading) { opacity: 0; }
-  ::view-transition { pointer-events: none; }
+  ::view-transition-new(root) { visibility: hidden; }
 }
 
 @media screen and (prefers-reduced-motion: no-preference) {
