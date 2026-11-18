@@ -10,6 +10,7 @@
   function defaults(settings) {
     var result = copy(settings || {});
     result.subsidyCompensation = Object.assign({ da1: .1, da2: .1, dnk2: .1 }, result.subsidyCompensation);
+    result.moneyCost = Object.assign({ da1: null, da2: null, dnk2: null }, result.moneyCost);
     result.specialFlats = Array.from(new Set(result.specialFlats || [])).sort();
     return result;
   }
@@ -32,30 +33,41 @@
     host.setAttribute('aria-label', 'Настройки продаж');
     host.append(element('summary', '', 'Настройки продаж'));
     if(options.mount)options.mount.append(host);else toolbar.before(host);
-    var saveButtons = [], resetButtons = [], inputs = {};
+    var saveButtons = [], resetButtons = [], inputs = [];
     var status = element('p', 'tools-settings-status');
     status.setAttribute('role', 'status');
     status.setAttribute('aria-live', 'polite');
     var guard = element('p', 'tools-settings-hint');
     guard.textContent = 'Сначала сохраните или отмените изменения инструментов.';
-    var capSection = element('details', 'tools-settings-section');
-    capSection.open = true;
-    capSection.append(element('summary', '', 'Компенсация ипотечной субсидии'));
-    var capBody = element('div', 'tools-settings-body');
-    capBody.append(element('p', 'tools-settings-hint', 'Максимальная компенсация субсидии от стоимости квартиры, %. База расчёта — цена при 100% оплате.'));
-    var capGrid = element('div', 'tools-settings-caps');
-    Object.keys(projects).forEach(function (project) {
-      var label = element('label', 'tools-settings-field', projects[project]);
-      var input = element('input');
-      input.type = 'number'; input.min = '0'; input.max = '99'; input.step = '0.01'; input.required = true;
-      input.setAttribute('aria-label', projects[project] + ': максимальная компенсация субсидии, %');
-      input.addEventListener('input', function () {
-        draft.subsidyCompensation[project] = input.value === '' ? null : Number(input.value) / 100;
-        changed();
+    function percentSection(setting, title, hint, ariaLabel) {
+      var section = element('details', 'tools-settings-section');
+      section.open = true;
+      section.append(element('summary', '', title));
+      var body = element('div', 'tools-settings-body');
+      body.append(element('p', 'tools-settings-hint', hint));
+      var grid = element('div', 'tools-settings-caps');
+      Object.keys(projects).forEach(function (project) {
+        var label = element('label', 'tools-settings-field', projects[project]);
+        var input = element('input');
+        input.type = 'number'; input.min = '0'; input.max = '99';
+        input.step = setting === 'moneyCost' ? 'any' : '0.01';
+        input.setAttribute('aria-label', projects[project] + ': ' + ariaLabel + ', %');
+        input.addEventListener('input', function () {
+          draft[setting][project] = input.value === '' ? null : Number(input.value) / 100;
+          changed();
+        });
+        inputs.push({ section, setting, project, input });
+        label.append(input); grid.append(label);
       });
-      inputs[project] = input; label.append(input); capGrid.append(label);
-    });
-    capBody.append(capGrid); capSection.append(capBody);
+      body.append(grid); section.append(body);
+      return section;
+    }
+    var capSection = percentSection('subsidyCompensation', 'Компенсация ипотечной субсидии',
+      'Максимальная компенсация субсидии от стоимости квартиры, %. База расчёта — цена при 100% оплате.',
+      'максимальная компенсация субсидии');
+    var costSection = percentSection('moneyCost', 'Стоимость денег',
+      'Процент от финансируемой суммы первоначального взноса. Действует для всех программ ЧПВ проекта. Для проекта без программ поле можно оставить пустым.',
+      'стоимость денег');
     var flatSection = element('details', 'tools-settings-section');
     flatSection.append(element('summary', '', 'Квартиры со специальными условиями'));
     var flatBody = element('div', 'tools-settings-body');
@@ -63,7 +75,7 @@
     var filters = element('div', 'tools-settings-filters');
     var projectLabel = element('label', 'tools-settings-field', 'Жилой комплекс');
     var projectSelect = element('select');
-    projectSelect.add(new Option('Все проекты', 'all'));
+    projectSelect.add(new Option('Выберите проект', ''));
     Object.keys(projects).forEach(function (project) { projectSelect.add(new Option(projects[project], project)); });
     projectLabel.append(projectSelect);
     var searchLabel = element('label', 'tools-settings-field', 'Номер квартиры');
@@ -86,7 +98,7 @@
       resetButtons.push(reset); bar.append(save, reset); return bar;
     }
     const actions=actionBar();actions.hidden=!!options.readOnly;
-    host.append(status, guard, capSection, flatSection, actions);
+    host.append(status, guard, capSection, costSection, flatSection, actions);
     function allowed() { return !options.canSave || options.canSave(); }
     function message(text, error) { status.textContent = text; status.classList.toggle('tools-settings-error', !!error); }
     function controls() {
@@ -97,13 +109,15 @@
         button.textContent = busy ? 'Сохранение…' : settingsReady ? 'Сохранить настройки' : 'Загрузить настройки';
       });
       resetButtons.forEach(function (button) { button.disabled = busy || !dirty; });
-      Object.values(inputs).forEach(function (input) { input.disabled = options.readOnly || busy || !settingsReady; });
+      inputs.forEach(function ({input}) { input.disabled = options.readOnly || busy || !settingsReady; });
       list.querySelectorAll('input').forEach(function (input) { input.disabled = options.readOnly || busy || !settingsReady; });
     }
     function fill() {
-      Object.keys(inputs).forEach(function (project) {
-        var value = draft.subsidyCompensation[project];
-        inputs[project].value = value == null ? '' : String(Math.round(value * 10000) / 100);
+      var records = (options.getData() || {}).records || [];
+      inputs.forEach(function ({setting, project, input}) {
+        var value = draft[setting][project];
+        input.required = setting === 'subsidyCompensation' || records.some(r => r.kind === 'chpv' && r.project === project);
+        input.value = value == null ? '' : String(Number((value * 100).toPrecision(15)));
       });
       controls();
     }
@@ -114,13 +128,22 @@
     }
     function renderFlats() {
       list.replaceChildren();
+      searchLabel.hidden = !projectSelect.value;
+      if (!projectSelect.value) {
+        retry.hidden = true;
+        flatStatus.textContent = 'Выберите проект, чтобы увидеть квартиры.';
+        controls();
+        return;
+      }
       if (!flatsLoaded) { controls(); return; }
       var query = normalize(search.value), flags = new Set(draft.specialFlats);
-      var visible = rows.filter(function (row) {
-        return (projectSelect.value === 'all' || (houseProjects[row.house_id] || 'other') === projectSelect.value) &&
-          (!query || normalize(row.num).includes(query));
-      });
-      flatStatus.textContent = 'Показано квартир: ' + visible.length + ' из ' + rows.length + '. Отмечено: ' + flags.size + '.';
+      var projectRows = rows.filter(row => (houseProjects[row.house_id] || 'other') === projectSelect.value);
+      var visible = projectRows.filter(row => !query || normalize(row.num).includes(query));
+      function updateCount(marked) {
+        flatStatus.textContent = 'Показано квартир: ' + visible.length + ' из ' + projectRows.length +
+          '. Со специальными условиями: ' + projectRows.filter(row => marked.has(key(row))).length + '.';
+      }
+      updateCount(flags);
       if (!visible.length) list.append(element('p', 'tools-settings-hint', 'Квартиры не найдены. Измените фильтр или номер.'));
       visible.forEach(function (row) {
         var label = element('label', 'tools-settings-flat');
@@ -135,18 +158,18 @@
           changed();
           // Не пересоздаём строку: фокус остаётся на переключённом чекбоксе.
           list.querySelectorAll('input').forEach(function (input) { if (input.dataset.key === key(row)) input.checked = checkbox.checked; });
-          flatStatus.textContent = 'Показано квартир: ' + visible.length + ' из ' + rows.length + '. Отмечено: ' + selected.size + '.';
+          updateCount(selected);
         });
         checkbox.dataset.key = key(row);
         var description = element('span', 'tools-settings-flat-description');
-        description.append(element('strong', '', '№ ' + row.num), element('span', '', projectName + ' · этаж ' + (row.floor || '—') + ' · ' + Number(row.area).toLocaleString('ru-RU') + ' м²'));
+        description.append(element('strong', '', '№ ' + row.num), element('span', '', projectName + ' · этаж ' + (row.floor || '—') + ' · ' + Number(row.area).toLocaleString('ru-RU') + ' м²' + (row.status ? ' · ' + row.status : '')));
         var stateLabel = options.readOnly && !checkbox.checked ? 'Обычные условия' : 'Специальные условия';
         label.append(description, element('span', 'tools-settings-flat-label', stateLabel), checkbox); list.append(label);
       });
       controls();
     }
     async function loadFlats() {
-      if (flatsBusy || flatsLoaded) return;
+      if (!projectSelect.value || flatsBusy || flatsLoaded) return;
       flatsBusy = true; retry.hidden = true; flatStatus.textContent = 'Загрузка квартир из Macro…';
       try {
         var response = await fetch('assets/macro-flats.json', { cache: 'no-store' });
@@ -166,6 +189,7 @@
       try {
         var result = await options.api('/api/settings');
         if (!result.settings || !result.revision) throw new Error('Не удалось прочитать версию настроек.');
+        if (!result.settings.moneyCost) throw new Error('Редактор использует прежний формат настроек. Для сохранения нужен обновлённый редактор.');
         if (destroyed) return;
         revision = result.revision; baseline = defaults(result.settings); draft = copy(baseline); settingsReady = true;
         fill(); renderFlats(); message('Настройки загружены.');
@@ -177,8 +201,12 @@
       if (!allowed()) { message('Сначала сохраните или отмените изменения инструментов.', true); return; }
       if (!settingsReady) { await loadSettings(); return; }
       if (!dirty) return;
-      var invalid = Object.keys(inputs).find(function (project) { return !inputs[project].checkValidity(); });
-      if (invalid) { capSection.open = true; inputs[invalid].reportValidity(); message('Укажите компенсацию для каждого проекта: от 0 до 99%.', true); return; }
+      var invalid = inputs.find(({input}) => !input.checkValidity());
+      if (invalid) {
+        invalid.section.open = true; invalid.input.reportValidity();
+        message('Проверьте поле «' + invalid.input.getAttribute('aria-label') + '». Допустимы значения от 0 до 99%.', true);
+        return;
+      }
       busy = true; controls(); message('Сохранение настроек…');
       try {
         var result = await options.api('/api/settings', { revision: revision, settings: copy(draft) });
@@ -209,21 +237,22 @@
       controls();
     }
     function beforeUnload(event) { if (dirty || busy) { event.preventDefault(); event.returnValue = ''; } }
-    projectSelect.addEventListener('change', renderFlats); search.addEventListener('input', renderFlats);
+    projectSelect.addEventListener('change', function () { search.value = ''; renderFlats(); loadFlats(); }); search.addEventListener('input', renderFlats);
     flatSection.addEventListener('toggle', function () { if (flatSection.open) loadFlats(); });
     retry.addEventListener('click', loadFlats);
     root.addEventListener('beforeunload', beforeUnload);
     function show(view){
       host.open=true;host.classList.toggle('tools-settings-tab',true);
+      costSection.hidden=view==='flats';costSection.open=view!=='flats';
       capSection.hidden=view==='flats';flatSection.hidden=view!=='flats';
       capSection.open=true;flatSection.open=view==='flats';
       if(view==='flats')loadFlats();
     }
     function flatFilter() { return { project: projectSelect.value, number: search.value }; }
     function setFlatFilter(filter) {
-      projectSelect.value = Array.from(projectSelect.options).some(option => option.value === filter.project) ? filter.project : 'all';
+      projectSelect.value = Array.from(projectSelect.options).some(option => option.value === filter.project) ? filter.project : '';
       search.value = typeof filter.number === 'string' ? filter.number : '';
-      renderFlats();
+      renderFlats(); loadFlats();
     }
     instance = { flatFilter, setFlatFilter, show:show, refresh: refresh, isDirty: function () { return dirty; }, isBusy: function () { return busy; }, destroy: function () {
       destroyed = true; root.removeEventListener('beforeunload', beforeUnload); host.remove(); instance = null;

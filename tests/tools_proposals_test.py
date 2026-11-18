@@ -260,12 +260,12 @@ class Element extends EventTarget {
   showModal(){assert.equal(this.open,false,'duplicate showModal');assert.equal(document.querySelector('dialog[open]'),undefined,'stacked dialogs');this.open=true;this.shows++;}
   close(){if(!this.open)return;this.open=false;setImmediate(()=>this.dispatchEvent(new Event('close')));}
 }
-const $=id=>{if(!elements.has(id))elements.set(id,new Element(['ai-dialog','tools-editor','owner-window'].includes(id)?'dialog':'div',id));return elements.get(id);};
+const $=id=>{if(!elements.has(id))elements.set(id,new Element(['ai-dialog','tools-editor'].includes(id)?'dialog':'div',id));return elements.get(id);};
 const document={getElementById:$,createElement:tag=>{const e=new Element(tag);if(tag==='iframe')e.contentWindow={messages:[],postMessage(...args){this.messages.push(args);}};return e;},createTextNode:text=>({textContent:text}),
-querySelector:selector=>selector==='dialog[open]'?[...elements.values()].find(e=>e.tag==='dialog'&&e.open):selector==='.tools-shell'?$('shell'):undefined,
-querySelectorAll:()=>[...elements.values()].filter(e=>e.tag==='dialog'),documentElement:{dataset:{theme:'light'}},body:new Element(),addEventListener(){}};
-const window=new EventTarget();window.parent=window;
-const context={window,document,navigator:{},URL,console,Event,MutationObserver:class{observe(){}},setTimeout:()=>1,clearTimeout(){}};
+querySelector:selector=>selector==='dialog[open]'?[...elements.values()].find(e=>e.tag==='dialog'&&e.open):selector==='.tools-mast h1'?$('heading'):undefined,
+querySelectorAll:()=>[...elements.values()].filter(e=>e.tag==='dialog'),activeElement:$('trigger'),documentElement:{dataset:{theme:'classic'}},body:new Element(),addEventListener(){}};
+const window=new EventTarget();window.parent=window;window.scrollTo=()=>{};
+const context={window,document,navigator:{},URL,URLSearchParams,console,Event,MutationObserver:class{observe(){}},setTimeout:()=>1,clearTimeout(){}};
 const load=path=>vm.runInNewContext(fs.readFileSync(path,'utf8'),context);
 const tick=()=>new Promise(resolve=>setImmediate(resolve));
 const emit=(type,source,origin,action)=>{const event=new Event('message');Object.assign(event,{data:{type,action},source,origin});window.dispatchEvent(event);};
@@ -304,17 +304,18 @@ $('tools-ai').onclick();$('ai-text').value='Новая команда';await $('
     def test_owner_container_reuses_frame_and_replaces_connection(self):
         self.run_js(r'''
 context.location={origin:'https://evgeniigusv.github.io'};load('assets/tools-window.js');
-const host=window.SMOwnerWindow,dialog=$('owner-window'),action={kind:'ai',project:'da1',section:'installment'};
-host.open(action,'Предложения');const frame=dialog.children.at(-1);assert.equal(frame.hidden,true);assert.equal(frame.style.display,'none');
-host.open(action,'Предложения');assert.equal(dialog.shows,1);assert.equal(dialog.children.length,1);
-emit('tools:ready',{},'http://127.0.0.1:8795');assert.equal(frame.hidden,true);
-emit('tools:ready',frame.contentWindow,'http://127.0.0.1:8795');assert.equal(frame.hidden,false);assert.equal($('owner-connection').hidden,true);assert.equal($('owner-connection').style.display,'none');assert.equal(frame.contentWindow.messages.length,1);
+const host=window.SMOwnerWindow,panel=$('owner-window'),action={kind:'manage',project:'da1',section:'installment'};
+panel.hidden=true;
+host.open(action,'Каталог');const frame=panel.children.at(-1);assert.equal(frame.hidden,true);assert.equal(panel.hidden,false);
+host.open(action,'Каталог');assert.equal(panel.children.length,1);assert.equal($('public-catalog').hidden,true);
+emit('tools:ready',{},'http://127.0.0.1:8795');
+emit('tools:ready',frame.contentWindow,'https://example.com');assert.equal(frame.hidden,true);
+emit('tools:ready',frame.contentWindow,'http://127.0.0.1:8795');assert.equal(frame.hidden,false);assert.equal($('owner-connection').hidden,true);
 emit('tools:ready',frame.contentWindow,'http://127.0.0.1:8795');assert.equal(frame.contentWindow.messages.length,1);
-const cancel=new Event('cancel',{cancelable:true});dialog.dispatchEvent(cancel);assert.equal(cancel.defaultPrevented,true);
-emit('tools:close',frame.contentWindow,'http://127.0.0.1:8795');await tick();assert.equal(dialog.open,false);
-host.open(action,'Предложения');assert.equal(dialog.children.length,1);assert.equal(frame.contentWindow.messages.length,2);
+emit('tools:close',frame.contentWindow,'http://127.0.0.1:8795');assert.equal(panel.hidden,true);assert.equal($('public-catalog').hidden,false);
+host.open(action,'Каталог');assert.equal(panel.children.length,1);assert.equal(frame.contentWindow.messages.length,2);
 emit('tools:failed',frame.contentWindow,'http://127.0.0.1:8795');assert.equal(frame.hidden,true);assert.equal($('owner-connection').hidden,false);
-$('owner-cancel').onclick();await tick();assert.equal(dialog.open,false);
+$('owner-cancel').onclick();assert.equal(panel.hidden,true);assert.equal($('trigger').focused,true);
 ''')
 
 

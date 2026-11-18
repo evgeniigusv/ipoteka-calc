@@ -58,7 +58,7 @@ class RecoveryTest(unittest.TestCase):
         self.source['errors']['dnk'] = 'Ошибка ДНК'
         retry = catalog.with_subsidies(data, self.source)
         self.assertEqual(retry['mortgageCheckedAt'], first['mortgageCheckedAt'])
-        self.assertEqual(retry['records'], first['records'])
+        self.assertEqual(public_snapshot(retry)['records'], first['records'])
 
         self.source['errors'].clear()
         recovered = catalog.with_subsidies(data, self.source)
@@ -73,7 +73,7 @@ class RecoveryTest(unittest.TestCase):
         draft = next(r for r in self.data['records'] if r['kind'] == 'info')
         draft['description'] = 'Уточнены условия'
         result = merge_snapshot(self.data, self.source)
-        self.assertEqual(result['settings'], self.data['settings'])
+        self.assertEqual(result['settings'], dict(self.data['settings'], moneyCost={'da1':.25, 'da2':.5, 'dnk2':None}))
         self.assertIn(draft, result['records'])
         self.assertEqual(set(result['mortgageWarnings']), {'da1','da2'})
 

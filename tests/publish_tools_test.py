@@ -3,7 +3,7 @@ import json
 import unittest
 from unittest.mock import patch
 
-from owner_catalog_test import LocalCatalogTest
+from owner_catalog_test import FIXTURE_SETTINGS, LocalCatalogTest
 import owner_catalog as store
 import tools_source as source
 import publish_tools as publisher
@@ -24,7 +24,7 @@ class PublishTest(LocalCatalogTest):
             result=publisher.publish_snapshot(self.catalog,'test/repo','expected-checkout-sha')
         self.assertTrue(result['snapshotSaved']);self.assertFalse(result['published'])
         self.assertIn('Pages',result['error'])
-        self.assertEqual(payloads[0]['settings'],store.DEFAULT_SETTINGS)
+        self.assertEqual(payloads[0]['settings'],FIXTURE_SETTINGS)
         self.assertNotIn('Закрытая запись',json.dumps(payloads[0],ensure_ascii=False))
         self.assertNotIn('revision',payloads[0])
 

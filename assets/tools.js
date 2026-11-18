@@ -473,11 +473,13 @@ Object.entries(M.categories).forEach(function([key,label]){$('tools-category').a
 var params=new URLSearchParams(location.search);
 if(Object.hasOwn(names,params.get('project')))selectProject(params.get('project'));
 if(Object.hasOwn(M.categories,params.get('section')))category=$('tools-category').value=params.get('section');
+if(params.has('query'))$('tools-search').value=params.get('query');
 function ownerAction(kind,id,targetProject){
  const record=id&&data?.records.find(r=>r.id===id);
- const titles={'add-project':'Добавить условия · '+names[targetProject],manage:'Управление инструментами',flats:'Квартиры',compensation:'Компенсация субсидии',new:'Добавить инструмент',ai:'Добавить с ИИ',edit:record?.name||'Редактировать инструмент'};
+ const titles={'add-project':'Добавить условия · '+names[targetProject],manage:'Управление инструментами',flats:'Квартиры',compensation:'Дополнительные условия',new:'Добавить инструмент',ai:'Добавить с ИИ',edit:record?.name||'Редактировать инструмент'};
  const flatFilter=kind==='flats'?settingsEditor.flatFilter():undefined;
- SMOwnerWindow.open({kind,id,flatFilter,query:$('tools-search').value,project:targetProject||record?.project||project,section:record?M.section(record):category},titles[kind]);
+ const sections={collapsed:Object.keys(collapsed).filter(key=>collapsed[key]),mortgages:[...expandedMortgages],general:generalMortgageOpen};
+ SMOwnerWindow.open({kind,id,flatFilter,sections,query:$('tools-search').value,project:targetProject||record?.project||project,section:record?M.section(record):category},titles[kind]);
 }
 $('tools-owner-link').onclick=()=>ownerAction('manage');
 await window.SM_TOOLS_READY;
@@ -511,39 +513,43 @@ settingsEditor=SMToolsSettings.setup({
 });
 function selectView(next, addHistory=false){
  view=['flats','compensation'].includes(next)?next:'catalog';
- const title={catalog:'Инструменты',flats:'Квартиры',compensation:'Компенсация субсидии'}[view];
+ const title={catalog:'Инструменты',flats:'Квартиры',compensation:'Дополнительные условия'}[view];
  document.querySelector('.tools-mast h1').textContent=title;document.title=title+' — Свобода мысли';
  $('tools-catalog-panel').hidden=view!=='catalog';$('tools-settings-panel').hidden=view==='catalog';
  $('tools-settings-owner').hidden=local||view==='catalog';
- $('tools-settings-edit').textContent=view==='flats'?'Редактировать условия квартир':'Редактировать лимиты';
+ $('tools-settings-edit').textContent=view==='flats'?'Редактировать условия квартир':'Редактировать условия';
  document.querySelectorAll('[data-tools-view]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.toolsView===view)));
- document.querySelectorAll('.sm-navigation a').forEach(link=>{
-   const target=new URL(link.href);
-   if(target.pathname.endsWith('/tools.html')){
-     const active=(target.searchParams.get('view')==='flats')===(view==='flats');
-     if(active)link.setAttribute('aria-current','page');else link.removeAttribute('aria-current');
-   }
- });
  if(view!=='catalog')settingsEditor.show(view);
+ SMOwnerWindow.viewChanged?.(view);
  const url=new URL(location.href);if(view==='catalog')url.searchParams.delete('view');else url.searchParams.set('view',view);
- if(addHistory && url.href!==location.href)history.pushState(null,'',url);
+ if(addHistory && !SMOwnerWindow.embedded && url.href!==location.href)history.pushState(null,'',url);
  else history.replaceState(null,'',url);
  render();
 }
-document.querySelector('.tools-view-tabs').onclick=e=>{const button=e.target.closest('[data-tools-view]');if(button)selectView(button.dataset.toolsView,true);};
+document.querySelector('.tools-view-tabs').onclick=e=>{const button=e.target.closest('[data-tools-view]');if(button){document.documentElement.classList.toggle('sm-tools-switching',e.detail>0);selectView(button.dataset.toolsView,true);}};
 $('tools-settings-edit').onclick=()=>ownerAction(view);
 window.addEventListener('popstate',()=>selectView(new URL(location.href).searchParams.get('view')));
 selectView(params.get('view'));
 
 
 if(showLinkedType)requestAnimationFrame(()=>$('mortgage-type-'+linkedType)?.scrollIntoView({block:'start'}));
+let lastPartnerFilters;
 SMOwnerWindow.ready(function(action){
  if(!action||!['manage','new','edit','ai','add-project','flats','compensation'].includes(action.kind))return;
- selectProject(Object.hasOwn(names,action.project)?action.project:'all');
- category=$('tools-category').value=Object.hasOwn(M.categories,action.section)?action.section:'all';
- $('tools-search').value=typeof action.query==='string'?action.query:'';
- $('tools-inactive').value='active';
- render();
+ // При повторном входе оставляем фильтры редактора, пока не изменился выбор в просмотре.
+ const partnerFilters=JSON.stringify([action.project,action.section,action.query,action.sections]);
+ if(action.kind!=='manage'||partnerFilters!==lastPartnerFilters){
+   selectProject(Object.hasOwn(names,action.project)?action.project:'all');
+   category=$('tools-category').value=Object.hasOwn(M.categories,action.section)?action.section:'all';
+   $('tools-search').value=typeof action.query==='string'?action.query:'';
+   $('tools-inactive').value='active';
+   collapsed={};
+   expandedMortgages.clear();
+   for(const key of action.sections?.collapsed||[])if(Object.hasOwn(M.categories,key))collapsed[key]=true;
+   for(const key of action.sections?.mortgages||[])if(Object.hasOwn(M.mortgageTypes,key))expandedMortgages.add(key);
+   generalMortgageOpen=action.sections?.general===true;
+ }
+ lastPartnerFilters=partnerFilters;
  selectView(['flats','compensation'].includes(action.kind)?action.kind:'catalog');
  if(action.kind==='flats' && action.flatFilter)settingsEditor.setFlatFilter(action.flatFilter);
  if(action.kind==='add-project')addProjectConditions(action.id,action.project);

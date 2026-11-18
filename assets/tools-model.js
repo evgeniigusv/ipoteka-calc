@@ -9,7 +9,7 @@
     mortgage:[field('bank','Банк','text'),field('type','Программа','select',{options:['Семейная ипотека','Базовая ипотека','IT-ипотека']}),field('kids','Дети','select',{options:['','1 ребёнок','2 ребёнка','3 ребёнка','4 ребёнка','5 и более детей']}),field('term','Кредит, лет','integer',{min:1,max:30}),field('rate','Ставка, %','percent'),field('subsidy','Комиссия банку, %','percent'),field('minPv','Минимальный взнос, %','percent'),field('limit','Лимит кредита, ₽','money'),field('variant','Вариант программы','text')],
     installment:[field('scheme','Схема платежей','select',{options:['equal','monthly','deferred','scheduled'],labels:['Равные платежи','Ежемесячный платёж и остаток','Взнос и остаток','По этапам']}),field('minPv','Первый взнос, %','percent'),field('end','Погашение до','date'),field('months','Или месяцев от сделки','integer',{min:1,max:60}),field('steps','Периодичность, месяцев','steps'),field('pay.1','Студия / 1к, ₽ в месяц','money'),field('pay.2','2к, ₽ в месяц','money'),field('pay.3','3к, ₽ в месяц','money'),field('disc','Скидка в процентах','percent'),field('discFromPv','Скидка на сумму ПВ, %','percent'),field('maxDisc','Потолок скидки, %','percent'),field('pvFromBase','Взнос от прайса','boolean'),field('launchDiscount','Стартовая скидка, %','percent'),field('launchUntil','Стартовая скидка до','date'),field('pvChoices','Варианты взноса, %','percentList'),field('discAt70','Скидка при ПВ от 70%, %','percent')],
     tranche:[field('bank','Банк','text'),field('tranches','Количество траншей','select',{options:['2','3']}),field('minPv','Первый взнос, %','percent'),field('rate','Ставка, %','percent'),field('estimate','Расчёт по ориентиру','boolean'),field('referencePrincipal','Сумма для ориентира, ₽','money'),field('referencePayment','Ориентир в месяц, ₽','money'),field('referenceYears','Ориентир: кредит, лет','integer',{min:1,max:30}),field('firstRub','Первый транш, ₽ (для двух)','money'),field('first','Первый транш, % цены','percent'),field('second','Второй транш, % (для трёх)','percent'),field('minFirst','Минимум первого транша, ₽','money'),field('date2','Дата второго транша','date'),field('secondMonths','Или месяцев до второго','integer',{min:1,max:60}),field('date3','Дата последнего транша','date'),field('lastMonthsBeforeCommissioning','Месяцев до ввода для последнего транша','integer',{min:1,max:60}),field('flexibleTranches','Суммы и число траншей по согласованию','boolean'),field('maxDate','Крайний срок последнего транша','date'),field('discount','Скидка, %','percent'),field('launchDiscount','Стартовая скидка, %','percent'),field('launchUntil','Стартовая скидка до','date')],
-    chpv:[field('limit','Лимит кредита, ₽','money'),field('years','Кредит, лет','integer',{min:1,max:30}),field('rate','Ставка, %','percent'),field('minDown','Минимальный взнос, %','percent'),field('cost','Стоимость денег, %','percent'),field('overRate','Ставка сверхлимита, %','percent')],
+    chpv:[field('limit','Лимит кредита, ₽','money'),field('years','Кредит, лет','integer',{min:1,max:30}),field('rate','Ставка, %','percent'),field('minDown','Минимальный взнос, %','percent'),field('overRate','Ставка сверхлимита, %','percent')],
     discount:[field('percent','Скидка, %','percent'),field('launchDiscount','Стартовая скидка, %','percent'),field('launchUntil','Стартовая скидка до','date')],info:[field('percent','Скидка в процентах','percent')]
   };
   function clone(v){return JSON.parse(JSON.stringify(v));}
@@ -40,6 +40,7 @@
           new Set(origin.peers).size===origin.peers.length,'Некорректная привязка к программе банка.');
       }
     }
+    if(r.kind==='chpv')required(!Object.hasOwn(p,'cost'),'Стоимость денег задаётся в дополнительных условиях проекта.');
     Object.keys(p).forEach(function(k){required(allowed.includes(k),'Неизвестное поле: '+k);});
     if('compatiblePromotions' in p)required(Array.isArray(p.compatiblePromotions)&&p.compatiblePromotions.length<=600&&new Set(p.compatiblePromotions).size===p.compatiblePromotions.length&&p.compatiblePromotions.every(id=>typeof id==='string'&&/^[a-zA-Z0-9_-]{1,100}$/.test(id)&&id!==r.id),'Проверьте список совместимых акций.');
     if('ownerOnly' in p)required(typeof p.ownerOnly==='boolean','Поле ownerOnly должно быть логическим.');
@@ -99,19 +100,41 @@
         }
       }
     }
-    if(r.kind==='chpv')required(p.limit>0&&p.years&&p.rate>0&&p.minDown>0&&number(p.cost,0,.99)&&p.overRate>0,'Заполните все параметры ЧПВ.');
+    if(r.kind==='chpv')required(p.limit>0&&p.years&&p.rate>0&&p.minDown>0&&p.overRate>0,'Заполните все параметры ЧПВ.');
     if(r.kind==='discount')required(number(p.percent,0,.99)&&p.scope==='cash','Скидка должна относиться к полной оплате.');
     if(r.kind!=='installment'&&p.launchDiscount)required(validDate(p.launchUntil),'Укажите дату окончания стартовой скидки.');
     var expected={mortgage:'mortgage',tranche:'tranche',installment:'installment',chpv:'chpv',discount:'discount'};
     if(expected[r.kind])required(r.category===expected[r.kind]||(r.kind==='tranche'&&r.category==='mortgage'),'Механика не соответствует разделу.');
     return r;
   }
+  // Старый снимок читаем без изменения оригинала, включая архивные программы.
+  function upgradeMoneyCost(data){
+    if(Object.hasOwn(data,'settings')){
+      required(data.settings && typeof data.settings==='object' && !Array.isArray(data.settings),'Проверьте настройки калькуляторов.');
+      if(Object.hasOwn(data.settings,'moneyCost'))return data;
+    }
+    const moneyCost={da1:null,da2:null,dnk2:null};
+    const records=data.records.map(record=>{
+      if(record.kind!=='chpv')return record;
+      const project=record.project, {cost,...params}=record.params;
+      required(number(cost,0,.99),'Проверьте прежнюю стоимость денег для '+projects[project]+'.');
+      const previous=moneyCost[project];
+      required(previous===null || previous===cost,'Разная стоимость денег в программах ЧПВ проекта '+projects[project]+': '+(previous*100)+'% и '+(cost*100)+'%.');
+      moneyCost[project]=cost;
+      return {...record,params};
+    });
+    const settings=data.settings || {subsidyCompensation:{da1:.1,da2:.1,dnk2:.1},specialFlats:[]};
+    return {...data,records,settings:{...settings,moneyCost}};
+  }
   function validate(data){
     required(data&&data.version===1&&Array.isArray(data.records)&&data.records.length>0&&data.records.length<=600,'Неверный формат справочника.');
-    if(data.settings!=null)validateSettings(data.settings);
+    data=upgradeMoneyCost(data);
+    validateSettings(data.settings);
     var ids=new Set(),cash=new Set();data.records.forEach(function(r){validateRecord(r);required(!ids.has(r.id),'Повтор ID программы.');ids.add(r.id);if(r.enabled&&!r.params.ownerOnly&&r.kind==='discount'&&r.params.scope==='cash'){required(!cash.has(r.project),'Для проекта допустима одна основная скидка за полную оплату.');cash.add(r.project);}});
     const byId=new Map(data.records.map(record=>[record.id,record]));
     for(const record of data.records){
+      if(record.kind==='chpv')required(data.settings.moneyCost[record.project]!=null,
+        'Укажите стоимость денег для '+projects[record.project]+' в дополнительных условиях.');
       for(const id of record.params.compatiblePromotions||[]){
         const promotion=byId.get(id);
         if(promotion)required(promotion.category==='discount'&&promotion.project===record.project&&(record.params.ownerOnly||!promotion.params.ownerOnly),'Совместимые акции должны относиться к тому же проекту и доступу.');
@@ -122,7 +145,10 @@
   }
   function validateSettings(settings){
     required(settings&&typeof settings==='object'&&!Array.isArray(settings),'Проверьте настройки калькуляторов.');
-    required(Object.keys(settings).every(key=>['subsidyCompensation','specialFlats'].includes(key)),'Неизвестная настройка калькулятора.');
+    required(Object.keys(settings).every(key=>['subsidyCompensation','specialFlats','moneyCost'].includes(key)),'Неизвестная настройка калькулятора.');
+    const costs=settings.moneyCost;
+    required(costs && Object.keys(costs).length===3 && Object.keys(projects).every(project=>
+      costs[project]===null || number(costs[project],0,.99)), 'Стоимость денег каждого проекта должна быть от 0 до 99% или пустой.');
     const caps=settings.subsidyCompensation;
     required(caps&&Object.keys(caps).length===3&&Object.keys(projects).every(project=>number(caps[project],0,.99)),'Задайте лимит компенсации от 0 до 99% для каждого проекта.');
     required(Array.isArray(settings.specialFlats)&&settings.specialFlats.length<=10000&&new Set(settings.specialFlats).size===settings.specialFlats.length&&settings.specialFlats.every(id=>typeof id==='string'&&/^\d+:[^\s:][^:]{0,99}$/.test(id)),'Проверьте список квартир со специальными условиями.');
@@ -139,13 +165,13 @@
     }
     return data;
   }
-  function calcData(data){validate(data);var out={mortgage:[],installments:[],tranche:[],chpv:[],cashDiscounts:{},settings:clone(data.settings||{}),promotions:[]};
+  function calcData(data){data=validate(data);var out={mortgage:[],installments:[],tranche:[],chpv:[],cashDiscounts:{},settings:clone(data.settings||{}),promotions:[]};
     data.records.filter(function(r){return r.enabled&&!r.params.ownerOnly;}).forEach(function(r){var p=clone(r.params);p.projects=[projects[r.project]];p.name=r.name;p.note=[p.note,r.description].filter(Boolean).join(' ');p.catalogId=r.id;p.combinationMode=r.mode;
       if(r.category==='discount')out.promotions.push({...p,id:r.id,scope:p.scope||'promotion',hasAmount:typeof p.percent==='number'});
       if(r.kind==='mortgage')out.mortgage.push(p);
       if(r.kind==='installment'){p.extraSequential=r.mode==='sequential';p.noExtra=r.mode==='none'||r.mode==='individual';out.installments.push(p);}
       if(r.kind==='tranche')out.tranche.push(p);
-      if(r.kind==='chpv')out.chpv.push(p);
+      if(r.kind==='chpv')out.chpv.push({...p,cost:out.settings.moneyCost[r.project]});
       if(r.kind==='discount'&&p.scope==='cash')out.cashDiscounts[projects[r.project]]=p;
     });return out;
   }
@@ -171,7 +197,7 @@
       if(p.lastMonthsBeforeCommissioning)a.push('Последний транш за '+p.lastMonthsBeforeCommissioning+' мес. до ввода');
       if(p.maxDate)a.push('Все транши до '+dmy(p.maxDate)+' включительно');
     }
-    if(r.kind==='chpv')a=[pct(p.rate)+' · до '+rub(p.limit),'ПВ от '+pct(p.minDown),'Стоимость денег '+pct(p.cost)];
+    if(r.kind==='chpv')a=[pct(p.rate)+' · до '+rub(p.limit),'ПВ от '+pct(p.minDown)];
     if(r.kind==='discount')a=['Скидка до '+pct(p.percent),p.launchDiscount?'+'+pct(p.launchDiscount)+' до '+dmy(p.launchUntil):''];
     if(r.kind==='info')a=[r.category==='discount'&&p.percent!=null?'Скидка '+pct(p.percent):'',r.description];
     return a.filter(Boolean);
@@ -221,6 +247,6 @@
     return offers;
   }
   function groups(data){var out=[],map={};data.records.forEach(function(r){var key=section(r)+':'+r.group;if(!map[key]){map[key]={id:r.group,category:section(r),name:r.name,cells:{}};out.push(map[key]);}if(!map[key].cells[r.project])map[key].cells[r.project]=[];map[key].cells[r.project].push(r);});return out;}
-  var api={section:section,mortgageType:mortgageType,mortgageTypes:mortgageTypes,mortgageBucket:mortgageBucket,mortgageOffers:mortgageOffers,projects:projects,categories:categories,modes:modes,fields:fields,clone:clone,get:get,set:set,validate:validate,validateSettings:validateSettings,cleanCompatibility:cleanCompatibility,validateRecord:validateRecord,calcData:calcData,summary:summary,combination:combination,groups:groups,pct:pct,rub:rub};
+  var api={section:section,mortgageType:mortgageType,mortgageTypes:mortgageTypes,mortgageBucket:mortgageBucket,mortgageOffers:mortgageOffers,projects:projects,categories:categories,modes:modes,fields:fields,upgradeMoneyCost:upgradeMoneyCost,clone:clone,get:get,set:set,validate:validate,validateSettings:validateSettings,cleanCompatibility:cleanCompatibility,validateRecord:validateRecord,calcData:calcData,summary:summary,combination:combination,groups:groups,pct:pct,rub:rub};
   root.SMToolsModel=api;if(typeof module!=='undefined')module.exports=api;
 })(typeof window!=='undefined'?window:globalThis);

@@ -117,3 +117,90 @@
   .sm-section-links a, .sm-return-result { display: inline-flex; align-items: center; min-height: 44px; color: var(--sky); font-weight: 600; }
   #calc-result, #calc-programs { scroll-margin-top: 12px; }
 }
+
+/* Один овальный переключатель. На узком экране вся строка прокручивается. */
+@media screen {
+  .sm:not(.sm-pdf) .sm-nav-row .sm-navigation {
+    display: flex;
+    flex-flow: row nowrap;
+    position: relative;
+    isolation: isolate;
+    align-items: center;
+    gap: 2px;
+    max-width: 100%;
+    min-width: 0;
+    padding: 4px;
+    box-sizing: border-box;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: var(--white);
+  }
+  .sm-navigation::-webkit-scrollbar { display: none; }
+  .sm:not(.sm-pdf) .sm-navigation a.sm-nav {
+    flex: 0 0 auto;
+    position: relative;
+    justify-content: center;
+    height: 42px;
+    padding: 0 clamp(11px, 1.35vw, 20px);
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--grey);
+    white-space: nowrap;
+    transition: background-color 120ms var(--ease);
+  }
+  .sm:not(.sm-pdf) .sm-navigation a[aria-current] { color: white; }
+  [data-theme="sm"] .sm:not(.sm-pdf) .sm-navigation a[aria-current] { color: var(--graphite); }
+  .sm-navigation a[aria-current]::before {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    background: var(--blue, var(--sky));
+    content: '';
+  }
+  .sm-navigation a:focus-visible { outline: 2px solid var(--sky); outline-offset: -3px; }
+}
+@media screen and (hover: hover) {
+  .sm:not(.sm-pdf) .sm-navigation a:not([aria-current]):hover { background: var(--sky-soft); }
+}
+@media screen and (prefers-reduced-motion: no-preference) {
+  .sm-navigation a.sm-pill-arrive::before {
+    transform-origin: left center;
+    animation: sm-pill-arrive 200ms var(--ease) backwards;
+  }
+  @keyframes sm-pill-arrive {
+    from { transform: translateX(var(--pill-from-x, 0px)) scaleX(var(--pill-from-scale, 1)); }
+  }
+  .tools dialog[open] { animation: sm-dialog-in 160ms var(--ease); }
+  @keyframes sm-dialog-in {
+    from { opacity: 0; transform: translateY(4px); }
+  }
+  .sm-tools-switching #tools-catalog-panel:not([hidden]),
+  .sm-tools-switching #tools-settings-panel:not([hidden]) { animation: sm-panel-in 120ms var(--ease); }
+  @keyframes sm-panel-in { from { opacity: .76; } }
+}
+
+.sm-nav-short { display: none; }
+@media screen and (max-width: 640px) {
+  .sm-navigation .sm-nav-full { display: none; }
+  .sm-navigation .sm-nav-short { display: inline; }
+  .sm:not(.sm-pdf) .sm-navigation a.sm-nav {
+    flex: 1 0 auto;
+    padding-inline: clamp(4px, 1.1vw, 8px);
+    min-width: 42px;
+    height: 44px;
+  }
+}
+
+@media screen and (prefers-reduced-motion: no-preference) and (pointer: fine) {
+  :is(.sm-actions button, .tools-toolbar-actions button, .tools-editor-foot button) {
+    transition: transform 110ms var(--ease), background-color 120ms var(--ease);
+  }
+  :is(.sm-actions button, .tools-toolbar-actions button, .tools-editor-foot button):active:not(:disabled):not(:focus-visible) {
+    transform: scale(.98);
+  }
+}

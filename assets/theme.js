@@ -23,6 +23,64 @@
   apply(initial);
   if (valid(requested) && window === window.parent) remember(initial);
 
+  // Вызывается сразу после разметки навигации, до загрузки скриптов расчёта.
+  window.SMNavigation = {
+    mount(nav) {
+      if (!nav || window.parent !== window) return;
+      const active = nav.querySelector('[aria-current="page"]');
+      if (!active) return;
+      const navKey = 'ipoteka-calc.navigation';
+      const links = [...nav.querySelectorAll('a')];
+      for (const link of links) {
+        const target = new URL(link.href);
+        target.searchParams.set('theme', root.dataset.theme);
+        link.href = target.href;
+      }
+      const reduced = matchMedia('(prefers-reduced-motion: reduce)');
+      const page = link => new URL(link.href).pathname.replace(/index\.html$/, '');
+      let previous;
+      try {
+        previous = JSON.parse(sessionStorage.getItem(navKey));
+        sessionStorage.removeItem(navKey);
+      } catch {}
+      if (nav.scrollWidth > nav.clientWidth) {
+        nav.scrollLeft = active.offsetLeft - nav.clientWidth / 2 + active.offsetWidth / 2;
+      }
+      if (!reduced.matches && previous?.to === page(active) && Date.now() - previous.time < 10000) {
+        const from = links.find(link => page(link) === previous.from);
+        if (from && from !== active) {
+          active.style.setProperty('--pill-from-x', (from.offsetLeft - active.offsetLeft) + 'px');
+          active.style.setProperty('--pill-from-scale', from.offsetWidth / active.offsetWidth);
+          active.classList.add('sm-pill-arrive');
+        }
+      }
+      nav.addEventListener('click', event => {
+        const target = event.target.closest('a');
+        if (!target || target === active || event.detail === 0 || event.button !== 0 ||
+            event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+        try { sessionStorage.setItem(navKey, JSON.stringify({from: page(active), to: page(target), time: Date.now()})); } catch {}
+      });
+      // Прогреваем только публичную HTML-страницу, на которую нацелился пользователь.
+      const prefetched = new Set();
+      const publicSite = location.hostname === 'evgeniigusv.github.io';
+      function warm(event) {
+        const target = event.target.closest('a');
+        if (!publicSite || !target || target === active || navigator.connection?.saveData) return;
+        const url = new URL(target.href);
+        url.searchParams.set('theme', root.dataset.theme);
+        if (prefetched.has(url.href)) return;
+        const hint = document.createElement('link');
+        hint.rel = 'prefetch';
+        hint.href = url.href;
+        document.head.append(hint);
+        prefetched.add(url.href);
+      }
+      nav.addEventListener('pointerover', warm);
+      nav.addEventListener('focusin', warm);
+      nav.addEventListener('pointerdown', warm, {passive: true});
+    }
+  };
+
   document.addEventListener('DOMContentLoaded', () => {
     const group = document.querySelector('.sm-theme-switch');
     const nav = document.querySelector('.sm-navigation');

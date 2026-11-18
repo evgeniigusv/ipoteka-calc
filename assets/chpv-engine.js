@@ -1,7 +1,9 @@
 /* Формулы листа «Расчёт ЧПВ». Денежные значения сохраняются без округления до вывода. */
 (function (root) {
   'use strict';
+  function validCost(value) { return Number.isFinite(value) && value >= 0 && value <= .99; }
   function calculate(x) {
+    if(!validCost(x.cost))throw new Error('Укажите стоимость денег проекта от 0 до 99%.');
     if(![x.base,x.cash,x.ddu].every(function(v){return Number.isFinite(v)&&v>0;}) || !(Number.isFinite(x.client)&&x.client>=0) || !(x.minDown>0&&x.minDown<1) || !(x.years>0&&x.years<=30)) throw new Error('Проверьте цены, средства клиента, взнос и срок.');
     if(x.client>x.ddu*x.minDown) throw new Error('Средств клиента больше суммы ПВ по ДДУ. Субсидирование ПВ не требуется; используйте обычную ипотеку.');
     var m = x.minDown, loanMonths = x.years * 12;
@@ -17,7 +19,7 @@
       verdict: profit > 1000 ? 'Не подходит' : excess > 0 ? 'Комбо-ипотека' : 'Подходит' };
   }
   function suggested(x) {
-    if(![x.cash,x.client,x.minDown,x.cost].every(Number.isFinite)||x.cash<=0||x.client<0||x.minDown<=0||x.minDown>=1||x.cost<0)return null;
+    if(![x.cash,x.client,x.minDown,x.cost].every(Number.isFinite)||x.cash<=0||x.client<0||x.minDown<=0||x.minDown>=1||!validCost(x.cost))return null;
     var denominator = 1 - x.minDown * (1 + x.cost);
     if (denominator <= 0) return null;
     var amount = (x.cash - (1 + x.cost) * x.client - 1000) / denominator;

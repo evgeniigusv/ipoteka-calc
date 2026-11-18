@@ -12,6 +12,38 @@
       : 'Ставки и комиссии проверены '+stamp(checkedAt)+'. Обновление каждые 3 часа.'+(stale?' Проверка задерживается — подтвердите актуальность условий.':'');
     return {checkedAt:checkedAt,stale:stale,fallback:!!reason,message:message};
   }
+  async function fetchCatalog(local){
+    const controller=new AbortController();
+    const timer=setTimeout(()=>controller.abort(),local?120000:15000);
+    try{
+      // При каждом открытии браузер сверяет публичный снимок с сервером по ETag или дате.
+      let path='assets/tools.json';
+      let options={cache:'no-cache',credentials:'omit',priority:'high',signal:controller.signal};
+      if(local){
+        const session=await fetch('/api/session',{cache:'no-store',signal:controller.signal});
+        if(!session.ok)throw new Error('Сессия редактора недоступна (HTTP '+session.status+').');
+        window.SM_TOOLS_SESSION=await session.json();
+        path='/api/tools';
+        options={cache:'no-store',headers:{'X-Editor-Session':window.SM_TOOLS_SESSION.csrf},signal:controller.signal};
+      }
+      const response=await fetch(path,options);
+      if(!response.ok)throw new Error('Каталог не ответил (HTTP '+response.status+'). '+(response.status===401?'Сессия устарела. Откройте редактор заново.':''));
+      return await response.json();
+    }finally{
+      clearTimeout(timer);
+    }
+  }
+  const editorOrigin=location.hostname==='127.0.0.1'&&location.port==='8795';
+  // Необязательный async-скрипт в head запускает только публичную перепроверку.
+  // На origin редактора режим партнёра определяется позже, в самой странице.
+  if(document.currentScript?.hasAttribute('data-tools-preload')){
+    if(!editorOrigin&&!window.SM_TOOLS_READY&&!window.SM_PUBLIC_TOOLS_REQUEST){
+      window.SM_PUBLIC_TOOLS_REQUEST=fetchCatalog(false);
+      // Основной скрипт обработает ошибку, даже если запрос завершился до его загрузки.
+      window.SM_PUBLIC_TOOLS_REQUEST.catch(()=>{});
+    }
+    return;
+  }
   window.SMToolsMortgageNotices=function(getData){
     var status=document.getElementById('tools-status'),notice=document.createElement('details');
     notice.className='tools-alert';
@@ -32,14 +64,14 @@
     new MutationObserver(update).observe(status,{childList:true});
   };
   window.SM_TOOLS_READY=(async function(){
-    // Старые загрузчики заканчивают первыми: поздний ответ не перезапишет единый справочник.
-    await Promise.all([window.SM_MORTGAGE_READY,window.SM_INSTALLMENTS_READY]);
-    var local=location.hostname==='127.0.0.1'&&location.port==='8795'&&!window.SM_TOOLS_PARTNER_VIEW,controller=new AbortController(),timer=setTimeout(function(){controller.abort();},local?120000:15000);
+    const local=editorOrigin&&!window.SM_TOOLS_PARTNER_VIEW;
+    const request=(!editorOrigin&&window.SM_PUBLIC_TOOLS_REQUEST)||fetchCatalog(local);
+    delete window.SM_PUBLIC_TOOLS_REQUEST;
+    // Запросы идут параллельно. Резервные загрузчики заканчивают запись до применения каталога.
+    const results=await Promise.allSettled([request,window.SM_MORTGAGE_READY,window.SM_INSTALLMENTS_READY]);
     try{
-      if(local){var session=await fetch('/api/session',{cache:'no-store',signal:controller.signal});if(!session.ok)throw new Error('Сессия редактора недоступна (HTTP '+session.status+').');window.SM_TOOLS_SESSION=await session.json();}
-      var response=await fetch(local?'/api/tools':'assets/tools.json',{headers:local?{'X-Editor-Session':window.SM_TOOLS_SESSION.csrf}:{},cache:'no-store',signal:controller.signal});
-      if(!response.ok)throw new Error('Каталог не ответил (HTTP '+response.status+'). '+(response.status===401?'Сессия устарела. Откройте редактор заново.':''));
-      var data=window.SMToolsModel.validate(await response.json()),calc=window.SMToolsModel.calcData(data);
+      for(const result of results)if(result.status==='rejected')throw result.reason;
+      var data=window.SMToolsModel.validate(results[0].value),calc=window.SMToolsModel.calcData(data);
       if(!Number.isFinite(Date.parse(data.checked_at)))throw new Error('Не указана дата проверки справочника');
       window.SM_TOOLS_DATA=data;window.SM_TOOLS_STATUS={fallback:false,checkedAt:Date.parse(data.checked_at),local:local};
       if(window.SM_DATA){window.SM_DATA.mortgage=calc.mortgage;window.SM_DATA.installments=calc.installments;window.SM_DATA.tranche=calc.tranche;window.SM_DATA.chpv=calc.chpv;window.SM_DATA.cashDiscounts=calc.cashDiscounts;window.SM_DATA.settings=calc.settings;window.SM_DATA.promotions=calc.promotions;}
@@ -50,6 +82,5 @@
       window.SM_MORTGAGE_STATUS={byProject:byProject,checkedAt:Date.parse(data.checked_at),stale:Date.now()-Date.parse(data.checked_at)>12*3600000,fallback:false};
       window.SM_INSTALLMENTS_STATUS={checkedAt:Date.parse(data.full_checked_at||data.checked_at),stale:Date.now()-Date.parse(data.full_checked_at||data.checked_at)>8*86400000,fallback:false,catalog:true};
     }catch(e){window.SM_TOOLS_STATUS={fallback:true,error:e.message};var legal=document.querySelector('.sm-foot .sm-legal');if(legal){var warning=document.createElement('span');warning.className='sm-why';warning.textContent=' Единый справочник недоступен. Используются резервные условия; подтвердите их перед оформлением.';legal.appendChild(warning);}}
-    finally{clearTimeout(timer);}
   })();
 })();

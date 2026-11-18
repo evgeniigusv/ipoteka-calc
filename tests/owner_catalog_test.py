@@ -16,6 +16,9 @@ import tools_editor as editor
 import tools_source as source
 
 
+FIXTURE_SETTINGS = dict(store.DEFAULT_SETTINGS, moneyCost={'da1': .25, 'da2': .5, 'dnk2': None})
+
+
 class LocalCatalogTest(unittest.TestCase):
     def mock(self, obj, name, **kw):
         binding = patch.object(obj, name, **kw)
@@ -48,7 +51,7 @@ class LocalCatalogTest(unittest.TestCase):
         self.assertEqual(self.report['owner'], 1)
         self.assertEqual(self.report['importedHash'], self.report['restoredHash'])
         self.assertTrue(self.report['restoreVerified'])
-        self.assertEqual(self.catalog['settings'], store.DEFAULT_SETTINGS)
+        self.assertEqual(self.catalog['settings'], FIXTURE_SETTINGS)
         self.assertTrue(all(r['mode'] == 'additive' for r in self.catalog['records']))
         original = json.loads((self.root/'migration/original-google-catalog.json').read_text())
         self.assertEqual(source.revision(original['records']), self.report['originalHash'])
@@ -92,7 +95,7 @@ class LocalCatalogTest(unittest.TestCase):
             self.assertCountEqual(list(pool.map(run, ('Первый','Второй'))), ['ok','conflict'])
 
     def test_settings_cas_strict_validation_and_inventory(self):
-        settings = copy.deepcopy(store.DEFAULT_SETTINGS)
+        settings = copy.deepcopy(FIXTURE_SETTINGS)
         settings['subsidyCompensation']['da1'] = .12
         first = store.save_settings(self.catalog, self.catalog['revision'], settings)
         self.assertEqual(first['settings'], settings)
@@ -111,6 +114,50 @@ class LocalCatalogTest(unittest.TestCase):
         self.conf['catalog_path'] = str(path)
         retry = store.save(store.read(True), self.catalog['revision'], [dict(self.info,name='Изменено')],lambda *_:self.fail(),'edit')
         self.assertEqual(retry, saved)
+
+
+class LegacyMoneyCostTest(unittest.TestCase):
+    def test_read_and_publish_preserve_old_database_until_first_save(self):
+        data = json.loads((source.ROOT / 'tests/fixtures/tools-initial.json').read_text())
+        data['settings'] = copy.deepcopy(store.DEFAULT_SETTINGS)
+        data['historicalSequence'] = 9007199254740993
+        rows = [r for r in data['records'] if r['kind'] == 'chpv' and r['project'] == 'da2']
+        for row in rows:
+            row['enabled'] = False
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / 'legacy.sqlite'
+            with sqlite3.connect(path) as db:
+                db.executescript('CREATE TABLE catalog(id INTEGER PRIMARY KEY, data TEXT, revision TEXT, generation INTEGER);'
+                                 'CREATE TABLE requests(request_key TEXT PRIMARY KEY, revision TEXT, created_at TEXT);')
+                db.execute('INSERT INTO catalog VALUES (1,?,?,1)', (json.dumps(data), 'legacy'))
+            with patch.object(store, 'catalog_path', return_value=path):
+                original = path.read_bytes()
+                current = store.read(True)
+                self.assertEqual(current['settings'], FIXTURE_SETTINGS)
+                self.assertEqual(current['revision'], 'legacy')
+                self.assertEqual(current['historicalSequence'], data['historicalSequence'])
+                self.assertEqual(source.public_snapshot(data), source.public_snapshot(current))
+                self.assertEqual(path.read_bytes(), original)
+                rows[0]['params']['cost'] = .3
+                with sqlite3.connect(path) as db:
+                    db.execute('UPDATE catalog SET data=?', (json.dumps(data),))
+                conflicted = path.read_bytes()
+                with self.assertRaisesRegex(ValueError, 'Разная стоимость денег.*ДА — 2 очередь'):
+                    store.save_settings(current, 'legacy', current['settings'])
+                self.assertEqual(path.read_bytes(), conflicted)
+                with self.assertRaisesRegex(ValueError, 'Разная стоимость денег'):
+                    source.public_snapshot(data)
+                rows[0]['params']['cost'] = .5
+                with sqlite3.connect(path) as db:
+                    db.execute('UPDATE catalog SET data=?', (json.dumps(data),))
+                result = store.save_settings(current, 'legacy', current['settings'])
+                self.assertEqual(result['records'], current['records'])
+                self.assertEqual(store.read(True), result)
+                with sqlite3.connect(path) as db:
+                    raw, generation = db.execute('SELECT data,generation FROM catalog').fetchone()
+                self.assertEqual(generation, 2)
+                self.assertEqual(json.loads(raw)['settings'], FIXTURE_SETTINGS)
+                self.assertFalse(any('cost' in r['params'] for r in json.loads(raw)['records'] if r['kind']=='chpv'))
 
 
 class ApiTest(LocalCatalogTest):
@@ -144,6 +191,36 @@ class ApiTest(LocalCatalogTest):
         self.assertEqual(self.api('/api/tools')[1]['revision'],result['data']['revision'])
         self.assertEqual(self.api('/api/tools',{'revision':data['revision'],'changes':[self.info]})[0],409)
 
+    def test_project_money_cost_for_new_and_archived_programs(self):
+        current = self.catalog
+        existing = next(row for row in current['records'] if row['kind'] == 'chpv')
+        draft = dict(existing, project='dnk2', id='new-chpv', enabled=False)
+        def add(row):
+            return self.api('/api/tools', {'revision':current['revision'], 'changes':[row]})
+        def settings(costs):
+            return self.api('/api/settings', {'revision':current['revision'],
+                            'settings':dict(current['settings'], moneyCost=costs)})
+
+        self.assertEqual(add(draft)[0], 400)
+        costs = dict(current['settings']['moneyCost'], dnk2=0)
+        for invalid in (dict(costs, da1=None), dict(costs, dnk2=True), dict(costs, dnk2='0'),
+                        dict(costs, dnk2=-.01), dict(costs, dnk2=1), {'dnk2':0}, dict(costs, other=0)):
+            self.assertEqual(settings(invalid)[0], 400)
+        self.assertEqual(store.read(True), current)
+        status, result = settings(costs)
+        self.assertEqual(status, 200, result)
+        current = result['data']
+        self.assertEqual(add(dict(draft, params=dict(draft['params'], cost=.25)))[0], 400)
+        status, result = add(draft)
+        self.assertEqual(status, 200, result)
+        current = result['data']
+        self.assertEqual(settings(dict(costs, dnk2=None))[0], 400)
+        status, result = add(dict(draft, enabled=True))
+        self.assertEqual(status, 200, result)
+        published = source.public_snapshot(result['data'])
+        self.assertEqual(published['settings']['moneyCost'], costs)
+        self.assertTrue(all('cost' not in r['params'] for r in published['records'] if r['kind']=='chpv'))
+
     def test_settings_and_tools_same_security(self):
         body={'revision':self.catalog['revision'],'settings':self.catalog['settings']}
         for path in ('/api/settings','/api/tools'):
@@ -160,7 +237,7 @@ class ApiTest(LocalCatalogTest):
         self.assertEqual(store.read(True),self.catalog)
         status,result=self.api('/api/tools',request);self.assertEqual(status,200)
         public=source.public_snapshot(result['data'])
-        self.assertEqual(public['settings'],store.DEFAULT_SETTINGS)
+        self.assertEqual(public['settings'],FIXTURE_SETTINGS)
         self.assertNotIn('Закрытая запись',json.dumps(public,ensure_ascii=False))
         self.assertNotIn('revision',public)
         self.assertEqual(self.api('/api/tools',request)[0],200)

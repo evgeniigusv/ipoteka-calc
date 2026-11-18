@@ -608,7 +608,6 @@
       "mode": "additive",
       "params": {
         "compatiblePromotions": [],
-        "cost": 0.25,
         "limit": 6000000,
         "minDown": 0.201,
         "overRate": 0.14,
@@ -629,7 +628,6 @@
       "mode": "additive",
       "params": {
         "compatiblePromotions": [],
-        "cost": 0.25,
         "limit": 8000000,
         "minDown": 0.201,
         "overRate": 0.14,
@@ -650,7 +648,6 @@
       "mode": "additive",
       "params": {
         "compatiblePromotions": [],
-        "cost": 0.25,
         "limit": 10000000,
         "minDown": 0.201,
         "overRate": 0.14,
@@ -671,7 +668,6 @@
       "mode": "additive",
       "params": {
         "compatiblePromotions": [],
-        "cost": 0.25,
         "limit": 10000000,
         "minDown": 0.201,
         "overRate": 0.14,
@@ -692,7 +688,6 @@
       "mode": "additive",
       "params": {
         "compatiblePromotions": [],
-        "cost": 0.25,
         "limit": 10000000,
         "minDown": 0.201,
         "overRate": 0.14,
@@ -713,7 +708,6 @@
       "mode": "additive",
       "params": {
         "compatiblePromotions": [],
-        "cost": 0.25,
         "limit": 9000000,
         "minDown": 0.201,
         "overRate": 0.14,
@@ -734,7 +728,6 @@
       "mode": "additive",
       "params": {
         "compatiblePromotions": [],
-        "cost": 0.5,
         "limit": 6000000,
         "minDown": 0.201,
         "overRate": 0.14,
@@ -755,7 +748,6 @@
       "mode": "additive",
       "params": {
         "compatiblePromotions": [],
-        "cost": 0.5,
         "limit": 8000000,
         "minDown": 0.201,
         "overRate": 0.14,
@@ -776,7 +768,6 @@
       "mode": "additive",
       "params": {
         "compatiblePromotions": [],
-        "cost": 0.5,
         "limit": 10000000,
         "minDown": 0.201,
         "overRate": 0.14,
@@ -797,7 +788,6 @@
       "mode": "additive",
       "params": {
         "compatiblePromotions": [],
-        "cost": 0.5,
         "limit": 10000000,
         "minDown": 0.201,
         "overRate": 0.14,
@@ -818,7 +808,6 @@
       "mode": "additive",
       "params": {
         "compatiblePromotions": [],
-        "cost": 0.5,
         "limit": 10000000,
         "minDown": 0.201,
         "overRate": 0.14,
@@ -839,7 +828,6 @@
       "mode": "additive",
       "params": {
         "compatiblePromotions": [],
-        "cost": 0.5,
         "limit": 9000000,
         "minDown": 0.201,
         "overRate": 0.14,
@@ -3506,6 +3494,11 @@
       "da1": 0.1,
       "da2": 0.1,
       "dnk2": 0
+    },
+    "moneyCost": {
+      "da1": 0.25,
+      "da2": 0.5,
+      "dnk2": null
     }
   }
 }

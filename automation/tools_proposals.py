@@ -100,7 +100,7 @@ def proposals(data, text):
             record = manual_record(old, record)
             candidate = dict(existing)
             candidate[record['id']] = record
-            validate({'version':1,'records':list(candidate.values())})
+            validate(dict(data, records=list(candidate.values())))
             rows.append({'record':record,'previous':old,'quotes':quotes,'action':'Изменение' if old else 'Добавление'})
             if old:
                 targets.add(old['id'])

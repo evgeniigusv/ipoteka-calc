@@ -243,7 +243,7 @@ document.querySelector('#go').onclick=async function(){this.disabled=true;try{co
                 revised = interpret(previous if same_kind else None, draft, cash)
                 revised = manual_record(records.get(draft['id']), revised)
                 records[revised['id']] = revised
-                candidate = owner_catalog.clean_references({'version':1, 'records':list(records.values())})
+                candidate = owner_catalog.clean_references(dict(catalog, records=list(records.values())))
                 validate(candidate)
                 revised = next(r for r in candidate['records'] if r['id'] == revised['id'])
                 return self.respond(200, {'record':revised, 'ticket':ticket(req['revision'], revised)})

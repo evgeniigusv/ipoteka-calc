@@ -17,6 +17,7 @@ from pathlib import Path
 
 import tools_source as source
 
+# Исходные настройки старого импорта. Стоимость денег извлекается из его программ.
 DEFAULT_SETTINGS = {'subsidyCompensation': dict.fromkeys(('da1', 'da2', 'dnk2'), .1), 'specialFlats': []}
 
 
@@ -51,12 +52,16 @@ def catalog_path():
 
 
 def validate_settings(settings):
-    if not isinstance(settings, dict) or set(settings) != {'subsidyCompensation', 'specialFlats'}:
-        raise ValueError('Нужны subsidyCompensation и specialFlats.')
+    if not isinstance(settings, dict) or set(settings) != {'subsidyCompensation', 'specialFlats', 'moneyCost'}:
+        raise ValueError('Нужны компенсация, стоимость денег по проектам и список квартир.')
     caps = settings['subsidyCompensation']
     if not isinstance(caps, dict) or set(caps) != {'da1', 'da2', 'dnk2'} or any(
             type(v) not in (float, int) or not math.isfinite(v) or not 0 <= v <= .99 for v in caps.values()):
         raise ValueError('Компенсация каждого проекта: доля от 0 до 0.99.')
+    costs = settings['moneyCost']
+    if not isinstance(costs, dict) or costs.keys() != caps.keys() or any(
+            v is not None and (type(v) not in (int, float) or not 0 <= v <= .99) for v in costs.values()):
+        raise ValueError('Стоимость денег каждого проекта: доля от 0 до 0.99 или пустое значение.')
     flats = settings['specialFlats']
     if not isinstance(flats, list) or len(flats) > 10000 or any(
             not isinstance(v, str) or not re.fullmatch(r'[0-9]{1,20}:[0-9A-Za-zА-Яа-яЁё/-]{1,30}', v)
@@ -103,6 +108,9 @@ def snapshot(db, path):
     if not row:
         raise RuntimeError('В локальном каталоге нет проверенного импорта.')
     data = json.loads(row[0])
+    # Проекция старой ревизии только в памяти. Запись — при штатной транзакции.
+    if 'moneyCost' not in data['settings']:
+        data = source.validate(data, normalized=True)
     data['revision'] = row[1]
     return Catalog(data, path)
 
@@ -412,7 +420,8 @@ def migrate_google(backup_dir):
         raise Conflict('Google изменился во время миграции. Перенос остановлен.')
     records, changes = migration_records(original['records'])
     data = dict(version=1, checked_at=now(), records=records, settings=copy.deepcopy(DEFAULT_SETTINGS))
-    source.validate(data)
+    data = source.validate(data, normalized=True)
+    records = data['records']
     path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
     fd, temp = tempfile.mkstemp(prefix='.migration-', dir=path.parent)
     os.close(fd)

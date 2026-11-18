@@ -101,14 +101,18 @@
 .tools-type-toggle img{width:15px;height:15px}
 .tools-type-toggle:hover{text-decoration:underline}
 
-#owner-window{width:min(1000px,calc(100vw - 24px));max-height:92dvh}
-#owner-window:has(iframe:not([hidden])){height:min(840px,92dvh)}
-#owner-window iframe{width:100%;height:100%;display:block;border:0}
-#owner-window:has(#owner-connection:not([hidden])){max-width:520px}
-.owner-connection-body{padding:8px 24px 24px}
-.tools-embedded .sm-navigation,.tools-embedded .sm-logo{display:none}
-.tools-embedded .tools-shell{padding:12px}
-@media(max-width:650px){#owner-window:has(iframe:not([hidden])){height:96dvh;max-height:96dvh;width:calc(100vw - 8px)}}
+/* Шапка общая для обоих режимов. Каталог прокручивается внутри локальной страницы. */
+.tools-shell:has(> #owner-window:not([hidden])) {
+  display:flex; flex-direction:column; height:100dvh; padding-bottom:0;
+}
+.tools-shell:has(> #owner-window:not([hidden])) > .tools-mast { width:100%; flex:none; }
+#owner-window { flex:1; min-height:50dvh; }
+#owner-window iframe { display:block; width:100%; height:100%; border:0; }
+#owner-connection { background:var(--white); border-radius:var(--r-lg); overflow:hidden; }
+.owner-connection-body { padding:8px 24px 24px; }
+.tools-embedded .tools-mast { display:none; }
+.tools-embedded .tools-shell { padding:0; max-width:none; }
+.tools-embedded #owner-return { margin-left:auto; white-space:normal; }
 
 .tools-type-action{flex:none;white-space:nowrap;font-size:12px;font-weight:400;color:var(--sky)}
 
@@ -122,11 +126,8 @@
 #tools-table .tools-section button:focus-visible{outline-color:white;outline-offset:-3px}
 .tools-search:focus-within input{outline:none}
 .tools-pills button:hover{border-color:var(--sky)}
-.tools-embedded .tools-mast{margin-bottom:12px}
 @media(max-width:640px){
   .tools-body{padding:16px;border-radius:24px}
-  .tools-embedded .sm-head h1{font-size:18px}
-  .tools-embedded #owner-return{white-space:normal}
 }
 
 #tools-table .tools-section td{background:var(--sky);color:var(--white)}

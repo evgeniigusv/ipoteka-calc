@@ -8,11 +8,11 @@ spec.loader.exec_module(sync)
 
 class SnapshotTests(unittest.TestCase):
     def row(self):
-        return {'house_id': 6736582, 'num': '1', 'floor': 2, 'rooms': 2, 'studio': 0, 'area': 40.0, 'price': 8000000.0, 'action': 7000000.0}
+        return {'house_id': 6736582, 'num': '1', 'status': 'Подбор', 'floor': 2, 'rooms': 2, 'studio': 0, 'area': 40.0, 'price': 8000000.0, 'action': 7000000.0}
 
     def test_filter_validation(self):
         sync.validate([self.row()])
-        for invalid in ({'price': 0}, {'area': 0}, {'num': ''}, {'house_id': 1}):
+        for invalid in ({'status':'Маркетинговая сделка'}, {'price': 0}, {'area': 0}, {'num': ''}, {'house_id': 1}):
             with self.subTest(invalid=invalid), self.assertRaises(ValueError):
                 sync.validate([{**self.row(), **invalid}])
 

@@ -31,7 +31,7 @@
   }
   function render() {
     var x = inputs();
-    if(programs.length&&!Number.isFinite(x.cost)){els.result.innerHTML='<p class="sm-empty">Заполните «Стоимость денег» в настройках выбранного инструмента ЧПВ.</p>';return;}
+    if(programs.length&&!Number.isFinite(x.cost)){els.result.innerHTML='<p class="sm-empty">Заполните «Стоимость денег» в дополнительных условиях выбранного проекта.</p>';return;}
     if(!programs.length){els.result.innerHTML='<p class="sm-empty">Активных программ ЧПВ нет.</p>';return;}
     if (!x.base || !x.cash || x.client == null || !x.ddu) { els.result.innerHTML = '<p class="sm-empty">Укажите цену по прайсу, цену при 100% оплате, средства клиента и цену ДДУ.</p>'; return; }
     var r;try{r=calc.calculate(x);}catch(e){els.result.innerHTML='<p class="sm-empty">'+esc(e.message)+'</p>';return;}
@@ -54,7 +54,7 @@
   [els.price, els.cash, els.client, els.ddu].forEach(function (e) { U.moneyInput(e, render); });
   els.program.addEventListener('change', render);
   $('sm-suggest').addEventListener('click', function () {
-    var x=inputs();if(!x.cash||x.client==null)return;
+    var x=inputs();if(!programs.length||!Number.isFinite(x.cost)){render();return;}if(!x.cash||x.client==null)return;
     var amount=calc.suggested(x);
     if(amount==null){els.result.innerHTML='<p class="sm-empty">При этих условиях дофинансирование первоначального взноса не требуется либо невозможно подобрать цену. Проверьте средства клиента и стоимость денег.</p>';return;}
     els.ddu.value=F.int(amount);render();

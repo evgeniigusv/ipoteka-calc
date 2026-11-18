@@ -57,11 +57,12 @@ assert.deepEqual(M.mortgageOffers({...info,description:'Банки: уточня
 assert.equal(M.mortgageBucket({...info,name:'Комбо ипотека'}),'other');
 
 // Новые настройки не меняют схему существующих записей и не раскрывают частные акции.
-const settings={subsidyCompensation:{da1:.1,da2:.1,dnk2:.1},specialFlats:['6736582:17']};
+const modern=M.clone(M.validate(live));
+const settings={...modern.settings,subsidyCompensation:{da1:.1,da2:.1,dnk2:.1},specialFlats:['6736582:17']};
 M.validateSettings(settings);
 assert.throws(()=>M.validateSettings({...settings,subsidyCompensation:{...settings.subsidyCompensation,da1:10}}));
 assert.throws(()=>M.validateSettings({...settings,specialFlats:['6736582:17','6736582:17']}));
-const modern=M.clone(live);modern.settings=settings;
+modern.settings=settings;
 const installment=modern.records.find(r=>r.kind==='installment');
 installment.params={scheme:'scheduled',minPv:.2,months:24,milestones:[{amount:300000, date:'2028-01-01'}]};
 M.validate(modern);

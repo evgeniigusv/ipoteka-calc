@@ -50,7 +50,7 @@
       found.forEach(function (item) {
         var row = item.row;
         var title = '№ ' + row.num + (row.house_id === 10899161 ? ' · ПИФ' : '') +
-          ' · этаж ' + (row.floor || '—') + ' · ' + Number(row.area).toLocaleString('ru-RU') + ' м²';
+          ' · этаж ' + (row.floor || '—') + ' · ' + Number(row.area).toLocaleString('ru-RU') + ' м²' + (row.status ? ' · ' + row.status : '');
         select.add(new Option(title, String(item.index + 1)));
       });
       info.textContent = hint(found, exact.length);

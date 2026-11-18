@@ -51,12 +51,29 @@ def parse(rows, *, private=False):
     data['revision']=revision(records)
     return data
 
-def validate(data):
-    p=subprocess.run(['node','-e',"const fs=require('fs');require('./assets/tools-model.js').validate(JSON.parse(fs.readFileSync(0,'utf8')));"],cwd=ROOT,input=json.dumps(data,ensure_ascii=False),text=True,capture_output=True)
+def validate(data, *, normalized=False):
+    script = """const model = require('./assets/tools-model.js');
+const data = model.validate(JSON.parse(require('fs').readFileSync(0, 'utf8')));
+if (process.argv[1] === 'normalize') process.stdout.write(JSON.stringify(data.settings));"""
+    p = subprocess.run(['node', '-e', script, 'normalize' if normalized else 'check'],
+                       cwd=ROOT, input=json.dumps(data, ensure_ascii=False), text=True, capture_output=True)
     if p.returncode:
         # Не выводим исходные ячейки или секреты в журнал.
         msg=next((s for s in p.stderr.splitlines() if s.startswith('Error:')), 'Проверьте поля программ.')
         raise ValueError(msg)
+    if normalized:
+        if 'moneyCost' in data.get('settings', {}):
+            return data
+        # Остальные значения SQLite оставляем в исходном представлении Python.
+        settings = json.loads(p.stdout)
+        records = []
+        for row in data['records']:
+            if row['kind'] == 'chpv':
+                params = dict(row['params'])
+                del params['cost']
+                row = dict(row, params=params)
+            records.append(row)
+        return dict(data, settings=settings, records=records)
 
 def revision(records):
     return hashlib.sha256(json.dumps(records,ensure_ascii=False,sort_keys=True,separators=(',',':')).encode()).hexdigest()
@@ -82,7 +99,7 @@ def validate_private(records):
         raise ValueError('В личном справочнике допустимы только записи владельца.')
     if len({r['id'] for r in records}) != len(records):
         raise ValueError('Повтор ID в личном справочнике.')
-    script = "const m=require('./assets/tools-model.js'); JSON.parse(require('fs').readFileSync(0,'utf8')).forEach(m.validateRecord)"
+    script = "const m=require('./assets/tools-model.js'); const records=JSON.parse(require('fs').readFileSync(0,'utf8')); m.upgradeMoneyCost({records}).records.forEach(m.validateRecord)"
     result = subprocess.run(['node','-e',script], cwd=ROOT, input=json.dumps(records),
                             text=True, capture_output=True)
     if result.returncode:
@@ -144,7 +161,7 @@ def public_snapshot(data):
             row['params']['compatiblePromotions'] = [i for i in row['params']['compatiblePromotions'] if i in public_ids and public_rows[i]['category'] == 'discount' and public_rows[i]['project'] == row['project'] and i != row['id']]
         clean['records'].append(row)
     if 'settings' in data:
-        clean['settings'] = copy.deepcopy(validate_settings(data['settings']))
+        clean['settings'] = copy.deepcopy(data['settings'])
     # Адреса внутренних Google-таблиц не нужны калькулятору и остаются только владельцу.
     def redact(value):
         if isinstance(value, str):
@@ -153,7 +170,8 @@ def public_snapshot(data):
         if isinstance(value, dict): return {k:redact(v) for k,v in value.items()}
         return value
     clean = redact(clean)
-    validate(clean)
+    clean = validate(clean, normalized=True)
+    validate_settings(clean['settings'])
     return clean
 
 

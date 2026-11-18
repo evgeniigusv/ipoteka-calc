@@ -19,7 +19,10 @@ class SourceTests(unittest.TestCase):
   data['records'].append(private)
   snapshot = source.public_snapshot(data)
   self.assertNotIn(private, snapshot['records'])
-  self.assertEqual(snapshot['records'], DATA['records'])
+  expected = copy.deepcopy(DATA['records'])
+  for row in expected:
+   if row['kind'] == 'chpv': del row['params']['cost']
+  self.assertEqual(snapshot['records'], expected)
   self.assertIn(private, data['records'])
 
  def test_cyrillic_request_encoding(self):

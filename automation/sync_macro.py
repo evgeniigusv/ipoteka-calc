@@ -16,10 +16,11 @@ from dotenv import dotenv_values
 REPO = 'evgeniigusv/ipoteka-calc'
 FILE = 'assets/macro-flats.json'
 HOUSES = (6736582, 6871059, 11013930)
+STATUSES = {20: 'Подбор', 30: 'Бронь', 32: 'Маркетинговый резерв'}
 SQL = '''SELECT house_id, geo_flatnum AS num, estate_floor AS floor,
  estate_rooms AS rooms, estate_studia AS studio, estate_area AS area,
- estate_price AS price, estate_price_action AS action
- FROM estate_sells WHERE estate_sell_category='flat' AND estate_sell_status=20
+ estate_price AS price, estate_price_action AS action, estate_sell_status_name AS status
+ FROM estate_sells WHERE estate_sell_category='flat' AND estate_sell_status IN (%s,%s,%s)
  AND estate_price>0 AND house_id IN (%s,%s,%s)
  ORDER BY house_id, estate_floor, geo_flatnum, estate_sell_id'''
 
@@ -38,7 +39,7 @@ def snapshot():
             if not stat or stat['age'] is None or stat['age'] < -3600 or stat['age'] > 48 * 3600:
                 raise ValueError('Выгрузка Macro устарела или её дата не определена; обновление остановлено')
             source_time = datetime.strptime(str(stat['param_value']), '%Y-%m-%d %H:%M:%S')
-            cur.execute(SQL, HOUSES)
+            cur.execute(SQL, (*STATUSES, *HOUSES))
             data = cur.fetchall()
         rows = [{k: float(v) if isinstance(v, Decimal) else v for k, v in row.items()} for row in data]
         validate(rows)
@@ -52,6 +53,8 @@ def validate(rows):
     if not rows or len(rows) > 5000:
         raise ValueError('Некорректное количество квартир; обновление остановлено')
     for row in rows:
+        if row.get('status') not in STATUSES.values():
+            raise ValueError('Неизвестный статус квартиры; обновление остановлено')
         if row.get('house_id') not in HOUSES or not str(row.get('num') or '').strip():
             raise ValueError('Некорректный номер квартиры или дом; обновление остановлено')
         if not isinstance(row.get('price'), (int, float)) or row['price'] <= 0:

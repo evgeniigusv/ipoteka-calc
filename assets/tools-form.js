@@ -7,7 +7,7 @@
     mortgage: ['bank', 'type', 'kids', 'rate', 'minPv', 'term', 'limit', 'subsidy'],
     installment: ['minPv', 'scheme', 'end', 'months', 'steps', 'pay.1', 'pay.2', 'pay.3', 'disc', 'discFromPv'],
     tranche: ['bank', 'minPv', 'estimate', 'rate', 'referencePayment', 'referencePrincipal', 'referenceYears', 'tranches', 'flexibleTranches', 'firstRub', 'first', 'second', 'date2', 'secondMonths', 'date3', 'lastMonthsBeforeCommissioning', 'maxDate'],
-    chpv: ['limit', 'years', 'rate', 'minDown', 'cost', 'overRate'],
+    chpv: ['limit', 'years', 'rate', 'minDown', 'overRate'],
     discount: ['percent'], info: []
   };
 

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
+import M from '../assets/tools-model.js';
 globalThis.window = globalThis;
 vm.runInThisContext(fs.readFileSync(new URL('../assets/engine.js', import.meta.url), 'utf8'));
 vm.runInThisContext(fs.readFileSync(new URL('../assets/chpv-engine.js', import.meta.url), 'utf8'));
@@ -23,4 +24,35 @@ for(const client of [0,100000,500000,1000000,2000000]){
  const candidate={...x,base:10000000,cash:9000000,client};
  const suggested=SMChpvCalc.suggested(candidate);
  if(suggested!=null){const result=SMChpvCalc.calculate({...candidate,ddu:suggested});assert.ok(result.funded>=0);assert.ok(result.profit<=1000);}
+}
+
+const legacy = JSON.parse(fs.readFileSync(new URL('./fixtures/tools-initial.json', import.meta.url)));
+const current = M.validate(legacy);
+assert.deepEqual(current.settings.moneyCost, {da1:.25, da2:.5, dnk2:null});
+const oldProgram = legacy.records.find(row => row.kind === 'chpv' && row.project === 'da1');
+assert.equal(oldProgram.params.cost, .25);
+assert.ok(!M.fields.chpv.some(field => field.key === 'cost'));
+const da1 = current.records.find(row => row.id === oldProgram.id);
+assert.ok(!('cost' in da1.params));
+da1.enabled = false;
+current.records.push({...da1, id:'new-chpv', enabled:true});
+for (const cost of [0, .375, .99]) {
+  current.settings.moneyCost.da1 = cost;
+  const programs = M.calcData(current).chpv;
+  assert.ok(!programs.some(p => p.catalogId === da1.id));
+  assert.ok(programs.some(p => p.catalogId === 'new-chpv'));
+  for (const p of programs) {
+    const expected = p.projects.includes(M.projects.da1) ? cost : .5;
+    assert.equal(p.cost, expected);
+    const input = {...x, cost:p.cost};
+    near(SMChpvCalc.calculate(input).cost, r.funded * expected);
+    const suggested = SMChpvCalc.suggested(input);
+    assert.ok(suggested > 0);
+    assert.ok(SMChpvCalc.calculate({...input, ddu:suggested}).profit <= 1000);
+    assert.ok(SMChpvCalc.calculate({...input, ddu:suggested-1000}).profit > 1000);
+  }
+}
+for (const cost of [undefined, null, '0', -.1, 1, Infinity]) {
+  assert.throws(() => SMChpvCalc.calculate({...x, cost}), /стоимость денег/);
+  assert.equal(SMChpvCalc.suggested({...x, cost}), null);
 }
