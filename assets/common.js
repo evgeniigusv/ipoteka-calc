@@ -41,8 +41,29 @@
   function onPill(box, attr, handler) {
     box.addEventListener('click', function (e) {
       var b = e.target.closest('button[data-' + attr + ']');
-      if (b && b.getAttribute('aria-pressed') !== 'true') handler(b.getAttribute('data-' + attr), b);
+      if (!b || b.getAttribute('aria-pressed') === 'true') return;
+      handler(b.getAttribute('data-' + attr), b);
+      programFeedback(e);
     });
+  }
+  // Подсвечиваем только новый итог после выбора программы. Ввод суммы остаётся мгновенным.
+  function programFeedback(event) {
+    if (document.documentElement.dataset.smInput !== 'pointer' ||
+        (event.type === 'click' && event.detail === 0) ||
+        matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    document.querySelector('#calc-result .sm-hero, #calc-result .sm-empty')?.classList.add('sm-program-enter');
+  }
+  function markProgram(row) {
+    const previous = row.parentElement.querySelector('.sm-sel');
+    if (previous === row) return;
+    if (previous) {
+      previous.classList.remove('sm-sel');
+      previous.removeAttribute('aria-current');
+      previous.querySelector('button')?.setAttribute('aria-pressed', 'false');
+    }
+    row.classList.add('sm-sel');
+    row.setAttribute('aria-current', 'true');
+    row.querySelector('button')?.setAttribute('aria-pressed', 'true');
   }
   function stamp() {
     var now = new Date();
@@ -191,6 +212,6 @@
 
   window.SMUi = {
     esc: esc, parseMoney: parseMoney, moneyInput: moneyInput, parsePct: parsePct, pctInput: pctInput,
-    pills: pills, onPill: onPill, stamp: stamp, reportHead: reportHead, page: page, makePdf: makePdf, saveButton: saveButton
+    pills: pills, onPill: onPill, programFeedback: programFeedback, markProgram: markProgram, stamp: stamp, reportHead: reportHead, page: page, makePdf: makePdf, saveButton: saveButton
   };
 })();

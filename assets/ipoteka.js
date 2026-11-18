@@ -107,7 +107,7 @@
   // Колонка: название, содержимое, «только для подходящих» (у неподходящей программы — прочерк), класс ячейки
   function cls(c) { return c[3] ? ' class="' + c[3] + '"' : ''; }
   function rowHtml(r, selId) {
-    return '<tr data-id="' + r.id + '" class="' + (r.ok ? 'sm-pick' : 'sm-off') + (r.id === selId ? ' sm-sel' : '') + '"' + (r.ok ? ' tabindex="0"' : '') + '>' +
+    return '<tr data-id="' + r.id + '" class="' + (r.ok ? 'sm-pick' : 'sm-off') + (r.id === selId ? ' sm-sel' : '') + '"' + (r.id === selId ? ' aria-current="true"' : '') + (r.ok ? ' tabindex="0"' : '') + '>' +
       COLS.map(function (c) { return '<td data-l="' + c[0] + '"' + cls(c) + '>' + (c[2] && !r.ok ? '—' : '<span>' + c[1](r) + '</span>') + '</td>'; }).join('') + '</tr>';
   }
   function headHtml() { return '<tr>' + COLS.map(function (c) { return '<th' + cls(c) + '>' + c[0] + '</th>'; }).join('') + '</tr>'; }
@@ -128,10 +128,14 @@
     var res = C.mortgage(D, inp);
     if (state.pick != null && !res.picked) state.pick = null; // выбранная вручную перестала подходить — снова автоподбор
     last = { inp: inp, res: res };
-    el.detail.innerHTML = res.best ? detailHtml(inp, res.best)
-      : '<p class="sm-empty">' + (res.rows.length ? 'При таких условиях ни одна программа не подходит. Измените скидку, взнос или тип ипотеки.' : 'Условия ипотеки для этого проекта готовятся.') + '</p>';
+    renderSelection(inp, res);
     el.thead.innerHTML = res.rows.length ? headHtml() : '';
     el.tbody.innerHTML = res.rows.map(function (r) { return rowHtml(r, res.best && res.best.id); }).join('');
+  }
+
+  function renderSelection(inp, res) {
+    el.detail.innerHTML = res.best ? detailHtml(inp, res.best)
+      : '<p class="sm-empty">' + (res.rows.length ? 'При таких условиях ни одна программа не подходит. Измените скидку, взнос или тип ипотеки.' : 'Условия ипотеки для этого проекта готовятся.') + '</p>';
     el.tip.innerHTML = !res.best ? ''
       : state.pick != null ? 'Программа выбрана вручную · <button type="button" class="sm-link" id="sm-auto">вернуть автоподбор</button>'
       : (inp.pv > 0
@@ -209,17 +213,25 @@
   U.moneyInput(el.pv, render);
   U.pctInput(el.disc, render);
   el.term.addEventListener('input', render);
-  el.kids.addEventListener('change', render);
+  el.kids.addEventListener('change', function (e) { render(); U.programFeedback(e); });
   el.companyPays.addEventListener('change',render);
   el.promotions.addEventListener('change',function(e){var id=e.target.getAttribute('data-promotion');if(!id)return;state.promotionIds=state.promotionIds.filter(function(v){return v!==id;});if(e.target.checked)state.promotionIds.push(id);render();});
 
   var pick = function (e) {
     var tr = e.target.closest('tr.sm-pick');
-    if (tr) { state.pick = +tr.getAttribute('data-id'); render(); }
+    if (!tr || !last || state.pick === +tr.dataset.id) return;
+    const selected = last.res.rows.find(row => row.ok && row.id === +tr.dataset.id);
+    if (!selected) return;
+    state.pick = last.inp.pick = selected.id;
+    last.res.best = selected;
+    last.res.picked = true;
+    U.markProgram(tr);
+    renderSelection(last.inp, last.res);
+    U.programFeedback(e);
   };
   el.tbody.addEventListener('click', pick);
   el.tbody.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(e); } });
-  el.tip.addEventListener('click', function (e) { if (e.target.id === 'sm-auto') { state.pick = null; render(); } });
+  el.tip.addEventListener('click', function (e) { if (e.target.id === 'sm-auto') { state.pick = null; render(); el.tbody.querySelector('tr.sm-sel')?.focus({preventScroll:true}); U.programFeedback(e); } });
   $('sm-print').addEventListener('click', function () { window.print(); });
   U.saveButton($('sm-save'), $('sm-msg'), createPdf);
 

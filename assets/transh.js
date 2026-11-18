@@ -143,7 +143,7 @@
   var flats=window.SMFlats.setup({select:el.flat,info:$('sm-flat-info'),price:el.price,project:project,onChange:render});
   U.pills(el.project,projects.map(function(p){return {value:p,label:p};}),project,'v');
   U.onPill(el.project,'v',function(v,btn){project=v;flats.setProject(v);el.date2.value='';el.date3.value='';Array.prototype.forEach.call(el.project.children,function(b){b.setAttribute('aria-pressed',String(b===btn));});setupProgram();});
-  el.program.addEventListener('change',applyProgram);U.moneyInput(el.price,render);
+  el.program.addEventListener('change',function(e){applyProgram();U.programFeedback(e);});U.moneyInput(el.price,render);
   [el.discount,el.rate,el.pv,el.first,el.second].forEach(function(e){U.pctInput(e,render);});
   [el.bank,el.term,el.date2,el.date3].forEach(function(e){e.addEventListener('input',render);});
   U.moneyInput($('sm-first-rub'),render);

@@ -8,6 +8,7 @@
     detail:$('sm-detail'),options:$('sm-program-options'),thead:$('sm-thead'),tbody:$('sm-tbody'),tip:$('sm-tip'),promotions:$('sm-promotions')};
   var state = {project:D.projects[0],step:{},picks:{},promotionIds:[]}, last = null;
 
+  let currentCards = [];
   var downRub=$('sm-down-rub');
   const downPct=$('sm-down-pct');
   let downUnit='rub';
@@ -74,9 +75,10 @@
     var pay=c.fullPayment?'Полная оплата':c.payment?F.rub(c.payment)+(c.kind==='equal'?({1:' / месяц',2:' / 2 месяца',3:' / квартал',6:' / полгода',12:' / год'}[c.step]):' / месяц'):'По графику';
     var values=['<button type="button" class="sm-program-pick" aria-pressed="'+selected+'" aria-controls="sm-detail">'+esc(c.name)+'</button><span class="sm-sub'+(c.error?' sm-why':'')+'">'+esc(c.error||discLabel(c))+'</span>',
       c.error?'—':F.rub(c.total),c.error?'—':F.rub(c.rows[0].amount)+'<span class="sm-sub">'+(c.fullPayment?'100% стоимости договора':F.pct1(c.share)+(c.pvFromBase?' прайса':' цены в договоре'))+'</span>',c.error?'—':pay,F.dmy(c.end)];
-    return '<tr class="sm-pick'+(selected?' sm-sel':'')+(c.error?' sm-off':'')+'" data-id="'+c.id+'">'+values.map(function(v,i){return '<td data-l="'+cols[i]+'"><span>'+v+'</span></td>';}).join('')+'</tr>';
+    return '<tr class="sm-pick'+(selected?' sm-sel':'')+(c.error?' sm-off':'')+'"'+(selected?' aria-current="true"':'')+' data-id="'+c.id+'">'+values.map(function(v,i){return '<td data-l="'+cols[i]+'"><span>'+v+'</span></td>';}).join('')+'</tr>';
   }
   function empty(message) {
+    currentCards = [];
     last=null;el.detail.innerHTML='<p class="sm-empty">'+esc(message)+'</p>';
     el.options.innerHTML=el.thead.innerHTML=el.tbody.innerHTML='';el.tip.textContent=message;$('sm-save').disabled=true;
   }
@@ -100,14 +102,20 @@
     if(downError)return empty(downError);
     if(inp.downRub==null)return empty('Введите первоначальный взнос в рублях или процентах.');
     if(!Number.isSafeInteger(inp.downRub)||inp.downRub<0)return empty('Укажите корректный первоначальный взнос.');
-    var cards=C.installments(D,inp,date);
+    const cards = C.installments(D, inp, date);
+    currentCards = cards;
     if(!cards.length)return empty('Условия рассрочки для этого проекта готовятся.');
     var selected=cards.find(function(c){return c.id===state.picks[state.project];})||cards.find(function(c){return !c.error;})||cards[0];
-    last=selected;
-    el.detail.innerHTML=detailHtml(selected);el.options.innerHTML=optionsHtml(selected);
+    showSelection(selected);
     el.thead.innerHTML='<tr>'+cols.map(function(c){return '<th>'+c+'</th>';}).join('')+'</tr>';
     el.tbody.innerHTML=cards.map(function(c){return rowHtml(c,c.id===selected.id);}).join('');
-    el.tip.textContent='Выберите строку, чтобы посмотреть расчёт';$('sm-save').disabled=!!selected.error;
+    el.tip.textContent='Выберите строку, чтобы посмотреть расчёт';
+  }
+  function showSelection(selected) {
+    last = selected;
+    el.detail.innerHTML = detailHtml(selected);
+    el.options.innerHTML = optionsHtml(selected);
+    $('sm-save').disabled = !!selected.error;
   }
   function buildReport(png) {
     var inp=readInputs(),flat=flats.selectedNumber();
@@ -121,8 +129,21 @@
   var now=new Date();el.date.value=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');
   el.price.value=F.int(10000000);
   U.onPill(el.project,'v',function(v,btn){state.project=v;flats.setProject(v);Array.prototype.forEach.call(el.project.children,function(b){b.setAttribute('aria-pressed',String(b===btn));});render();});
-  el.tbody.addEventListener('click',function(e){var row=e.target.closest('tr[data-id]');if(!row)return;state.picks[state.project]=+row.dataset.id;render();el.tbody.querySelector('tr.sm-sel button').focus({preventScroll:true});});
-  el.options.addEventListener('click',function(e){var b=e.target.closest('[data-step] button[data-v]');if(!b||!last)return;var value=b.getAttribute('data-v');state.step[last.id]=+value;render();el.options.querySelector('[data-step] button[data-v="'+value+'"]').focus({preventScroll:true});});
+  el.tbody.addEventListener('click', function (event) {
+    const row = event.target.closest('tr[data-id]');
+    if (!row) return;
+    const selected = currentCards.find(card => card.id === +row.dataset.id);
+    if (!selected) return;
+    const button = row.querySelector('button');
+    if (document.activeElement !== button) button.focus({preventScroll:true});
+    state.picks[state.project] = selected.id;
+    if (last !== selected) {
+      showSelection(selected);
+      U.markProgram(row);
+      U.programFeedback(event);
+    }
+  });
+  el.options.addEventListener('click',function(e){var b=e.target.closest('[data-step] button[data-v]');if(!b||!last)return;var value=b.getAttribute('data-v');state.step[last.id]=+value;render();U.programFeedback(e);el.options.querySelector('[data-step] button[data-v="'+value+'"]').focus({preventScroll:true});});
   el.promotions.addEventListener('change',function(e){var id=e.target.getAttribute('data-promotion');if(!id)return;state.promotionIds=state.promotionIds.filter(function(v){return v!==id;});if(e.target.checked)state.promotionIds.push(id);render();});
   U.moneyInput(downRub,function(){downUnit='rub';render();});
   downPct.addEventListener('input',function(){downUnit='pct';render();});

@@ -188,10 +188,6 @@
   @keyframes sm-pill-arrive {
     from { transform: translateX(var(--pill-from-x, 0px)) scaleX(var(--pill-from-scale, 1)); }
   }
-  .tools dialog[open] { animation: sm-dialog-in 160ms var(--ease); }
-  @keyframes sm-dialog-in {
-    from { opacity: 0; transform: translateY(4px); }
-  }
   .sm-tools-switching #tools-catalog-panel:not([hidden]),
   .sm-tools-switching #tools-settings-panel:not([hidden]) { animation: sm-panel-in 120ms var(--ease); }
   @keyframes sm-panel-in { from { opacity: .76; } }
@@ -217,3 +213,16 @@
     transform: scale(.98);
   }
 }
+
+@media screen and (prefers-reduced-motion: no-preference) {
+  .sm-program-enter {
+    animation: sm-program-enter 150ms var(--ease);
+  }
+  @keyframes sm-program-enter {
+    from { opacity: .86; transform: translateY(2px); }
+  }
+  [data-sm-input="pointer"] #sm-tbody .sm-pick td {
+    transition: background-color 120ms var(--ease);
+  }
+}
+[data-sm-input="keyboard"] .sm-pills button { transition: none; }

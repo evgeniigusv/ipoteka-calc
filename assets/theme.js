@@ -3,6 +3,11 @@
   'use strict';
   const key = 'ipoteka-calc.theme';
   const root = document.documentElement;
+  function inputMode(mode) {
+    if (root.dataset.smInput !== mode) root.dataset.smInput = mode;
+  }
+  document.addEventListener('pointerdown', () => inputMode('pointer'), { capture: true, passive: true });
+  document.addEventListener('keydown', () => inputMode('keyboard'), true);
   const url = new URL(location.href);
   const requested = url.searchParams.get('theme');
   const valid = value => value === 'classic' || value === 'sm';

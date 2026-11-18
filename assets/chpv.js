@@ -52,7 +52,7 @@
   }
   U.onPill(els.project, 'v', function (v, btn) { project = v; setupPrograms(); els.cash.value = ''; els.ddu.value = ''; flats.setProject(v); Array.prototype.forEach.call(els.project.children, function (b) { b.setAttribute('aria-pressed', String(b === btn)); }); render(); });
   [els.price, els.cash, els.client, els.ddu].forEach(function (e) { U.moneyInput(e, render); });
-  els.program.addEventListener('change', render);
+  els.program.addEventListener('change', function (e) { render(); U.programFeedback(e); });
   $('sm-suggest').addEventListener('click', function () {
     var x=inputs();if(!programs.length||!Number.isFinite(x.cost)){render();return;}if(!x.cash||x.client==null)return;
     var amount=calc.suggested(x);
