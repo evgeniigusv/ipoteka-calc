@@ -34,7 +34,7 @@
   window.SM_TOOLS_READY=(async function(){
     // Старые загрузчики заканчивают первыми: поздний ответ не перезапишет единый справочник.
     await Promise.all([window.SM_MORTGAGE_READY,window.SM_INSTALLMENTS_READY]);
-    var local=location.hostname==='127.0.0.1'&&location.port==='8795',controller=new AbortController(),timer=setTimeout(function(){controller.abort();},local?120000:15000);
+    var local=location.hostname==='127.0.0.1'&&location.port==='8795'&&!window.SM_TOOLS_PARTNER_VIEW,controller=new AbortController(),timer=setTimeout(function(){controller.abort();},local?120000:15000);
     try{
       if(local){var session=await fetch('/api/session',{cache:'no-store',signal:controller.signal});if(!session.ok)throw new Error('Сессия редактора недоступна (HTTP '+session.status+').');window.SM_TOOLS_SESSION=await session.json();}
       var response=await fetch(local?'/api/tools':'assets/tools.json',{headers:local?{'X-Editor-Session':window.SM_TOOLS_SESSION.csrf}:{},cache:'no-store',signal:controller.signal});

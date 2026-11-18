@@ -1,7 +1,7 @@
 <!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Инструменты — Свобода мысли</title><meta name="robots" content="noindex,nofollow"><meta name="theme-color" content="#355DB3"><link rel="icon" href="assets/mark-da.svg"><link rel="stylesheet" href="assets/style.css?v=ux-review-20261118"><link rel="stylesheet" href="assets/tools.css?v=ux-review-20261118"><link rel="stylesheet" href="assets/themes.css?v=1">
 <script src="assets/theme.js?v=2"></script>
 <link rel="stylesheet" href="assets/tools-settings.css?v=ux-review-20261118"></head>
-<body class="tools"><main class="tools-shell"><div class="sm tools-mast"><header class="sm-head"><h1>Инструменты</h1><button type="button" class="t-btn" id="owner-return" hidden>Вернуться в каталог</button><a class="sm-logo" href="./" aria-label="Свобода мысли — калькулятор"><img src="assets/logo-svoboda-dark.svg" width="106" height="56" alt="Свобода мысли"></a></header><div class="sm-nav-row"><nav class="sm-navigation" aria-label="Калькуляторы"><a class="sm-nav" href="./">Ипотека</a><a class="sm-nav" href="rassrochka.html">Рассрочка</a><a class="sm-nav" href="chpv.html">ЧПВ</a><a class="sm-nav" href="transh.html">Траншевая ипотека</a><a class="sm-nav" href="tools.html" aria-current="page">Инструменты</a><a class="sm-nav" href="tools.html?view=flats">Квартиры</a></nav>
+<body class="tools"><main class="tools-shell"><div class="sm tools-mast"><header class="sm-head"><h1>Инструменты</h1><button type="button" class="t-btn" id="owner-return" hidden>Выйти из редактирования</button><a class="sm-logo" href="./" aria-label="Свобода мысли — калькулятор"><img src="assets/logo-svoboda-dark.svg" width="106" height="56" alt="Свобода мысли"></a></header><div class="sm-nav-row"><nav class="sm-navigation" aria-label="Калькуляторы"><a class="sm-nav" href="./">Ипотека</a><a class="sm-nav" href="rassrochka.html">Рассрочка</a><a class="sm-nav" href="chpv.html">ЧПВ</a><a class="sm-nav" href="transh.html">Траншевая ипотека</a><a class="sm-nav" href="tools.html" aria-current="page">Инструменты</a><a class="sm-nav" href="tools.html?view=flats">Квартиры</a></nav>
     <div class="sm-theme-switch" role="group" aria-label="Тема оформления" hidden>
       <span>Тема</span>
       <button type="button" data-theme-choice="classic">Классика</button>
@@ -25,9 +25,7 @@
   <button id="tools-add" class="t-btn t-primary" hidden><img src="assets/icons/plus-lg.svg" alt="">Добавить инструмент</button>
   <button id="tools-ai" class="t-btn" hidden>Добавить с ИИ</button>
   <button id="tools-pdf" class="t-btn" disabled><img src="assets/icons/download.svg" alt="">Сохранить PDF</button>
-  <div id="tools-owner" class="tools-owner"><button type="button" id="tools-owner-link" class="t-btn">Управлять инструментами</button>
-    <button type="button" id="tools-owner-new" class="t-btn t-primary">Добавить вручную</button>
-    <button type="button" id="tools-owner-ai" class="t-btn">Добавить с ИИ</button>
+  <div id="tools-owner" class="tools-owner"><button type="button" id="tools-owner-link" class="t-btn">Редактировать</button>
     <span>На Маке владельца</span></div>
 </div>
 <div class="tools-context"><span id="tools-status" role="status">Загружаем условия…</span>
@@ -46,4 +44,10 @@
 <button class="t-btn" id="ai-build">Подготовить предложения</button><p id="ai-status" role="status"></p><div id="ai-items"></div></div>
 <div class="tools-editor-foot"><button id="ai-accept" class="t-btn t-primary" disabled>Принять и опубликовать выбранные</button></div></dialog>
 <dialog id="tools-editor" aria-labelledby="tools-editor-title"><form id="tools-form"><div class="tools-editor-head"><div><span class="tools-eyebrow" id="tools-editor-project"></span><h2 id="tools-editor-title">Инструмент</h2></div><button class="t-icon" type="button" id="tools-close" aria-label="Закрыть"><img src="assets/icons/x-lg.svg" alt=""></button></div><div id="tools-editor-fields"></div><p id="tools-form-error" class="tools-form-error" role="alert"></p><div class="tools-editor-foot"><button type="button" class="t-btn" id="tools-cancel">Отмена</button><button class="t-btn t-primary" type="submit">В черновик</button></div></form></dialog>
-<script src="assets/data.js?v=20261114-da"></script><script src="assets/engine.js?v=ux-review-20261118"></script><script src="assets/common.js?v=ux-review-20261118"></script><script src="assets/tools-model.js?v=ux-review-20261118"></script><script src="assets/tools-loader.js?v=ux-review-20261118"></script><script src="assets/tools-proposals.js?v=ux-review-20261118"></script><script src="assets/tools-window.js?v=ux-review-20261118"></script><script src="assets/tools-form.js?v=ux-review-20261118"></script><script src="assets/tools-settings.js?v=ux-review-20261118"></script><script src="assets/tools.js?v=ux-review-20261118"></script></body></html>
+<script src="assets/data.js?v=20261114-da"></script><script src="assets/engine.js?v=ux-review-20261118"></script><script src="assets/common.js?v=ux-review-20261118"></script><script src="assets/tools-model.js?v=ux-review-20261118"></script><script>
+// Прямая ссылка на конкретное действие открывает редактор. Обычный вход — партнёрский каталог.
+const entryParams = new URLSearchParams(location.search);
+window.SM_TOOLS_PARTNER_VIEW = window.parent === window &&
+  !['edit', 'template'].some(key => entryParams.has(key)) &&
+  entryParams.get('mode') !== 'edit' && !['#new', '#ai'].includes(location.hash);
+</script><script src="assets/tools-loader.js?v=partner-mode-1"></script><script src="assets/tools-proposals.js?v=ux-review-20261118"></script><script src="assets/tools-window.js?v=partner-mode-1"></script><script src="assets/tools-form.js?v=ux-review-20261118"></script><script src="assets/tools-settings.js?v=ux-review-20261118"></script><script src="assets/tools.js?v=partner-mode-1"></script></body></html>

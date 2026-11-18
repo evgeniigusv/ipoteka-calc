@@ -1,6 +1,6 @@
 (async function(){
 'use strict';
-var M=SMToolsModel,U=SMUi,esc=U.esc,$=function(id){return document.getElementById(id);},local=location.hostname==='127.0.0.1'&&location.port==='8795';
+var M=SMToolsModel,U=SMUi,esc=U.esc,$=function(id){return document.getElementById(id);},local=location.hostname==='127.0.0.1'&&location.port==='8795'&&!window.SM_TOOLS_PARTNER_VIEW;
 var data,baseline,revision,csrf,project='all',category='all',collapsed={},changes=new Map(),editing=null,busy=false,pendingPublish=false;
 var settingsEditor=null,view='catalog',needsRefresh=false;
 var names={da1:'ДА1',da2:'ДА2',dnk2:'ДНК-2'},kindNames={mortgage:'Ипотечная программа',installment:'Рассрочка',tranche:'Траншевая ипотека',chpv:'Дофинансирование ПВ',discount:'Скидка за полную оплату',info:'Информационный инструмент'};
@@ -75,6 +75,7 @@ function brief(r){
 }
 
 function editAction(r){
+ if(!local)return '';
  const label='Редактировать';
  const aria=esc(label+' · '+r.name+' · '+names[r.project]);
  return '<button type="button" class="tool-record-edit" aria-label="'+aria+'" data-edit="'+r.id+'">'+icon('pencil')+label+'</button>';
@@ -100,7 +101,7 @@ function compactRow(group){
  const cells=projects().map(projectKey=>{
   const records=group.cells[projectKey]||[];
   let contents=records.map(r=>(r.name!==group.name?'<strong>'+esc(r.name)+'</strong>':'')+compactCell(r)).join('');
-  if(!records.length && $('tools-inactive').value==='active' && !activeInProject(template,projectKey)){
+  if(local && !records.length && $('tools-inactive').value==='active' && !activeInProject(template,projectKey)){
    const label='Добавить условия · '+group.name+' · '+names[projectKey];
    contents='<button type="button" class="tools-add-cell" aria-label="'+esc(label)+'" data-new-project="'+projectKey+'" data-template="'+esc(template.id)+'">+ Добавить</button>';
   }
@@ -476,11 +477,9 @@ function ownerAction(kind,id,targetProject){
  const record=id&&data?.records.find(r=>r.id===id);
  const titles={'add-project':'Добавить условия · '+names[targetProject],manage:'Управление инструментами',flats:'Квартиры',compensation:'Компенсация субсидии',new:'Добавить инструмент',ai:'Добавить с ИИ',edit:record?.name||'Редактировать инструмент'};
  const flatFilter=kind==='flats'?settingsEditor.flatFilter():undefined;
- SMOwnerWindow.open({kind,id,flatFilter,project:targetProject||record?.project||project,section:record?M.section(record):category},titles[kind]);
+ SMOwnerWindow.open({kind,id,flatFilter,query:$('tools-search').value,project:targetProject||record?.project||project,section:record?M.section(record):category},titles[kind]);
 }
 $('tools-owner-link').onclick=()=>ownerAction('manage');
-$('tools-owner-new').onclick=()=>ownerAction('new');
-$('tools-owner-ai').onclick=()=>ownerAction('ai');
 await window.SM_TOOLS_READY;
 if(!window.SM_TOOLS_DATA){SMOwnerWindow.failed(window.SM_TOOLS_STATUS?.error);alert('Справочник не загрузился. '+(window.SM_TOOLS_STATUS?.error||'Обновите страницу.'));$('tools-status').textContent='Источник недоступен';$('tools-pdf').disabled=true;$('tools-rows').innerHTML='';return;}
 if(local){
@@ -542,7 +541,7 @@ SMOwnerWindow.ready(function(action){
  if(!action||!['manage','new','edit','ai','add-project','flats','compensation'].includes(action.kind))return;
  selectProject(Object.hasOwn(names,action.project)?action.project:'all');
  category=$('tools-category').value=Object.hasOwn(M.categories,action.section)?action.section:'all';
- $('tools-search').value='';
+ $('tools-search').value=typeof action.query==='string'?action.query:'';
  $('tools-inactive').value='active';
  render();
  selectView(['flats','compensation'].includes(action.kind)?action.kind:'catalog');
@@ -552,12 +551,14 @@ SMOwnerWindow.ready(function(action){
  if(action.kind==='new')openEditor();
  if(action.kind==='ai')$('tools-ai').click();
 });
-if(SMOwnerWindow.embedded){
- const returnIfFinished=()=>{
-   if(!changes.size&&!pendingPublish&&!window.SMProposals?.isTransitioning()&&!document.querySelector('dialog[open]')) SMOwnerWindow.close();
+if(local && !SMOwnerWindow.embedded){
+ $('owner-return').hidden=false;
+ $('owner-return').onclick=()=>{
+   const target=new URL(location.href);
+   for(const key of ['edit','template','mode'])target.searchParams.delete(key);
+   target.hash='';
+   location.replace(target.href);
  };
- $('tools-editor').addEventListener('close',returnIfFinished);
- $('ai-dialog').addEventListener('close',returnIfFinished);
 }
 if(local && params.has('template')){
  const template=params.get('template');

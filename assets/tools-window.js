@@ -1,8 +1,9 @@
 // Публичный каталог передаёт в личный редактор только выбранное действие.
 (function () {
   'use strict';
-  const site = 'https://evgeniigusv.github.io';
   const owner = 'http://127.0.0.1:8795';
+  // Прямой вход с Мака и вход с сайта используют одно окно редактора.
+  const site = new URLSearchParams(location.search).get('parent') === 'local' ? owner : 'https://evgeniigusv.github.io';
   const $ = id => document.getElementById(id);
   const embedded = location.origin === owner && window.parent !== window;
   const sendParent = (type, details = {}) => window.parent.postMessage({type, ...details}, site);
@@ -54,7 +55,7 @@
     frame.title = 'Личный редактор инструментов';
     frame.allow = 'microphone; local-network-access; loopback-network';
     visibility(frame, false);
-    frame.src = owner + '/tools.html?theme=' + document.documentElement.dataset.theme + '&open=' + Date.now();
+    frame.src = owner + '/tools.html?theme=' + document.documentElement.dataset.theme + '&open=' + Date.now() + (location.origin === owner ? '&parent=local' : '');
     visibility($('owner-connection'), true);
     dialog.append(frame);
     report('Подключаем личный редактор на вашем Маке…', false);
@@ -110,6 +111,7 @@
       $('owner-action-title').textContent = title;
       const url = new URL('/tools.html', owner);
       url.searchParams.set('theme', document.documentElement.dataset.theme);
+      url.searchParams.set('mode','edit');
       if(['flats','compensation'].includes(next.kind))url.searchParams.set('view',next.kind);
       if (next.project !== 'all') url.searchParams.set('project', next.project);
       if (next.section !== 'all') url.searchParams.set('section', next.section);
