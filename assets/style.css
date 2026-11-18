@@ -422,3 +422,41 @@ html, body { margin: 0; padding: 0; background: var(--bg); }
   }
 }
 @media print { .sm label.sm-notes-choice { display: none; } }
+
+/* Текст приходит после справочника. Резерв зависит от ширины самого поля,
+   в том числе когда форма на широком экране занимает лишь одну колонку. */
+@media screen {
+  .sm-conditions:has(#sm-show-notes:checked) .sm-field:has(> :is(
+    #sm-flat-info, #sm-company-hint, #sm-program-info, #sm-rate-hint, #sm-rub-hint, #sm-date2-hint
+  )) {
+    container: sm-note-field / inline-size;
+  }
+
+  @container sm-note-field (min-width: 0px) {
+    :is(#sm-flat-info, #sm-company-hint, #sm-program-info, #sm-rate-hint, #sm-rub-hint, #sm-date2-hint) {
+      min-block-size: 2lh;
+    }
+  }
+  @container sm-note-field (min-width: 35rem) {
+    :is(#sm-flat-info, #sm-company-hint) { min-block-size: 1lh; }
+  }
+  @container sm-note-field (min-width: 30rem) {
+    #sm-rub-hint { min-block-size: 1lh; }
+  }
+  @container sm-note-field (min-width: 25rem) {
+    :is(#sm-rate-hint, #sm-date2-hint) { min-block-size: 1lh; }
+  }
+  @container sm-note-field (max-width: 30rem) {
+    #sm-program-info { min-block-size: 3lh; }
+  }
+  @container sm-note-field (max-width: 21rem) {
+    #sm-program-info { min-block-size: 4lh; }
+  }
+  @container sm-note-field (max-width: 17rem) {
+    :is(#sm-flat-info, #sm-company-hint) { min-block-size: 3lh; }
+    #sm-program-info { min-block-size: 5lh; }
+  }
+  @container sm-note-field (max-width: 12.5rem) {
+    :is(#sm-rate-hint, #sm-date2-hint) { min-block-size: 3lh; }
+  }
+}

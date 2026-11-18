@@ -8,9 +8,9 @@
 <meta name="theme-color" content="#355DB3">
 <meta name="robots" content="noindex, nofollow">
 <script async data-tools-preload src="assets/tools-loader.js?v=shared-conditions-nav-1"></script>
-<link rel="stylesheet" href="assets/style.css?v=shared-conditions-nav-1">
-<link rel="stylesheet" href="assets/themes.css?v=interaction-motion-1">
-<script src="assets/theme.js?v=interaction-motion-1"></script>
+<link rel="stylesheet" href="assets/style.css?v=quiet-calc-1">
+<link rel="stylesheet" href="assets/themes.css?v=quiet-calc-1">
+<script src="assets/theme.js?v=quiet-calc-1"></script>
 <style>
 .sm .sm-check { display:flex; align-items:center; gap:10px; color:var(--ink); }
 .sm .sm-check input { width:18px; height:18px; padding:0; flex:0 0 18px; accent-color:var(--sky); }
@@ -31,16 +31,19 @@
 
   <nav class="sm-section-links" aria-label="Переходы внутри расчёта"><a href="#calc-result">К расчёту</a><a href="#calc-programs">Сравнить программы</a></nav>
   <div class="sm-grid">
-  <section class="sm-card">
-    <h2>Условия</h2>
+  <section class="sm-card sm-conditions">
+    <div class="sm-conditions-head"><h2>Условия</h2>
+        <label class="sm-notes-choice"><input type="checkbox" id="sm-show-notes">Пояснения</label>
+      </div>
+      <script>SMFieldNotes(document.getElementById('sm-show-notes'))</script>
       <div class="sm-field">
         <span class="sm-label" id="sm-project-l">Проект</span>
-        <div class="sm-pills" id="sm-project" role="group" aria-labelledby="sm-project-l"></div>
+        <div class="sm-pills" id="sm-project" role="group" aria-labelledby="sm-project-l"><button type="button" disabled aria-pressed="true">ДА — 1 очередь</button><button type="button" disabled aria-pressed="false">ДА — 2 очередь</button><button type="button" disabled aria-pressed="false">ДНК — 2 очередь</button></div>
       </div>
       <div class="sm-field sm-flat-field">
         <div class="sm-flat-pair"><div><label for="sm-flat-search">Номер квартиры</label><input id="sm-flat-search" type="text" autocomplete="off" placeholder="Введите номер"></div>
         <div><label for="sm-flat">Или выберите из списка</label><select id="sm-flat"><option value="">Выбрать из списка</option></select></div></div>
-        <span id="sm-flat-info" class="sm-hint">Загрузка квартир из Macro…</span>
+        <span id="sm-flat-info" class="sm-hint" role="status">Загрузка квартир из Macro…</span>
       </div>
       <div class="sm-field">
         <label for="sm-price">Цена по прайсу, ₽</label>
@@ -64,7 +67,7 @@
       </div>
       <div class="sm-row2">
       <div class="sm-field"><label for="sm-date">Дата сделки</label><input id="sm-date" type="date"></div>
-      <div class="sm-field" id="sm-extra-field">
+      <div class="sm-field" id="sm-extra-field" hidden>
         <label for="sm-extra">Доп. скидка</label>
         <div class="sm-suffix"><input id="sm-extra" type="text" inputmode="decimal" autocomplete="off" placeholder="0"><span aria-hidden="true">%</span></div>
       </div>
@@ -113,7 +116,7 @@
 <script src="assets/tools-loader.js?v=shared-conditions-nav-1"></script>
 <script src="assets/engine.js?v=shared-conditions-nav-1"></script>
 <script src="assets/common.js?v=interaction-motion-1"></script>
-<script src="assets/flats.js?v=macro-projects-1"></script>
+<script src="assets/flats.js?v=quiet-calc-1"></script>
 <script src="assets/rassrochka.js?v=interaction-motion-1"></script>
 </body>
 </html>

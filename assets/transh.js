@@ -55,14 +55,18 @@
   function applyProgram(){
     selected=programs[parseInt(el.program.value,10)];
     manual=el.program.value.endsWith('-manual');
-    if(!selected){render();return;}
+    $('sm-flexible').inert=false;
+    if(!selected){
+      for(const id of ['sm-da-tranches','sm-dnk-tranches','sm-dnk-stage-hint','sm-third-date','sm-flexible','sm-commissioning-field'])$(id).hidden=true;
+      render();return;
+    }
     var three=+selected.tranches===3, flex=!!selected.flexibleTranches, rub=flex||!!selected.firstRub;
     var estimate=isDaEstimate(), relative=!!selected.lastMonthsBeforeCommissioning;
     el.bank.value=selected.bank||'';
     var rate=estimate?calc.rateFromPayment(referencePrincipal(),selected.referencePayment,selected.referenceYears):selected.rate;
     el.rate.value=manual||!rate?'':String(+(rate*100).toFixed(estimate?2:4)).replace('.',',');
     el.rate.readOnly=estimate;
-    $('sm-rate-label').textContent=estimate?'Расчётная ставка, %':'Ставка, % годовых';
+    $('sm-rate-label').textContent=estimate?'Оценочная ставка, %':'Ставка, % годовых';
     $('sm-rate-hint').textContent=estimate?'Расчёт по ориентиру платежа. Банковская ставка уточняется.':'Ставка банка для выбранной программы.';
     el.first.value=String(+(100*(selected.first||0)).toFixed(4));
     el.second.value=String(+(100*(selected.second||0)).toFixed(4));
