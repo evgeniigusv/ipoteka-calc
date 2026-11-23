@@ -1,6 +1,5 @@
 {
-  "app": "ipoteka-calc-react",
-  "sourceCommit": "16920cab14d5759d32fea6c696db89b0e6e203ba",
-  "legacyCommit": "2504146fca30ebc84b71bd44755fe12878909e6e",
-  "builtAt": "2026-11-23T13:15:33.004756+00:00"
+  "app": "ipoteka-calc-redirect",
+  "sourceCommit": "5ab035f11871661642cec6d5e7809cc3ffeca954",
+  "server_url": "https://academic-towering-horizon.ihchost.rocks/static/app/calculator/"
 }

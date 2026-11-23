@@ -1,61 +1,34 @@
-<!doctype html>
-<html lang="ru">
-<head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Траншевая ипотека — Свобода мысли</title><link rel="icon" type="image/svg+xml" href="assets/mark-da.svg">
-<meta name="theme-color" content="#355DB3"><meta name="robots" content="noindex, nofollow">
-<script async data-tools-preload src="assets/tools-loader.js?v=fast-nav-1"></script>
-<link rel="stylesheet" href="assets/style.css?v=partner-cards-1">
-<style>
-@media (max-width: 640px) {
-  #sm-result dl { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
-  #sm-result dd { white-space: normal; overflow-wrap: anywhere; }
-}
-</style>
-<link rel="stylesheet" href="assets/themes.css?v=partner-cards-1">
-<script src="assets/theme.js?v=partner-cards-1"></script>
-<link rel="stylesheet" href="assets/flat-search.css?v=partner-cards-1">
-<link rel="stylesheet" href="assets/select.css?v=partner-cards-1">
-<link rel="stylesheet" href="assets/control-motion.css?v=partner-cards-1">
-<link rel="stylesheet" href="assets/calculator-motion.css?v=partner-cards-1">
-<script defer src="assets/control-motion.js?v=workspace-motion-1"></script>
-</head>
-<body>
-<main class="sm" id="sm-transh">
-  <div class="sm-app-header"><header class="sm-head"><div class="sm-heading"><h1>Траншевая ипотека</h1><p class="sm-lede">Посмотрите платёж до и после выдачи каждого транша.</p></div><a class="sm-logo" href="https://da-dom.life/" target="_blank" rel="noopener"><img src="assets/logo-svoboda-dark.svg" width="106" height="56" alt="Свобода мысли"></a></header>
-  <div class="sm-nav-row"><nav class="sm-navigation" aria-label="Калькуляторы"><a class="sm-nav" href="./">Ипотека</a><a class="sm-nav" href="rassrochka.html">Рассрочка</a><a class="sm-nav" href="chpv.html">ЧПВ</a><a class="sm-nav" href="transh.html" aria-label="Траншевая ипотека" aria-current="page"><span class="sm-nav-full">Траншевая ипотека</span><span class="sm-nav-short" aria-hidden="true">Транш</span></a><a class="sm-nav" href="tools.html">Инструменты</a></nav><script>SMNavigation.mount(document.currentScript.previousElementSibling)</script>
-    <div id="sm-theme-switch" class="sm-theme-switch" role="group" aria-label="Тема оформления" hidden>
-      <span>Тема</span>
-      <button type="button" data-theme-choice="light">Светлая</button>
-      <button type="button" data-theme-choice="dark">Тёмная</button>
-    </div></div></div>
-  <nav class="sm-section-links" aria-label="Переходы внутри расчёта"><a href="#calc-result">К расчёту</a></nav>
-  <div class="sm-grid">
-    <section class="sm-card sm-conditions">
-      <div class="sm-conditions-head"><h2>Условия сделки</h2>
-        <label class="sm-notes-choice"><input type="checkbox" id="sm-show-notes">Пояснения</label>
-      </div>
-      <script>SMFieldNotes(document.getElementById('sm-show-notes'))</script>
-      <div class="sm-field"><span class="sm-label" id="sm-project-l">Проект</span><div class="sm-pills" id="sm-project" role="group" aria-labelledby="sm-project-l"><button type="button" disabled aria-pressed="true">ДА — 1 очередь</button><button type="button" disabled aria-pressed="false">ДА — 2 очередь</button><button type="button" disabled aria-pressed="false">ДНК — 2 очередь</button></div></div>
-      <div class="sm-field sm-flat-field"><div class="sm-flat-pair"><div><label for="sm-flat-search">Номер квартиры</label><input id="sm-flat-search" type="text" autocomplete="off" placeholder="Введите номер"></div><div><label for="sm-flat">Или выберите из списка</label><select id="sm-flat"><option value="">Выбрать из списка</option></select></div></div><span id="sm-flat-info" class="sm-hint" role="status">Загрузка квартир из Macro…</span></div>
-      <div class="sm-row2"><div class="sm-field"><label for="sm-price">Цена по прайсу, ₽</label><input id="sm-price" type="text" inputmode="numeric" placeholder="Укажите цену"></div><div class="sm-field"><label for="sm-discount">Скидка, %</label><div class="sm-suffix"><input id="sm-discount" type="text" inputmode="decimal"><span>%</span></div><span class="sm-hint">Доля скидки от цены по прайсу</span></div></div>
-      <div class="sm-field"><label for="sm-program">Программа расчёта</label><select id="sm-program"><option disabled selected value="">Загружаем программы…</option></select><span id="sm-program-info" class="sm-hint"></span></div>
-      <div class="sm-row2"><div class="sm-field"><label for="sm-bank">Банк (необязательно)</label><input id="sm-bank" type="text" placeholder="Укажите банк"></div><div class="sm-field"><label for="sm-rate" id="sm-rate-label">Оценочная ставка, %</label><div class="sm-suffix"><input id="sm-rate" type="text" inputmode="decimal" readonly placeholder="Ставка"><span>%</span></div><span id="sm-rate-hint" class="sm-hint"></span></div></div>
-      <div class="sm-row2"><div class="sm-field"><label for="sm-pv">Первоначальный взнос, %</label><div class="sm-suffix"><input id="sm-pv" type="text" inputmode="decimal" value="20"><span>%</span></div></div><div class="sm-field"><label for="sm-term">Срок, лет</label><input id="sm-term" type="number" min="1" max="30" step="1" value="30"></div></div>
-      <div class="sm-field" id="sm-da-tranches"><label for="sm-first-rub">Первый транш, ₽</label><input id="sm-first-rub" type="text" placeholder="Сумма транша" readonly><span class="sm-hint" id="sm-rub-hint"></span></div>
-      <div class="sm-row2" id="sm-dnk-tranches" hidden><div class="sm-field"><label for="sm-first">Первый транш, % цены</label><div class="sm-suffix"><input id="sm-first" type="text" inputmode="decimal"><span>%</span></div></div><div class="sm-field" id="sm-second-field"><label for="sm-second">Второй транш, % цены</label><div class="sm-suffix"><input id="sm-second" type="text" inputmode="decimal"><span>%</span></div></div></div>
-      <p class="sm-hint sm-stage-hint" id="sm-dnk-stage-hint" hidden>Последний транш — остаток кредита. Доли и сроки можно уточнить с банком.</p>
-      <div class="sm-field" id="sm-commissioning-field" hidden><label for="sm-commissioning">Дата ввода в эксплуатацию</label><input id="sm-commissioning" type="date"><span class="sm-hint">Если дата пока неизвестна, оставьте поле пустым.</span></div>
-      <div class="sm-field"><label for="sm-date1">Дата сделки</label><input id="sm-date1" type="date"></div>
-      <div class="sm-field" id="sm-flexible" inert><label for="sm-first-date">Дата первого транша</label><input id="sm-first-date" type="date"><div id="sm-draws"></div><button id="sm-add-draw" type="button" class="sm-btn sm-btn2">Добавить промежуточный транш</button></div>
-      <div class="sm-date-grid"><div class="sm-field"><label for="sm-date2" id="sm-date2-label">Последний транш</label><input id="sm-date2" type="date"><span id="sm-date2-hint" class="sm-hint"></span></div><div class="sm-field" id="sm-third-date" hidden><label for="sm-date3">Последний транш</label><input id="sm-date3" type="date"><span id="sm-date-hint" class="sm-hint"></span></div></div>
-    </section>
-    <section class="sm-card" aria-live="polite" id="calc-result" tabindex="-1"><h2>Как меняется платёж</h2><div id="sm-result"></div></section>
-  </div>
-  <footer class="sm-foot"><p class="sm-legal">Предварительный расчёт без учёта страховки и банковских комиссий. Окончательный график, остаток долга и условия определяет банк.</p><div class="sm-actions"><span id="sm-msg" class="sm-msg" role="status"></span><button id="sm-print" type="button" class="sm-btn sm-btn2">Распечатать</button><button id="sm-save" type="button" class="sm-btn">Сохранить PDF</button></div></footer>
-</main>
-<script defer src="assets/data.js?v=20261114-da"></script><script defer src="assets/tools-model.js?v=shared-conditions-nav-1"></script>
-<script defer src="assets/tools-loader.js?v=fast-nav-1"></script>
-<script defer src="assets/engine.js?v=shared-conditions-nav-1"></script><script defer src="assets/common.js?v=partner-cards-1"></script><script defer src="assets/flat-search.js?v=workspace-motion-1"></script>
-<script defer src="assets/flats.js?v=fast-nav-1"></script><script defer src="assets/transh-engine.js?v=20261114-tranche"></script><script defer src="assets/promotion-picker.js?v=tools13-20261118"></script><script defer src="assets/transh.js?v=workspace-motion-1"></script>
-</body></html>
+<!doctype html><html lang="ru"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow"><meta name="referrer" content="no-referrer">
+<title>Вход в калькулятор — Свобода мысли</title></head>
+<body><p>Калькулятор переехал на защищённый сервер. Сейчас откроется страница входа.</p>
+<p><a id="destination" rel="noreferrer" href="https://academic-towering-horizon.ihchost.rocks/static/app/calculator/legacy/transh.html">Открыть калькулятор</a></p>
+<script>
+(() => {
+  const target = new URL("https://academic-towering-horizon.ihchost.rocks/static/app/calculator/");
+  const incoming = new URLSearchParams(location.search);
+  const routes = ['mortgage', 'installments', 'chpv', 'tranche', 'tools'];
+  const aliases = {"rassrochka.html": "installments", "chpv.html": "chpv", "transh.html": "tranche", "tools.html": "tools"};
+  const prefix = '/ipoteka-calc/legacy';
+  let legacyPath = "legacy/transh.html";
+  if (location.pathname === prefix || location.pathname.startsWith(prefix + '/')) {
+    const tail = location.pathname.slice(prefix.length).replace(/^\//, '');
+    const safe = tail.split('/').every(part => !part || (/^[A-Za-z0-9._-]+$/.test(part) && part !== '.' && part !== '..'));
+    legacyPath = 'legacy/' + (safe ? tail : '');
+  }
+  const queryPage = incoming.get('page');
+  if (legacyPath) {
+    target.pathname = target.pathname.replace(/\/?$/, '/') + legacyPath;
+    if (routes.includes(queryPage)) target.searchParams.set('page', queryPage);
+  } else {
+    const candidate = null || aliases[location.pathname.split('/').pop()];
+    const alias = routes.includes(candidate) ? candidate : null;
+    if (alias || routes.includes(queryPage)) target.searchParams.set('page', alias || queryPage);
+  }
+  const theme = incoming.get('theme');
+  if (theme === 'light' || theme === 'dark') target.searchParams.set('theme', theme);
+  document.getElementById('destination').href = target.href;
+  location.replace(target.href);
+})();
+</script></body></html>

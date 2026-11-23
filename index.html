@@ -1,28 +1,34 @@
-<!doctype html>
-<html lang="ru">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <meta name="robots" content="noindex,nofollow" />
-    <meta name="theme-color" content="#355DB3" />
-    <script>
-      try {
-        const theme =
-          new URL(location.href).searchParams.get("theme") ||
-          localStorage.getItem("sm-react-theme-v1");
-        document.documentElement.dataset.theme =
-          theme === "dark" ? "dark" : "light";
-        document.documentElement.style.background =
-          theme === "dark" ? "#111823" : "#F4F5F9";
-      } catch {}
-    </script>
-    <link rel="icon" href="./assets/mark-da-bKi4Yd5a.svg" />
-    <title>Калькулятор — Свобода мысли</title>
-    <script type="module" crossorigin src="./assets/index-Dhss0gSF.js"></script>
-    <link rel="modulepreload" crossorigin href="./assets/rolldown-runtime-XKyaHtl9.js">
-    <link rel="stylesheet" crossorigin href="./assets/index-DQB6Gclb.css">
-  </head>
-  <body>
-    <div id="root"></div>
-  </body>
-</html>
+<!doctype html><html lang="ru"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow"><meta name="referrer" content="no-referrer">
+<title>Вход в калькулятор — Свобода мысли</title></head>
+<body><p>Калькулятор переехал на защищённый сервер. Сейчас откроется страница входа.</p>
+<p><a id="destination" rel="noreferrer" href="https://academic-towering-horizon.ihchost.rocks/static/app/calculator/">Открыть калькулятор</a></p>
+<script>
+(() => {
+  const target = new URL("https://academic-towering-horizon.ihchost.rocks/static/app/calculator/");
+  const incoming = new URLSearchParams(location.search);
+  const routes = ['mortgage', 'installments', 'chpv', 'tranche', 'tools'];
+  const aliases = {"rassrochka.html": "installments", "chpv.html": "chpv", "transh.html": "tranche", "tools.html": "tools"};
+  const prefix = '/ipoteka-calc/legacy';
+  let legacyPath = null;
+  if (location.pathname === prefix || location.pathname.startsWith(prefix + '/')) {
+    const tail = location.pathname.slice(prefix.length).replace(/^\//, '');
+    const safe = tail.split('/').every(part => !part || (/^[A-Za-z0-9._-]+$/.test(part) && part !== '.' && part !== '..'));
+    legacyPath = 'legacy/' + (safe ? tail : '');
+  }
+  const queryPage = incoming.get('page');
+  if (legacyPath) {
+    target.pathname = target.pathname.replace(/\/?$/, '/') + legacyPath;
+    if (routes.includes(queryPage)) target.searchParams.set('page', queryPage);
+  } else {
+    const candidate = null || aliases[location.pathname.split('/').pop()];
+    const alias = routes.includes(candidate) ? candidate : null;
+    if (alias || routes.includes(queryPage)) target.searchParams.set('page', alias || queryPage);
+  }
+  const theme = incoming.get('theme');
+  if (theme === 'light' || theme === 'dark') target.searchParams.set('theme', theme);
+  document.getElementById('destination').href = target.href;
+  location.replace(target.href);
+})();
+</script></body></html>
