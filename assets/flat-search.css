@@ -1,0 +1,100 @@
+.sm-flat-search { position: relative; min-inline-size: 0; }
+
+.sm-flat-search__popup {
+  position: absolute;
+  z-index: 5;
+  opacity: 0;
+  pointer-events: none;
+  inset-block-start: calc(100% + 5px);
+  inset-inline-start: 0;
+  box-sizing: border-box;
+  inline-size: max(100%, min(22rem, calc(100vw - 4rem)));
+  max-block-size: min(22rem, var(--sm-flat-space, 45vh));
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  padding: 5px;
+  border: 1px solid var(--sm-menu-edge);
+  border-radius: var(--sm-menu-radius);
+  box-shadow: var(--sm-menu-shadow);
+  background: var(--surface);
+  color: var(--black);
+  font: 500 15px/1.4 var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.sm-flat-search__popup[data-open] { opacity: 1; pointer-events: auto; }
+.sm-flat-search__popup--above { inset-block-start: auto; inset-block-end: calc(100% + 5px); }
+.sm-flat-search__popup[hidden] { display: none; }
+.sm-flat-search__option, .sm-flat-search__message {
+  padding: 9px 12px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.sm-flat-search__option {
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  min-block-size: 44px;
+  position: relative;
+  padding-inline-end: 34px;
+  border-radius: calc(var(--sm-menu-radius) - 5px);
+  cursor: pointer;
+}
+.sm-flat-search__option[aria-current="true"],
+.sm-flat-search__option[aria-selected="true"] {
+  color: var(--sky);
+  background: var(--sky-soft);
+}
+.sm-flat-search__option[aria-current="true"]::after {
+  content: "";
+  position: absolute;
+  inset-inline-end: 14px;
+  inset-block-start: 50%;
+  inline-size: 5px;
+  block-size: 9px;
+  border: solid var(--sky);
+  border-width: 0 2px 2px 0;
+  transform: translateY(-60%) rotate(45deg);
+}
+.sm-flat-search__option[aria-selected="true"] {
+  outline: 2px solid var(--sky);
+  outline-offset: -2px;
+}
+@media (forced-colors: active) {
+  .sm-flat-search__option[aria-selected="true"] { outline: 2px solid Highlight; outline-offset: -2px; }
+}
+@media (max-width: 640px) {
+  .sm-flat-search__popup { inline-size: 100%; }
+  /* В одноколоночной форме соседний выбор квартиры остаётся доступным для касания. */
+  .sm-flat-search__popup:not(.sm-flat-search__popup--above) {
+    position: relative;
+    inset: auto;
+    margin-block-start: 5px;
+  }
+}
+@media (hover: hover) and (pointer: fine) {
+  .sm-flat-search__option:not([aria-current]):not([aria-selected="true"]):hover { background: var(--sm-menu-hover); }
+}
+.sm-flat-search__message { color: var(--muted); }
+.sm-flat-search__sr {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  clip-path: inset(50%);
+  overflow: hidden;
+  white-space: nowrap;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .sm-flat-search__popup {
+    transition: opacity var(--sm-menu-exit) var(--sm-menu-ease);
+  }
+  .sm-flat-search__popup[data-open] { transition-duration: var(--sm-menu-enter); }
+}
+@media print { .sm-flat-search__popup { display: none; } }
+
+/* При переходе прямо из соседнего списка завершаем его выход до показа подсказок. */
+@supports selector(::picker(select)) {
+  .sm-flat-pair:has(#sm-flat-search[aria-expanded="true"]) #sm-flat:not(:open)::picker(select) {
+    transition: none;
+  }
+}

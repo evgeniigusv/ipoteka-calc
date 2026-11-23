@@ -1,0 +1,53 @@
+/* Один указатель для обоих состояний сохраняет положение при быстром повторном нажатии. */
+#tools-rows button[aria-expanded="true"] > img { transform: rotate(90deg); }
+
+:is(#tools-rows, #tools-form, #tools-settings-panel, .tools-alert) summary { list-style: none; }
+:is(#tools-rows, #tools-form, #tools-settings-panel, .tools-alert) summary::-webkit-details-marker { display: none; }
+:is(#tools-rows, #tools-form, #tools-settings-panel, .tools-alert) summary::before {
+  content: "";
+  display: inline-block;
+  vertical-align: .1em;
+  width: .44em;
+  height: .44em;
+  margin-inline: .13em .55em;
+  border: solid currentColor;
+  border-width: 1.5px 1.5px 0 0;
+  transform: rotate(45deg);
+}
+:is(#tools-rows, #tools-form, #tools-settings-panel) details[open] > summary::before,
+details.tools-alert[open] > summary::before { transform: rotate(135deg); }
+
+@media screen and (prefers-reduced-motion: no-preference) {
+  #tools-rows button[data-pointer-disclosure] > img {
+    transition: transform 150ms var(--ease);
+  }
+}
+
+@media screen and (prefers-reduced-motion: no-preference) {
+  #public-catalog[data-view-motion] #tools-catalog-panel:not([hidden]),
+  #public-catalog[data-view-motion] .tools-settings-section:not([hidden]) {
+    animation: tools-section-entry var(--sm-motion-dialog, 190ms) var(--sm-ease-enter, ease-out);
+  }
+  @keyframes tools-section-entry {
+    from { opacity: .48; translate: 0 5px; }
+  }
+
+  @supports (interpolate-size: allow-keywords) and selector(details::details-content) {
+    :is(.tools-settings-section, #tools-form details)::details-content {
+      interpolate-size: allow-keywords;
+      overflow: clip;
+      block-size: 0;
+    }
+    :is(.tools-settings-section, #tools-form details)[open]::details-content {
+      block-size: auto;
+    }
+    :root[data-sm-input="pointer"] :is(.tools-settings-section, #tools-form details)[data-pointer-disclosure]::details-content {
+      --tools-section-time: var(--sm-motion-exit, 125ms);
+      transition: block-size var(--tools-section-time) var(--sm-ease-enter, ease-out),
+        content-visibility var(--tools-section-time) allow-discrete;
+    }
+    :root[data-sm-input="pointer"] :is(.tools-settings-section, #tools-form details)[data-pointer-disclosure][open]::details-content {
+      --tools-section-time: var(--sm-motion-popup, 180ms);
+    }
+  }
+}

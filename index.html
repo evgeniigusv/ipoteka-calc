@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="robots" content="noindex,nofollow" />
+    <meta name="theme-color" content="#355DB3" />
+    <script>
+      try {
+        const theme =
+          new URL(location.href).searchParams.get("theme") ||
+          localStorage.getItem("sm-react-theme-v1");
+        document.documentElement.dataset.theme =
+          theme === "dark" ? "dark" : "light";
+        document.documentElement.style.background =
+          theme === "dark" ? "#111823" : "#F4F5F9";
+      } catch {}
+    </script>
+    <link rel="icon" href="./assets/mark-da-bKi4Yd5a.svg" />
+    <title>Калькулятор — Свобода мысли</title>
+    <script type="module" crossorigin src="./assets/index-DQDUrrsH.js"></script>
+    <link rel="modulepreload" crossorigin href="./assets/rolldown-runtime-XKyaHtl9.js">
+    <link rel="stylesheet" crossorigin href="./assets/index-AImVrjS-.css">
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>

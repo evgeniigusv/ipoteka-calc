@@ -1,0 +1,73 @@
+@media screen {
+  #calc-programs .sm-scroll { position: relative; isolation: isolate; }
+  #calc-programs .sm-row-indicator {
+    position: absolute;
+    z-index: -1;
+    background: var(--sky-soft);
+    box-shadow: inset 4px 0 var(--sky);
+    transform-origin: top;
+    pointer-events: none;
+  }
+  #calc-programs .sm-scroll:has(.sm-row-indicator) #sm-tbody tr td {
+    background: transparent;
+    box-shadow: none;
+    transition: none;
+  }
+  /* На телефоне выбранный вариант отмечен контуром карточки. */
+  @media (max-width: 640px) {
+    #calc-programs .sm-row-indicator {
+      z-index: 1;
+      background: transparent;
+      box-shadow: inset 0 0 0 2.5px var(--sky);
+    }
+    #calc-programs .sm-scroll:has(.sm-row-indicator) #sm-tbody .sm-sel {
+      box-shadow: none;
+    }
+  }
+  #calc-result .sm-result-action {
+    justify-self: start;
+    min-block-size: 24px;
+  }
+  #sm-save[aria-busy="true"] { cursor: progress; }
+  #sm-save[aria-busy="true"]::before {
+    content: "";
+    display: inline-block;
+    inline-size: .8em;
+    block-size: .8em;
+    margin-inline-end: .5em;
+    vertical-align: -.06em;
+    box-sizing: border-box;
+    border: 2px solid currentColor;
+    border-inline-end-color: transparent;
+    border-radius: 50%;
+  }
+}
+
+/* Отклик на изменение расчёта. */
+@media screen and (prefers-reduced-motion: no-preference) {
+  #calc-result .sm-result-issued {
+    animation: sm-result-issued var(--sm-motion-result, 195ms) var(--sm-ease-enter, ease-out);
+  }
+  #calc-result .sm-program-enter {
+    animation: sm-program-enter var(--sm-motion-result, 195ms) var(--sm-ease-enter, ease-out);
+  }
+  #calc-result .sm-result-confirm {
+    animation: sm-result-confirm 230ms ease-out;
+  }
+  #sm-save[aria-busy="true"]::before {
+    animation: sm-pdf-progress 800ms linear infinite;
+  }
+  @keyframes sm-pdf-progress {
+    to { transform: rotate(1turn); }
+  }
+  @keyframes sm-result-issued {
+    from { opacity: .76; transform: translateY(8px); }
+  }
+  @keyframes sm-program-enter {
+    from { opacity: .78; transform: translateX(7px); }
+  }
+  @keyframes sm-result-confirm {
+    from { box-shadow: inset 0 0 0 3px currentColor; }
+    to { box-shadow: inset 0 0 0 3px transparent; }
+  }
+}

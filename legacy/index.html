@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ипотечный калькулятор — Свобода мысли</title>
+<link rel="icon" type="image/svg+xml" href="assets/mark-da.svg">
+<meta name="theme-color" content="#355DB3">
+<meta name="robots" content="noindex, nofollow">
+<script async data-tools-preload src="assets/tools-loader.js?v=fast-nav-1"></script>
+<link rel="stylesheet" href="assets/style.css?v=partner-cards-1">
+<link rel="stylesheet" href="assets/themes.css?v=partner-cards-1">
+<script src="assets/theme.js?v=partner-cards-1"></script>
+<style>
+.sm .sm-check { display:flex; align-items:center; gap:10px; color:var(--ink); }
+.sm .sm-check input { width:18px; height:18px; padding:0; flex:0 0 18px; accent-color:var(--sky); }
+.sm-mortgage-loading { min-block-size: 50rem; }
+.sm-mortgage-loading .sm-hero { min-block-size: 11rem; }
+@media (max-width: 640px) {
+  .sm-mortgage-loading { min-block-size: 63rem; }
+}
+@media (max-width: 370px) {
+  .sm-mortgage-loading { min-block-size: 75rem; }
+}
+</style>
+<link rel="stylesheet" href="assets/flat-search.css?v=partner-cards-1">
+<link rel="stylesheet" href="assets/select.css?v=partner-cards-1">
+<link rel="stylesheet" href="assets/control-motion.css?v=partner-cards-1">
+<link rel="stylesheet" href="assets/calculator-motion.css?v=partner-cards-1">
+<script defer src="assets/control-motion.js?v=workspace-motion-1"></script>
+</head>
+<body>
+
+<main class="sm" id="sm-ipoteka">
+  <div class="sm-app-header"><header class="sm-head"><div class="sm-heading"><h1>Ипотечный калькулятор</h1><p class="sm-lede">Сравните ставки, взнос и ежемесячный платёж.</p></div><a class="sm-logo" href="https://da-dom.life/" target="_blank" rel="noopener"><img src="assets/logo-svoboda-dark.svg" width="106" height="56" alt="Свобода мысли"></a></header>
+  <div class="sm-nav-row"><nav class="sm-navigation" aria-label="Калькуляторы"><a class="sm-nav" href="./" aria-current="page">Ипотека</a><a class="sm-nav" href="rassrochka.html">Рассрочка</a><a class="sm-nav" href="chpv.html">ЧПВ</a><a class="sm-nav" href="transh.html" aria-label="Траншевая ипотека"><span class="sm-nav-full">Траншевая ипотека</span><span class="sm-nav-short" aria-hidden="true">Транш</span></a><a class="sm-nav" href="tools.html">Инструменты</a></nav><script>SMNavigation.mount(document.currentScript.previousElementSibling)</script>
+    <div id="sm-theme-switch" class="sm-theme-switch" role="group" aria-label="Тема оформления" hidden>
+      <span>Тема</span>
+      <button type="button" data-theme-choice="light">Светлая</button>
+      <button type="button" data-theme-choice="dark">Тёмная</button>
+    </div></div></div>
+
+  <nav class="sm-section-links" aria-label="Переходы внутри расчёта"><a href="#calc-result">К расчёту</a><a href="#calc-programs">Сравнить программы</a></nav>
+  <div class="sm-grid">
+    <section class="sm-card sm-conditions">
+      <div class="sm-conditions-head"><h2>Условия</h2>
+        <label class="sm-notes-choice"><input type="checkbox" id="sm-show-notes">Пояснения</label>
+      </div>
+      <script>SMFieldNotes(document.getElementById('sm-show-notes'))</script>
+      <div class="sm-field">
+        <span class="sm-label" id="sm-project-l">Проект</span>
+        <div class="sm-pills" id="sm-project" role="group" aria-labelledby="sm-project-l"><button type="button" disabled aria-pressed="true">ДА — 1 очередь</button><button type="button" disabled aria-pressed="false">ДА — 2 очередь</button><button type="button" disabled aria-pressed="false">ДНК — 2 очередь</button></div>
+      </div>
+      <div class="sm-field sm-flat-field">
+        <div class="sm-flat-pair"><div><label for="sm-flat-search">Номер квартиры</label><input id="sm-flat-search" type="text" autocomplete="off" placeholder="Введите номер"></div>
+        <div><label for="sm-flat">Или выберите из списка</label><select id="sm-flat"><option value="">Выбрать из списка</option></select></div></div>
+        <span id="sm-flat-info" class="sm-hint" role="status">Загрузка квартир из Macro…</span>
+      </div>
+      <div class="sm-field"><label for="sm-price">Стоимость квартиры, ₽</label><input id="sm-price" type="text" inputmode="numeric" autocomplete="off"><span class="sm-hint">Цена по прайсу, без скидки</span></div>
+      <div class="sm-field">
+        <label for="sm-disc">Скидка</label>
+        <div class="sm-suffix"><input id="sm-disc" type="text" inputmode="decimal" autocomplete="off" placeholder="0"><span aria-hidden="true">%</span></div>
+        <span class="sm-hint">Скидка при полной оплате. В программах со сниженной ставкой часть скидки уходит на снижение ставки, поэтому цена в договоре выше</span>
+      </div>
+      <div class="sm-field">
+        <span class="sm-label" id="sm-type-l">Тип ипотеки</span>
+        <div class="sm-pills" id="sm-type" role="group" aria-labelledby="sm-type-l"><button type="button" disabled aria-pressed="true">Семейная</button><button type="button" disabled aria-pressed="false">Базовая</button></div>
+      </div>
+      <div class="sm-field" id="sm-kids-field">
+        <label for="sm-kids">Количество детей</label>
+        <select id="sm-kids"><option disabled selected value="">Загружаем условия…</option></select>
+      </div>
+      <div class="sm-field" id="sm-company-field">
+        <label class="sm-check"><input type="checkbox" id="sm-company-pays"><span>Компания оплачивает субсидию</span></label>
+        <span class="sm-hint" id="sm-company-hint"></span>
+      </div>
+      <div class="sm-field" id="sm-promotions-field" hidden>
+        <span class="sm-label">Дополнительные акции</span>
+        <div id="sm-promotions"></div>
+        <span class="sm-hint">Выбранные акции применяются только к совместимым программам.</span>
+      </div>
+      <div class="sm-row2">
+        <div class="sm-field">
+          <label for="sm-pv">Первоначальный взнос, ₽</label>
+          <input id="sm-pv" type="text" inputmode="numeric" autocomplete="off" placeholder="минимальный">
+          <span class="sm-hint" id="sm-pv-hint">От 20,1% цены по прайсу. Меньше минимального по программе — посчитаем с минимальным</span>
+        </div>
+        <div class="sm-field">
+          <label for="sm-term">Срок, лет</label>
+          <input id="sm-term" type="number" inputmode="decimal" min="1" max="30" step="1" placeholder="максимальный">
+          <span class="sm-hint">Не больше срока программы</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="sm-card" aria-live="polite" id="calc-result" tabindex="-1">
+      <div class="sm-result-heading"><h2>Расчёт по программе</h2><a class="sm-jump" href="#calc-programs">К программам</a></div>
+      <div id="sm-detail">
+        <div class="sm-mortgage-loading" role="status">
+          <div class="sm-hero"><span class="sm-hero-name">Загружаем условия ипотеки…</span></div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <section class="sm-card sm-tablecard" id="calc-programs" tabindex="-1">
+    <div class="sm-tablehead">
+      <h2 id="sm-table-title">Все программы</h2>
+      <span class="sm-tip" id="sm-tip"></span>
+    </div>
+    <div class="sm-scroll">
+      <table>
+        <thead id="sm-thead"></thead>
+        <tbody id="sm-tbody"></tbody>
+      </table>
+    </div>
+  <a class="sm-return-result" href="#calc-result">К расчёту выбранной программы</a>
+  </section>
+
+  <footer class="sm-foot">
+    <p class="sm-legal"><span id="sm-legal">Расчёт предварительный и не является офертой. Окончательные условия, страхование и комиссии определяет банк.</span> <span id="sm-rate-status" role="status">Загружаем актуальные ставки и комиссии…</span></p>
+    <div class="sm-actions">
+      <span class="sm-msg" id="sm-msg" role="status"></span>
+      <button type="button" class="sm-btn sm-btn2" id="sm-print">Распечатать</button>
+      <button type="button" class="sm-btn" id="sm-save">Сохранить PDF</button>
+    </div>
+  </footer>
+</main>
+
+<script defer src="assets/data.js?v=20261114-da"></script>
+<script defer src="assets/tools-model.js?v=shared-conditions-nav-1"></script>
+<script defer src="assets/tools-loader.js?v=fast-nav-1"></script>
+<script defer src="assets/mortgage-loader.js?v=fast-nav-1"></script>
+<script defer src="assets/engine.js?v=shared-conditions-nav-1"></script>
+<script defer src="assets/common.js?v=partner-cards-1"></script>
+<script defer src="assets/flat-search.js?v=workspace-motion-1"></script>
+<script defer src="assets/flats.js?v=fast-nav-1"></script>
+<script defer src="assets/ipoteka.js?v=partner-cards-1"></script>
+</body>
+</html>
